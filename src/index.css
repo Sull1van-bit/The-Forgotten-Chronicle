@@ -66,3 +66,27 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+@import "tailwindcss";
+
+/* Ensure pixel art stays crisp */
+.pixel-art {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+/* Pixel button hover effect */
+.pixel-button {
+  transition: transform 0.1s ease;
+  border: none;
+  outline: none;
+  cursor: pointer;
+}
+
+.pixel-button:active {
+  transform: translateY(2px);
+}
+
+/* Import pixel font */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
