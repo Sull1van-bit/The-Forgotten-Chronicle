@@ -3,6 +3,9 @@
   height: 100vh;
   overflow: hidden;
   background-color: #000;
+  position: fixed;
+  top: 0;
+  left: 0;
 }
 
 .camera {
@@ -16,12 +19,15 @@
   position: absolute;
   width: 100%;
   height: 100%;
-  transform-origin: center center;
+  will-change: transform;
   transition: transform 0.1s ease-out;
 }
 
 .map-background {
   image-rendering: pixelated;
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 
 .grid {
@@ -44,19 +50,62 @@
   box-sizing: border-box;
 }
 
-.grid-cell.collision {
+.grid-cell.collision.full {
   background-color: rgba(255, 0, 0, 0.2);
   border: 1px solid rgba(255, 0, 0, 0.5);
 }
 
+.grid-cell.collision.half-top {
+  background: linear-gradient(to bottom, 
+    rgba(255, 0, 0, 0.2) 50%, 
+    transparent 50%
+  );
+  border-top: 1px solid rgba(255, 0, 0, 0.5);
+  border-left: 1px solid rgba(255, 0, 0, 0.5);
+  border-right: 1px solid rgba(255, 0, 0, 0.5);
+}
+
+.grid-cell.collision.half-bottom {
+  background: linear-gradient(to top, 
+    rgba(255, 0, 0, 0.2) 50%, 
+    transparent 50%
+  );
+  border-bottom: 1px solid rgba(255, 0, 0, 0.5);
+  border-left: 1px solid rgba(255, 0, 0, 0.5);
+  border-right: 1px solid rgba(255, 0, 0, 0.5);
+}
+
+.grid-cell.collision.half-left {
+  background: linear-gradient(to right, 
+    rgba(255, 0, 0, 0.2) 50%, 
+    transparent 50%
+  );
+  border-top: 1px solid rgba(255, 0, 0, 0.5);
+  border-left: 1px solid rgba(255, 0, 0, 0.5);
+  border-bottom: 1px solid rgba(255, 0, 0, 0.5);
+}
+
+.grid-cell.collision.half-right {
+  background: linear-gradient(to left, 
+    rgba(255, 0, 0, 0.2) 50%, 
+    transparent 50%
+  );
+  border-top: 1px solid rgba(255, 0, 0, 0.5);
+  border-right: 1px solid rgba(255, 0, 0, 0.5);
+  border-bottom: 1px solid rgba(255, 0, 0, 0.5);
+}
+
 .player {
   position: absolute;
-  width: 40px;
-  height: 40px;
-  background-size: contain;
+  width: 13px;
+  height: 13px;
+  transform: scale(2.5);
+  background-size: 100% 100%;
   background-repeat: no-repeat;
   background-position: center;
   z-index: 2;
   image-rendering: pixelated;
   transition: all 0.1s linear;
+  transform-origin: center;
+  will-change: transform, left, top;
 } 
