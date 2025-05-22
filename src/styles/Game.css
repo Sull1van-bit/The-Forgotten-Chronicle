@@ -30,6 +30,11 @@
   left: 0;
 }
 
+.map-foreground {
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
 .grid {
   position: relative;
   width: 2400px;

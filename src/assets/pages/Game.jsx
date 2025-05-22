@@ -6,6 +6,7 @@ import playerWalkDown from '../../assets/Character/player-a-wd.gif';
 import playerWalkLeft from '../../assets/Character/player-a-wl.gif';
 import playerWalkRight from '../../assets/Character/player-a-wr.gif';
 import allMap from '../../assets/maps/all-map.png';
+import foregroundMap from '../../assets/maps/all-map-foreground.png';
 
 // Define collision points using grid coordinates
 const COLLISION_MAP = [
@@ -352,6 +353,20 @@ const Game = () => {
               top: `${position.y}px`,
               backgroundImage: `url(${getSprite()})`,
               imageRendering: 'pixelated',
+            }}
+          />
+          <div 
+            className="map-foreground"
+            style={{
+              width: `${MAP_WIDTH}px`,
+              height: `${MAP_HEIGHT}px`,
+              backgroundImage: `url(${foregroundMap})`,
+              backgroundSize: '100% 100%',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              pointerEvents: 'none',
+              zIndex: 3,
             }}
           />
         </div>
