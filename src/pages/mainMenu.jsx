@@ -9,6 +9,7 @@ import Credits from '../components/Credits';
 import Settings from '../components/Settings';
 import MusicPrompt from '../components/MusicPrompt';
 import CharacterSelection from '../components/CharacterSelection';
+import Loader from '../components/Loader';
 
 // TODO: Import Firebase auth hooks and context if using a provider
 // import { useAuth } from '../context/AuthContext';
@@ -24,6 +25,7 @@ function MainMenuContent() {
   const [showSettings, setShowSettings] = useState(false);
   const [showMusicPrompt, setShowMusicPrompt] = useState(false);
   const [showCharacterSelection, setShowCharacterSelection] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     console.log('MainMenu useEffect running');
@@ -62,16 +64,18 @@ function MainMenuContent() {
 
   const handleNewGame = () => {
     playClick();
+    setIsLoading(true);
     setTimeout(() => {
       setShowCharacterSelection(true);
-    }, 100);
+      setIsLoading(false);
+    }, 1000); // Show loader for 1 second
   };
 
   const handleCharacterSelect = (character) => {
     playClick();
     console.log('Selected character:', character);
     setTimeout(() => {
-      setShowCharacterSelection(false);
+    setShowCharacterSelection(false);
     }, 100);
     // TODO: Start the game with the selected character
   };
@@ -136,6 +140,13 @@ function MainMenuContent() {
           onAccept={handleMusicAccept}
           onDecline={handleMusicDecline}
         />
+      )}
+
+      {/* Loading State */}
+      {isLoading && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+          <Loader />
+        </div>
       )}
 
       {/* Character Selection */}
