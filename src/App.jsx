@@ -1,13 +1,13 @@
 import React from 'react';
-  import Game from './assets/pages/Game';
-import './styles/App.css';
+import { SoundProvider } from './context/SoundContext';
+import MainMenu from './pages/MainMenu';
 
-const App = () => {
+function App() {
   return (
-    <div className="app">
-      <Game />
-    </div>
+    <SoundProvider>
+      <MainMenu />
+    </SoundProvider>
   );
-};
+}
 
 export default App;
