@@ -287,7 +287,7 @@ class Media {
 }
 
 class App {
-  constructor(container, { items, bend, textColor = "#ffffff", borderRadius = 0, font } = {}) {
+  constructor(container, { items, bend, textColor = "#ffffff", borderRadius = 0, font, onCenteredCardChange, onCardClick } = {}) {
     document.documentElement.classList.remove('no-js');
     this.container = container;
     this.scroll = { ease: 0.05, current: 0, target: 0, last: 0 };
@@ -300,6 +300,10 @@ class App {
     this.createMedias(items, bend, textColor, borderRadius, font);
     this.update();
     this.addEventListeners();
+    this.onCenteredCardChange = onCenteredCardChange;
+    this.onCardClick = onCardClick;
+    this.centeredCardIndex = -1;
+    this.isDragging = false;
   }
 
   createRenderer() {
@@ -350,33 +354,79 @@ class App {
 
   onTouchDown(e) {
     this.isDown = true;
-    this.scroll.position = this.scroll.current;
-    this.start = e.touches ? e.touches[0].clientX : e.clientX;
+    this.isDragging = false;
+    this.momentum = 0;
+    this.noop = false;
+    this.velocity = 0;
+    this.start = e.clientX || e.touches[0].clientX;
+    this.container.classList.add('is-down');
   }
 
   onTouchMove(e) {
     if (!this.isDown) return;
-    const x = e.touches ? e.touches[0].clientX : e.clientX;
-    const distance = (this.start - x) * 0.05;
-    this.scroll.target = this.scroll.position + distance;
+    this.isDragging = true;
+    const x = e.clientX || e.touches[0].clientX;
+    const delta = x - this.start;
+    this.velocity = delta;
+    this.scroll.target -= delta * 1.3;
+    this.start = x;
   }
 
   onTouchUp() {
     this.isDown = false;
-    this.onCheck();
+    this.container.classList.remove('is-down');
+    this.checkSwipe();
   }
 
-  onWheel() {
-    this.scroll.target += 2;
-    this.onCheckDebounce();
+  onWheel(e) {
+    const normalized = e.pixelY || e.deltaY;
+    this.momentum = normalized * 0.01;
+    this.scroll.target += normalized;
   }
 
   onCheck() {
     if (!this.medias || !this.medias[0]) return;
     const width = this.medias[0].width;
-    const itemIndex = Math.round(Math.abs(this.scroll.target) / width);
-    const item = width * itemIndex;
-    this.scroll.target = this.scroll.target < 0 ? -item : item;
+    const centerScroll = this.scroll.current;
+    const totalWidth = this.medias[0].widthTotal;
+    const numOriginalItems = this.mediasImages.length;
+    
+    let closestIndex = -1;
+    let minDistance = Infinity;
+
+    for (let i = 0; i < this.medias.length; i++) {
+        const media = this.medias[i];
+        const screenPosition = media.plane.position.clone().project(this.camera);
+         const viewportCenter = this.viewport.width / 2;
+        const distanceToCenter = Math.abs(screenPosition.x);
+
+        if (distanceToCenter < minDistance) {
+            minDistance = distanceToCenter;
+            closestIndex = i % numOriginalItems;
+        }
+    }
+
+    if (closestIndex !== -1 && closestIndex !== this.centeredCardIndex) {
+         this.centeredCardIndex = closestIndex;
+         const centeredItemData = this.mediasImages[this.centeredCardIndex];
+
+         const visuallyCenteredMedia = this.medias.find(media => (media.index % numOriginalItems) === this.centeredCardIndex && Math.abs(media.plane.position.x) < this.medias[0].width / 2);
+         if(visuallyCenteredMedia) {
+             const screenPosition = visuallyCenteredMedia.plane.position.clone().project(this.camera);
+             const canvasRect = this.renderer.gl.canvas.getBoundingClientRect();
+             const screenX = canvasRect.left + (screenPosition.x * 0.5 + 0.5) * canvasRect.width;
+             const screenY = canvasRect.top + (screenPosition.y * -0.5 + 0.5) * canvasRect.height;
+
+              if (this.onCenteredCardChange) {
+                this.onCenteredCardChange(centeredItemData, { x: screenX, y: screenY });
+              }
+         }
+    }
+
+    const itemIndexTarget = Math.round(Math.abs(this.scroll.target) / width);
+    const itemTarget = width * itemIndexTarget;
+    this.scroll.target = this.scroll.target < 0 ? -itemTarget : itemTarget;
+
     if (this.playHover) {
       this.playHover();
     }
@@ -423,6 +473,8 @@ class App {
     this.boundOnTouchDown = this.onTouchDown.bind(this);
     this.boundOnTouchMove = this.onTouchMove.bind(this);
     this.boundOnTouchUp = this.onTouchUp.bind(this);
+    this.boundOnPointerUp = this.onPointerUp.bind(this);
+    this.renderer.gl.canvas.addEventListener('pointerup', this.boundOnPointerUp);
     window.addEventListener('resize', this.boundOnResize);
     window.addEventListener('mousewheel', this.boundOnWheel);
     window.addEventListener('wheel', this.boundOnWheel);
@@ -432,6 +484,29 @@ class App {
     window.addEventListener('touchstart', this.boundOnTouchDown);
     window.addEventListener('touchmove', this.boundOnTouchMove);
     window.addEventListener('touchend', this.boundOnTouchUp);
+  }
+
+  onPointerUp(e) {
+      if (this.isDragging) {
+          this.isDragging = false;
+          return;
+      }
+
+      const hit = this.renderer.render({ scene: this.scene, camera: this.camera, checkBounds: false, x: e.clientX, y: this.renderer.canvas.height - e.clientY });
+
+      if (hit) {
+          const clickedMedia = this.medias.find(media => media.plane === hit.object);
+          if (clickedMedia) {
+              const numOriginalItems = this.mediasImages.length;
+               const clickedOriginalIndex = clickedMedia.index % numOriginalItems;
+
+               if (clickedOriginalIndex === this.centeredCardIndex && this.onCardClick) {
+                   const clickedItemData = this.mediasImages[clickedOriginalIndex];
+                   this.onCardClick(clickedItemData);
+               }
+          }
+      }
+       this.isDragging = false;
   }
 
   destroy() {
@@ -445,6 +520,7 @@ class App {
     window.removeEventListener('touchstart', this.boundOnTouchDown);
     window.removeEventListener('touchmove', this.boundOnTouchMove);
     window.removeEventListener('touchend', this.boundOnTouchUp);
+    this.renderer.gl.canvas.removeEventListener('pointerup', this.boundOnPointerUp);
     if (this.renderer && this.renderer.gl && this.renderer.gl.canvas.parentNode) {
       this.renderer.gl.canvas.parentNode.removeChild(this.renderer.gl.canvas);
     }
@@ -456,18 +532,25 @@ export default function CircularGallery({
   bend = 3,
   textColor = "#ffffff",
   borderRadius = 0.05,
-  font = "bold 30px 'Press Start 2P'"
+  font = "bold 30px 'Press Start 2P'",
+  onCenteredCardChange,
+  onCardClick
 }) {
   const containerRef = useRef(null);
   const { playHover } = useSound();
 
   useEffect(() => {
-    const app = new App(containerRef.current, { items, bend, textColor, borderRadius, font });
+    const itemsWithOverlay = items.map(item => ({
+      ...item,
+      overlayImage: item.overlayImage || '',
+    }));
+
+    const app = new App(containerRef.current, { items: itemsWithOverlay, bend, textColor, borderRadius, font, onCenteredCardChange, onCardClick });
     app.playHover = playHover;
     return () => {
       app.destroy();
     };
-  }, [items, bend, textColor, borderRadius, font, playHover]);
+  }, [items, bend, textColor, borderRadius, font, playHover, onCenteredCardChange, onCardClick]);
 
   return (
     <div className='w-full h-full cursor-grab active:cursor-grabbing' ref={containerRef} />

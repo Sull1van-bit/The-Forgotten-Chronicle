@@ -144,7 +144,7 @@ function MainMenuContent() {
 
       {/* Main Menu */}
       {user && !showMusicPrompt && !showCharacterSelection && (
-        <div className="fixed top-0 left-0 bottom-0 z-20 flex flex-col items-start justify-start p-8 w-72 bg-black bg-opacity-80">
+        <div className="fixed top-0 left-0 bottom-0 z-20 flex flex-col items-start justify-start p-8 w-72" style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)' }}>
           <img src={gameTitleImage} alt="Game Title" className="mb-8 w-full h-auto object-contain" />
           
           <nav className="flex flex-col space-y-6 w-full">
