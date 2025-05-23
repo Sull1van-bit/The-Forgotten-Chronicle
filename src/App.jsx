@@ -2,7 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { SoundProvider } from './context/SoundContext';
 import { MusicProvider } from './context/MusicContext';
-import MainMenu from './pages/MainMenu';
+import MainMenu from './pages/mainMenu';
 import Game from './pages/Game';
 
 function App() {
