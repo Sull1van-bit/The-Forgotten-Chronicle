@@ -31,6 +31,10 @@ import allMap from '../assets/Maps/all-map.png';
 import foregroundMap from '../assets/Maps/all-map-foreground.png';
 import HouseInterior from './interiors/HouseInterior';
 
+import { useAuth } from '../context/AuthContext';
+import { saveFileService } from '../services/saveFileService';
+import { createSaveFileData, loadSaveFileData } from '../utils/saveFileUtils';
+
 // Define collision points using grid coordinates
 const COLLISION_MAP = [
   //kali diatas 30s (full collision)
@@ -174,9 +178,14 @@ const COLLISION_MAP = [
 const Game = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const character = location.state?.character;
+  const isLoadedGame = location.state?.isLoadedGame;
   const [isLoading, setIsLoading] = useState(true);
   const [showCutscene, setShowCutscene] = useState(false);
+  const [saveFiles, setSaveFiles] = useState([]);
+  const [canSave, setCanSave] = useState(false);
+  const [showSavePrompt, setShowSavePrompt] = useState(false);
 
   // If no character is selected, redirect to main menu
   useEffect(() => {
@@ -185,21 +194,97 @@ const Game = () => {
     }
   }, [character, navigate]);
 
+  // Load save files when user is authenticated
+  useEffect(() => {
+    const loadSaveFiles = async () => {
+      if (user) {
+        try {
+          const files = await saveFileService.getUserSaveFiles(user.uid);
+          setSaveFiles(files);
+        } catch (error) {
+          console.error('Error loading save files:', error);
+        }
+      }
+    };
+
+    loadSaveFiles();
+  }, [user]);
+
   // Initial loading effect
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
-      // Show cutscene for new players
-      if (character && character !== 'saved') {
+      // Show cutscene only for new games, not loaded games
+      if (character && !isLoadedGame) {
         setShowCutscene(true);
       }
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [character]);
+  }, [character, isLoadedGame]);
 
   const handleCutsceneComplete = () => {
     setShowCutscene(false);
+  };
+
+  // Add save point coordinates
+  const SAVE_POINTS = [
+    { x: 0, y: 2 },
+    { x: 0, y: 1 }
+  ];
+
+  // Check if player is at a save point
+  const checkSavePoint = (x, y) => {
+    const playerGridPos = getGridPosition(x, y);
+    return SAVE_POINTS.some(point => 
+      point.x === playerGridPos.gridX && point.y === playerGridPos.gridY
+    );
+  };
+
+  // Update save game function
+  const saveGame = async () => {
+    if (!user || !canSave) return;
+
+    try {
+      const gameState = {
+        character,
+        position,
+        facing,
+        inventory: [], // Add your inventory state
+        quests: [], // Add your quests state
+        stats: {
+          level: 1,
+          playTime: '0:00'
+        },
+        settings: {
+          // Add your game settings
+        }
+      };
+
+      const saveData = createSaveFileData(gameState);
+      await saveFileService.saveGame(user.uid, saveData);
+      
+      // Refresh save files list
+      const files = await saveFileService.getUserSaveFiles(user.uid);
+      setSaveFiles(files);
+      setShowSavePrompt(false);
+    } catch (error) {
+      console.error('Error saving game:', error);
+    }
+  };
+
+  // Load game function
+  const loadGame = async (saveId) => {
+    try {
+      const gameState = await loadSaveFileData(saveId);
+      if (gameState) {
+        setPosition(gameState.position);
+        setFacing(gameState.facing);
+        // Restore any other game state
+      }
+    } catch (error) {
+      console.error('Error loading game:', error);
+    }
   };
 
   const [position, setPosition] = useState({ x: 350, y: 150 });
@@ -372,81 +457,84 @@ const Game = () => {
     });
   };
 
+  // Update useEffect for movement
   useEffect(() => {
     const handleKeyPress = (e) => {
-      if (isInInterior) return; // Let interior handle its own movement
+      console.log('Key pressed:', e.key); // Debug log
+      console.log('isInInterior:', isInInterior); // Debug log
+      
+      if (!isInInterior) {
+        let newX = position.x;
+        let newY = position.y;
 
-      let newX = position.x;
-      let newY = position.y;
-
-      switch (e.key.toLowerCase()) {
-        case 'w':
-        case 'arrowup':
-          newY = position.y - speed;
-          if (!hasCollision(newX, newY)) {
-            setFacing('up');
-            setPosition(prev => ({ 
-              ...prev, 
-              y: Math.max(0, newY)
-            }));
-            checkTeleport(newX, newY);
-          }
-          break;
-        case 's':
-        case 'arrowdown':
-          newY = position.y + speed;
-          if (!hasCollision(newX, newY)) {
-            setFacing('down');
-            setPosition(prev => ({ 
-              ...prev, 
-              y: Math.min(MAP_HEIGHT - PLAYER_SIZE, newY)
-            }));
-            checkTeleport(newX, newY);
-          }
-          break;
-        case 'a':
-        case 'arrowleft':
-          newX = position.x - speed;
-          if (!hasCollision(newX, newY)) {
-            setFacing('left');
-            setPosition(prev => ({ 
-              ...prev, 
-              x: Math.max(0, newX)
-            }));
-            checkTeleport(newX, newY);
-          }
-          break;
-        case 'd':
-        case 'arrowright':
-          newX = position.x + speed;
-          if (!hasCollision(newX, newY)) {
-            setFacing('right');
-            setPosition(prev => ({ 
-              ...prev, 
-              x: Math.min(MAP_WIDTH - PLAYER_SIZE, newX)
-            }));
-            checkTeleport(newX, newY);
-          }
-          break;
-        default:
-          break;
-      }
-    };
-
-    const handleKeyUp = (e) => {
-      // Hanya set facing ke 'stand' jika key yang dilepas adalah WASD atau arrow key
-      const movementKeys = ['w', 's', 'a', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
-      if (movementKeys.includes(e.key.toLowerCase())) {
-        setFacing('stand');
+        switch (e.key.toLowerCase()) {
+          case 'w':
+          case 'arrowup':
+            console.log('Moving up'); // Debug log
+            newY = position.y - speed;
+            if (!hasCollision(newX, newY)) {
+              setFacing('up');
+              setPosition(prev => {
+                console.log('New position:', { ...prev, y: Math.max(0, newY) }); // Debug log
+                return { ...prev, y: Math.max(0, newY) };
+              });
+              // Check if player is at save point
+              if (checkSavePoint(newX, newY)) {
+                setCanSave(true);
+                setShowSavePrompt(true);
+              } else {
+                setCanSave(false);
+                setShowSavePrompt(false);
+              }
+            }
+            break;
+          case 's':
+          case 'arrowdown':
+            console.log('Moving down'); // Debug log
+            newY = position.y + speed;
+            if (!hasCollision(newX, newY)) {
+              setFacing('down');
+              setPosition(prev => {
+                console.log('New position:', { ...prev, y: Math.min(MAP_HEIGHT - PLAYER_SIZE, newY) }); // Debug log
+                return { ...prev, y: Math.min(MAP_HEIGHT - PLAYER_SIZE, newY) };
+              });
+              checkTeleport(newX, newY);
+            }
+            break;
+          case 'a':
+          case 'arrowleft':
+            console.log('Moving left'); // Debug log
+            newX = position.x - speed;
+            if (!hasCollision(newX, newY)) {
+              setFacing('left');
+              setPosition(prev => {
+                console.log('New position:', { ...prev, x: Math.max(0, newX) }); // Debug log
+                return { ...prev, x: Math.max(0, newX) };
+              });
+              checkTeleport(newX, newY);
+            }
+            break;
+          case 'd':
+          case 'arrowright':
+            console.log('Moving right'); // Debug log
+            newX = position.x + speed;
+            if (!hasCollision(newX, newY)) {
+              setFacing('right');
+              setPosition(prev => {
+                console.log('New position:', { ...prev, x: Math.min(MAP_WIDTH - PLAYER_SIZE, newX) }); // Debug log
+                return { ...prev, x: Math.min(MAP_WIDTH - PLAYER_SIZE, newX) };
+              });
+              checkTeleport(newX, newY);
+            }
+            break;
+          default:
+            break;
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyPress);
-    window.addEventListener('keyup', handleKeyUp);
-    return () => {
-      window.removeEventListener('keydown', handleKeyPress);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
+    return () => window.removeEventListener('keydown', handleKeyPress);
   }, [position, isInInterior]);
 
   const getCameraStyle = () => {
@@ -495,6 +583,23 @@ const Game = () => {
     return cells;
   };
 
+  // Add save prompt UI
+  const renderSavePrompt = () => {
+    if (!showSavePrompt || !canSave) return null;
+
+    return (
+      <div className="fixed bottom-4 right-4 bg-black bg-opacity-75 p-4 rounded-lg text-white z-50">
+        <p className="mb-2">Press 'S' to save your game</p>
+        <button
+          onClick={saveGame}
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+        >
+          Save Game
+        </button>
+      </div>
+    );
+  };
+
   if (isInInterior) {
     return <HouseInterior position={position} setPosition={setPosition} onExit={handleExitInterior} character={character} />;
   }
@@ -518,6 +623,9 @@ const Game = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Save Game UI */}
+      {user && !isLoading && !showCutscene && renderSavePrompt()}
 
       {/* Rest of your game content */}
       {!isLoading && !showCutscene && (
