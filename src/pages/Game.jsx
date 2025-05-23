@@ -1,12 +1,34 @@
-import React, { useState, useEffect } from 'react';
-import '../../styles/Game.css';
-import playerStand from '../../assets/Character/player-a-stand.gif';
-import playerWalkUp from '../../assets/Character/player-a-wu.gif';
-import playerWalkDown from '../../assets/Character/player-a-wd.gif';
-import playerWalkLeft from '../../assets/Character/player-a-wl.gif';
-import playerWalkRight from '../../assets/Character/player-a-wr.gif';
-import allMap from '../../assets/maps/all-map.png';
-import foregroundMap from '../../assets/maps/all-map-foreground.png';
+import React, { useState, useEffect, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useSound } from '../context/SoundContext';
+import { useMusic } from '../context/MusicContext';
+import { AnimatePresence } from 'framer-motion';
+import LoadingScreen from '../components/LoadingScreen';
+import Cutscene from '../components/Cutscene';
+import '../styles/Game.css';
+// Import character sprites
+/*import eugeneStand from '../assets/characters/eugene/stand.gif';
+import eugeneWalkUp from '../assets/characters/eugene/walk-up.gif';
+import eugeneWalkDown from '../assets/characters/eugene/walk-down.gif';
+import eugeneWalkLeft from '../assets/characters/eugene/walk-left.gif';
+import eugeneWalkRight from '../assets/characters/eugene/walk-right.gif';
+
+import alexStand from '../assets/characters/alex/stand.gif';
+import alexWalkUp from '../assets/characters/alex/walk-up.gif';
+import alexWalkDown from '../assets/characters/alex/walk-down.gif';
+import alexWalkLeft from '../assets/characters/alex/walk-left.gif';
+import alexWalkRight from '../assets/characters/alex/walk-right.gif';
+*/
+
+import louiseStand from '../assets/characters/louise/stand.gif';
+import louiseWalkUp from '../assets/characters/louise/walk-up.gif';
+import louiseWalkDown from '../assets/characters/louise/walk-down.gif';
+import louiseWalkLeft from '../assets/characters/louise/walk-left.gif';
+import louiseWalkRight from '../assets/characters/louise/walk-right.gif';
+
+// Import maps
+import allMap from '../assets/Maps/all-map.png';
+import foregroundMap from '../assets/Maps/all-map-foreground.png';
 import HouseInterior from './interiors/HouseInterior';
 
 // Define collision points using grid coordinates
@@ -150,6 +172,36 @@ const COLLISION_MAP = [
 ];
 
 const Game = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const character = location.state?.character;
+  const [isLoading, setIsLoading] = useState(true);
+  const [showCutscene, setShowCutscene] = useState(false);
+
+  // If no character is selected, redirect to main menu
+  useEffect(() => {
+    if (!character) {
+      navigate('/');
+    }
+  }, [character, navigate]);
+
+  // Initial loading effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+      // Show cutscene for new players
+      if (character && character !== 'saved') {
+        setShowCutscene(true);
+      }
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [character]);
+
+  const handleCutsceneComplete = () => {
+    setShowCutscene(false);
+  };
+
   const [position, setPosition] = useState({ x: 350, y: 150 });
   const [facing, setFacing] = useState('stand');
   const [isInInterior, setIsInInterior] = useState(false);
@@ -163,6 +215,61 @@ const Game = () => {
   const MAP_HEIGHT = 1800;
   const GRID_COLS = Math.floor(MAP_WIDTH / GRID_SIZE);
   const GRID_ROWS = Math.floor(MAP_HEIGHT / GRID_SIZE);
+
+  // Get character-specific sprites
+  const getCharacterSprites = () => {
+    switch (character.name.toLowerCase()) {
+      case 'eugene':
+        return {
+          stand: eugeneStand,
+          walkUp: eugeneWalkUp,
+          walkDown: eugeneWalkDown,
+          walkLeft: eugeneWalkLeft,
+          walkRight: eugeneWalkRight
+        };
+      case 'alex':
+        return {
+          stand: alexStand,
+          walkUp: alexWalkUp,
+          walkDown: alexWalkDown,
+          walkLeft: alexWalkLeft,
+          walkRight: alexWalkRight
+        };
+      case 'louise':
+        return {
+          stand: louiseStand,
+          walkUp: louiseWalkUp,
+          walkDown: louiseWalkDown,
+          walkLeft: louiseWalkLeft,
+          walkRight: louiseWalkRight
+        };
+      default:
+        return {
+          stand: eugeneStand,
+          walkUp: eugeneWalkUp,
+          walkDown: eugeneWalkDown,
+          walkLeft: eugeneWalkLeft,
+          walkRight: eugeneWalkRight
+        };
+    }
+  };
+
+  const characterSprites = getCharacterSprites();
+
+  const getSprite = () => {
+    switch (facing) {
+      case 'up':
+        return characterSprites.walkUp;
+      case 'down':
+        return characterSprites.walkDown;
+      case 'left':
+        return characterSprites.walkLeft;
+      case 'right':
+        return characterSprites.walkRight;
+      default:
+        return characterSprites.stand;
+    }
+  };
 
   // Convert pixel position to grid coordinates
   const getGridPosition = (x, y) => ({
@@ -230,21 +337,6 @@ const Game = () => {
   // Check if any part of the player collides with a collision point
   const hasCollision = (x, y) => {
     return COLLISION_MAP.some(point => checkCollision(x, y, point));
-  };
-
-  const getSprite = () => {
-    switch (facing) {
-      case 'up':
-        return playerWalkUp;
-      case 'down':
-        return playerWalkDown;
-      case 'left':
-        return playerWalkLeft;
-      case 'right':
-        return playerWalkRight;
-      default:
-        return playerStand;
-    }
   };
 
   // Teleport points
@@ -404,53 +496,76 @@ const Game = () => {
   };
 
   if (isInInterior) {
-    return <HouseInterior position={position} setPosition={setPosition} onExit={handleExitInterior} />;
+    return <HouseInterior position={position} setPosition={setPosition} onExit={handleExitInterior} character={character} />;
   }
 
   return (
-    <div className="game-container">
-      <div className="camera">
-        <div className="map" style={getCameraStyle()}>
-          <div 
-            className="map-background"
-            style={{
-              width: `${MAP_WIDTH}px`,
-              height: `${MAP_HEIGHT}px`,
-              backgroundImage: `url(${allMap})`,
-              backgroundSize: '100% 100%',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-            }}
-          />
-          <div className="grid" style={{ width: `${MAP_WIDTH}px`, height: `${MAP_HEIGHT}px` }}>
-            {renderGrid()}
+    <div className="relative w-full h-screen bg-black overflow-hidden">
+      {/* Loading Screen */}
+      <AnimatePresence mode="wait">
+        {isLoading && (
+          <div className="fixed inset-0 z-50">
+            <LoadingScreen />
           </div>
-          <div
-            className="player"
-            style={{
-              left: `${position.x}px`,
-              top: `${position.y}px`,
-              backgroundImage: `url(${getSprite()})`,
-              imageRendering: 'pixelated',
-            }}
-          />
-          <div 
-            className="map-foreground"
-            style={{
-              width: `${MAP_WIDTH}px`,
-              height: `${MAP_HEIGHT}px`,
-              backgroundImage: `url(${foregroundMap})`,
-              backgroundSize: '100% 100%',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              pointerEvents: 'none',
-              zIndex: 3,
-            }}
-          />
+        )}
+      </AnimatePresence>
+
+      {/* Cutscene */}
+      <AnimatePresence mode="wait">
+        {showCutscene && (
+          <div className="fixed inset-0 z-50">
+            <Cutscene onComplete={handleCutsceneComplete} />
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Rest of your game content */}
+      {!isLoading && !showCutscene && (
+        <div className="game-container">
+          <div className="camera">
+            <div className="map" style={getCameraStyle()}>
+              <div 
+                className="map-background"
+                style={{
+                  width: `${MAP_WIDTH}px`,
+                  height: `${MAP_HEIGHT}px`,
+                  backgroundImage: `url(${allMap})`,
+                  backgroundSize: '100% 100%',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                }}
+              />
+              <div className="grid" style={{ width: `${MAP_WIDTH}px`, height: `${MAP_HEIGHT}px` }}>
+                {renderGrid()}
+              </div>
+              <div
+                className="player"
+                style={{
+                  left: `${position.x}px`,
+                  top: `${position.y}px`,
+                  backgroundImage: `url(${getSprite()})`,
+                  imageRendering: 'pixelated',
+                }}
+              />
+              <div 
+                className="map-foreground"
+                style={{
+                  width: `${MAP_WIDTH}px`,
+                  height: `${MAP_HEIGHT}px`,
+                  backgroundImage: `url(${foregroundMap})`,
+                  backgroundSize: '100% 100%',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  pointerEvents: 'none',
+                  zIndex: 3,
+                }}
+              />
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

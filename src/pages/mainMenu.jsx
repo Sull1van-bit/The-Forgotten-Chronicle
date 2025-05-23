@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSound } from '../context/SoundContext';
 import { MusicProvider, useMusic } from '../context/MusicContext';
+import { AnimatePresence } from 'framer-motion';
 import backgroundVideo from '../assets/menu/background.mp4';
 import gameTitleImage from '../assets/menu/title.png';
 import buttonImage from '../assets/menu/button.png';
@@ -9,13 +11,11 @@ import Credits from '../components/Credits';
 import Settings from '../components/Settings';
 import MusicPrompt from '../components/MusicPrompt';
 import CharacterSelection from '../components/CharacterSelection';
-import Loader from '../components/Loader';
-
-// TODO: Import Firebase auth hooks and context if using a provider
-// import { useAuth } from '../context/AuthContext';
+import LoadingScreen from '../components/LoadingScreen';
 
 // Wrapper component that uses the music context
 function MainMenuContent() {
+  const navigate = useNavigate();
   const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume, playClick, playHover } = useSound();
   const { setMusicEnabled, startMusicPlayback, musicEnabled, musicVolume, setMusicVolume } = useMusic();
   const videoRef = useRef(null);
@@ -45,13 +45,6 @@ function MainMenuContent() {
     return () => clearTimeout(demoLoginTimer);
   }, []);
 
-  // Remove local login handler
-  // const handleLogin = (isNew) => {
-  //   setIsNewPlayer(isNew);
-  //   setIsLoggedIn(true);
-  //   setShowLogin(false);
-  // };
-
   const handleMusicAccept = () => {
     startMusicPlayback();
     setShowMusicPrompt(false);
@@ -64,26 +57,29 @@ function MainMenuContent() {
 
   const handleNewGame = () => {
     playClick();
-    setIsLoading(true);
-    setTimeout(() => {
-      setShowCharacterSelection(true);
-      setIsLoading(false);
-    }, 1000); // Show loader for 1 second
+    setShowCharacterSelection(true);
   };
 
   const handleCharacterSelect = (character) => {
     playClick();
     console.log('Selected character:', character);
-    setTimeout(() => {
+    setIsLoading(true);
     setShowCharacterSelection(false);
-    }, 100);
-    // TODO: Start the game with the selected character
+    
+    // Add a small delay before navigation to ensure loading screen is visible
+    setTimeout(() => {
+      navigate('/game', { state: { character } });
+    }, 2000);
   };
 
   const handleLoadGame = () => {
     playClick();
     console.log('Loading saved game');
-    // TODO: Implement load game logic
+    setIsLoading(true);
+    setTimeout(() => {
+      // TODO: Implement load game logic
+      navigate('/game', { state: { character: 'saved' } });
+    }, 2000);
   };
 
   const handleSettings = () => {
@@ -142,15 +138,17 @@ function MainMenuContent() {
         />
       )}
 
-      {/* Loading State */}
-      {isLoading && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-          <Loader />
-        </div>
-      )}
+      {/* Loading Screen - Only show during character selection transition */}
+      <AnimatePresence mode="wait">
+        {isLoading && (
+          <div className="fixed inset-0 z-50">
+            <LoadingScreen />
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Character Selection */}
-      {showCharacterSelection && (
+      {showCharacterSelection && !isLoading && (
         <div className="fixed inset-0 z-30 transition-opacity duration-200">
           <CharacterSelection
             onSelect={handleCharacterSelect}
@@ -255,11 +253,7 @@ function MainMenuContent() {
   );
 }
 
-// Main component that provides the music context
+// Main component
 export default function MainMenu() {
-  return (
-    <MusicProvider>
-      <MainMenuContent />
-    </MusicProvider>
-  );
+  return <MainMenuContent />;
 }

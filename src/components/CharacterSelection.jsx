@@ -18,7 +18,6 @@ export default function CharacterSelection({ onSelect, onClose }) {
   const { playExit, playHover } = useSound();
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [characterToConfirm, setCharacterToConfirm] = useState(null);
-  const [selectedCharacter, setSelectedCharacter] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const carouselRef = useRef(null);
   const [carouselRadius, setCarouselRadius] = useState(0);
@@ -26,7 +25,7 @@ export default function CharacterSelection({ onSelect, onClose }) {
   useEffect(() => {
     if (carouselRef.current) {
       const computedStyle = getComputedStyle(carouselRef.current);
-      const radius = parseFloat(computedStyle.getPropertyValue('--radius')) || 300; // Default to 300 if not found
+      const radius = parseFloat(computedStyle.getPropertyValue('--radius')) || 250; // Default to 250 if not found
       setCarouselRadius(radius);
     }
   }, [carouselRef]);
@@ -59,12 +58,14 @@ export default function CharacterSelection({ onSelect, onClose }) {
   ];
 
   const handlePrev = () => {
+    playHover();
     setCurrentIndex((prevIndex) => 
       prevIndex === 0 ? characters.length - 1 : prevIndex - 1
     );
   };
 
   const handleNext = () => {
+    playHover();
     setCurrentIndex((prevIndex) => 
       prevIndex === characters.length - 1 ? 0 : prevIndex + 1
     );
@@ -116,13 +117,13 @@ export default function CharacterSelection({ onSelect, onClose }) {
         {/* Navigation Buttons */}
         <button
           onClick={handlePrev}
-          className="absolute left-4 z-20 p-2 rounded-full bg-black bg-opacity-50 text-white hover:bg-opacity-75 transition-all"
+          className="absolute left-4 z-20 p-4 rounded-full bg-black bg-opacity-50 text-white hover:bg-opacity-75 transition-all hover:scale-110"
         >
           ←
         </button>
         <button
           onClick={handleNext}
-          className="absolute right-4 z-20 p-2 rounded-full bg-black bg-opacity-50 text-white hover:bg-opacity-75 transition-all"
+          className="absolute right-4 z-20 p-4 rounded-full bg-black bg-opacity-50 text-white hover:bg-opacity-75 transition-all hover:scale-110"
         >
           →
         </button>
@@ -252,7 +253,7 @@ export default function CharacterSelection({ onSelect, onClose }) {
 
       <style jsx>{`
         :root {
-          --card-height: 250px;
+          --card-height: 250px; /* Adjusted card height */
           --card-width: calc(var(--card-height) * 1.5);
           --radius: 250px;
         }
@@ -355,7 +356,7 @@ export default function CharacterSelection({ onSelect, onClose }) {
             to bottom,
             transparent 46%,
             rgba(12, 13, 19, 0.5) 68%,
-            rgba(12, 13, 19) 97%
+            rgba(12, 13, 19) 97%,
           );
           border-radius: 5px;
         }
@@ -374,19 +375,19 @@ export default function CharacterSelection({ onSelect, onClose }) {
           transform: translate3d(0%, -40px, 100px);
         }
         .character {
-          width: 60%; /* Adjusted width to make character image a little smaller */
+          width: 60%; /* Set a consistent width for all characters */
           opacity: 0;
           transition: all 0.5s;
           position: absolute;
           left: 50%; /* Center horizontally */
-          transform: translateX(-50%); /* Keep centered horizontally regardless of size */
+          transform: translateX(-50%) translateY(0%); /* Keep centered horizontally regardless of size, base vertical position */
           z-index: -1;
         }
         .card:hover .character {
           opacity: 1;
           transform: translate3d(-50%, -30%, 100px); /* Corrected hover transform */
         }
-        /* Removed specific character image adjustments for Eugene and Louise */
+        /* Removed specific character image adjustments for Eugene and Louise to ensure consistent sizing */
         /* Text styling */
         .title h3 {
           color: #ffffff;
@@ -412,15 +413,20 @@ export default function CharacterSelection({ onSelect, onClose }) {
 }
 
 // Wrapper component that uses the music context
-function MainMenuContent() {
-  // ... existing code ...
+function MainMenuContent({ onCharacterSelect }) {
+  return (
+    <CharacterSelection
+      onSelect={onCharacterSelect}
+      onClose={() => console.log('Character selection closed')}
+    />
+  );
 }
 
 // Main component that provides the music context
-export function MainMenu() {
+export function MainMenu({ onCharacterSelect }) {
   return (
     <MusicProvider>
-      <MainMenuContent />
+      <MainMenuContent onCharacterSelect={onCharacterSelect} />
     </MusicProvider>
   );
 } 

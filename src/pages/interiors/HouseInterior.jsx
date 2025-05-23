@@ -1,10 +1,23 @@
 import React, { useState } from 'react';
-import houseInside from '../../interior/house-inside.png';
-import playerStand from '../../Character/player-a-stand.gif';
-import playerWalkUp from '../../Character/player-a-wu.gif';
-import playerWalkDown from '../../Character/player-a-wd.gif';
-import playerWalkLeft from '../../Character/player-a-wl.gif';
-import playerWalkRight from '../../Character/player-a-wr.gif';
+import houseInside from '../../assets/Interior/house-inside.png';
+// Import character sprites
+/*import eugeneStand from '../../assets/characters/eugene/stand.gif';
+import eugeneWalkUp from '../../assets/characters/eugene/walk-up.gif';
+import eugeneWalkDown from '../../assets/characters/eugene/walk-down.gif';
+import eugeneWalkLeft from '../../assets/characters/eugene/walk-left.gif';
+import eugeneWalkRight from '../../assets/characters/eugene/walk-right.gif';
+
+import alexStand from '../../assets/characters/alex/stand.gif';
+import alexWalkUp from '../../assets/characters/alex/walk-up.gif';
+import alexWalkDown from '../../assets/characters/alex/walk-down.gif';
+import alexWalkLeft from '../../assets/characters/alex/walk-left.gif';
+import alexWalkRight from '../../assets/characters/alex/walk-right.gif';
+*/
+import louiseStand from '../../assets/characters/louise/stand.gif';
+import louiseWalkUp from '../../assets/characters/louise/walk-up.gif';
+import louiseWalkDown from '../../assets/characters/louise/walk-down.gif';
+import louiseWalkLeft from '../../assets/characters/louise/walk-left.gif';
+import louiseWalkRight from '../../assets/characters/louise/walk-right.gif';
 
 // Define collision points for interior
 const INTERIOR_COLLISION_MAP = [
@@ -26,7 +39,7 @@ const INTERIOR_COLLISION_MAP = [
 
 ];
 
-const HouseInterior = ({ position, setPosition, onExit }) => {
+const HouseInterior = ({ position, setPosition, onExit, character }) => {
   const [facing, setFacing] = useState('stand');
   const INTERIOR_WIDTH = 800;
   const INTERIOR_HEIGHT = 600;
@@ -34,6 +47,61 @@ const HouseInterior = ({ position, setPosition, onExit }) => {
   const PLAYER_SIZE = 26;
   const GRID_COLS = Math.floor(INTERIOR_WIDTH / GRID_SIZE);
   const GRID_ROWS = Math.floor(INTERIOR_HEIGHT / GRID_SIZE);
+
+  // Get character-specific sprites
+  const getCharacterSprites = () => {
+    switch (character.name.toLowerCase()) {
+      case 'eugene':
+        return {
+          stand: eugeneStand,
+          walkUp: eugeneWalkUp,
+          walkDown: eugeneWalkDown,
+          walkLeft: eugeneWalkLeft,
+          walkRight: eugeneWalkRight
+        };
+      case 'alex':
+        return {
+          stand: alexStand,
+          walkUp: alexWalkUp,
+          walkDown: alexWalkDown,
+          walkLeft: alexWalkLeft,
+          walkRight: alexWalkRight
+        };
+      case 'louise':
+        return {
+          stand: louiseStand,
+          walkUp: louiseWalkUp,
+          walkDown: louiseWalkDown,
+          walkLeft: louiseWalkLeft,
+          walkRight: louiseWalkRight
+        };
+      default:
+        return {
+          stand: eugeneStand,
+          walkUp: eugeneWalkUp,
+          walkDown: eugeneWalkDown,
+          walkLeft: eugeneWalkLeft,
+          walkRight: eugeneWalkRight
+        };
+    }
+  };
+
+  const characterSprites = getCharacterSprites();
+
+  const getSprite = () => {
+    switch (facing) {
+      case 'up':
+        return characterSprites.walkUp;
+      case 'down':
+        return characterSprites.walkDown;
+      case 'left':
+        return characterSprites.walkLeft;
+      case 'right':
+        return characterSprites.walkRight;
+      default:
+        return characterSprites.stand;
+    }
+  };
 
   // Check collision based on type
   const checkCollision = (playerX, playerY, collisionPoint) => {
@@ -91,21 +159,6 @@ const HouseInterior = ({ position, setPosition, onExit }) => {
   // Check if any collision occurs
   const hasCollision = (x, y) => {
     return INTERIOR_COLLISION_MAP.some(point => checkCollision(x, y, point));
-  };
-
-  const getSprite = () => {
-    switch (facing) {
-      case 'up':
-        return playerWalkUp;
-      case 'down':
-        return playerWalkDown;
-      case 'left':
-        return playerWalkLeft;
-      case 'right':
-        return playerWalkRight;
-      default:
-        return playerStand;
-    }
   };
 
   // Handle exit point (door) collision
