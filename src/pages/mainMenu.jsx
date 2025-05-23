@@ -62,13 +62,17 @@ function MainMenuContent() {
 
   const handleNewGame = () => {
     playClick();
-    setShowCharacterSelection(true);
+    setTimeout(() => {
+      setShowCharacterSelection(true);
+    }, 100);
   };
 
   const handleCharacterSelect = (character) => {
     playClick();
     console.log('Selected character:', character);
-    setShowCharacterSelection(false);
+    setTimeout(() => {
+      setShowCharacterSelection(false);
+    }, 100);
     // TODO: Start the game with the selected character
   };
 
@@ -136,10 +140,12 @@ function MainMenuContent() {
 
       {/* Character Selection */}
       {showCharacterSelection && (
-        <CharacterSelection
-          onSelect={handleCharacterSelect}
-          onClose={() => setShowCharacterSelection(false)}
-        />
+        <div className="fixed inset-0 z-30 transition-opacity duration-200">
+          <CharacterSelection
+            onSelect={handleCharacterSelect}
+            onClose={() => setShowCharacterSelection(false)}
+          />
+        </div>
       )}
 
       {/* Main Menu */}

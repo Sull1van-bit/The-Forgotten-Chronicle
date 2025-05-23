@@ -276,8 +276,8 @@ class Media {
       }
     }
     this.scale = this.screen.height / 1500;
-    this.plane.scale.y = (this.viewport.height * (1200 * this.scale)) / this.screen.height;
-    this.plane.scale.x = (this.viewport.width * (900 * this.scale)) / this.screen.width;
+    this.plane.scale.y = (this.viewport.height * (800 * this.scale)) / this.screen.height;
+    this.plane.scale.x = (this.viewport.width * (600 * this.scale)) / this.screen.width;
     this.plane.program.uniforms.uPlaneSizes.value = [this.plane.scale.x, this.plane.scale.y];
     this.padding = 2;
     this.width = this.plane.scale.x + this.padding;
@@ -290,7 +290,7 @@ class App {
   constructor(container, { items, bend, textColor = "#ffffff", borderRadius = 0, font, onCenteredCardChange, onCardClick } = {}) {
     document.documentElement.classList.remove('no-js');
     this.container = container;
-    this.scroll = { ease: 0.05, current: 0, target: 0, last: 0 };
+    this.scroll = { ease: 0.02, current: 0, target: 0, last: 0 };
     this.onCheckDebounce = debounce(this.onCheck, 200);
     this.createRenderer();
     this.createCamera();
@@ -304,6 +304,7 @@ class App {
     this.onCardClick = onCardClick;
     this.centeredCardIndex = -1;
     this.isDragging = false;
+    this.isUpdating = false;
   }
 
   createRenderer() {
@@ -317,6 +318,7 @@ class App {
     this.camera = new Camera(this.gl);
     this.camera.fov = 35;
     this.camera.position.z = 35;
+    this.camera.position.y = -4;
   }
 
   createScene() {
@@ -368,67 +370,71 @@ class App {
     const x = e.clientX || e.touches[0].clientX;
     const delta = x - this.start;
     this.velocity = delta;
-    this.scroll.target -= delta * 1.3;
+    this.scroll.target -= delta * 0.3;
     this.start = x;
   }
 
   onTouchUp() {
     this.isDown = false;
     this.container.classList.remove('is-down');
-    this.checkSwipe();
   }
 
   onWheel(e) {
     const normalized = e.pixelY || e.deltaY;
-    this.momentum = normalized * 0.01;
+    this.momentum = normalized * 0.003;
     this.scroll.target += normalized;
   }
 
   onCheck() {
     if (!this.medias || !this.medias[0]) return;
     const width = this.medias[0].width;
-    const centerScroll = this.scroll.current;
-    const totalWidth = this.medias[0].widthTotal;
     const numOriginalItems = this.mediasImages.length;
-    
-    let closestIndex = -1;
-    let minDistance = Infinity;
 
-    for (let i = 0; i < this.medias.length; i++) {
-        const media = this.medias[i];
-        const screenPosition = media.plane.position.clone().project(this.camera);
-         const viewportCenter = this.viewport.width / 2;
-        const distanceToCenter = Math.abs(screenPosition.x);
+    // Calculate the index based on the eased scroll current
+    const targetIndexFloat = (this.scroll.current + width / 2) / width;
+    let targetIndex = Math.floor(targetIndexFloat);
 
-        if (distanceToCenter < minDistance) {
-            minDistance = distanceToCenter;
-            closestIndex = i % numOriginalItems;
-        }
+    // Adjust for negative scroll current to get correct index
+    if (this.scroll.current < 0) {
+        targetIndex = Math.floor((this.scroll.current - width / 2) / width);
     }
 
-    if (closestIndex !== -1 && closestIndex !== this.centeredCardIndex) {
-         this.centeredCardIndex = closestIndex;
-         const centeredItemData = this.mediasImages[this.centeredCardIndex];
+    // Use modulo to get the index within the original set of items
+    const centeredIndex = (targetIndex % numOriginalItems + numOriginalItems) % numOriginalItems;
 
-         const visuallyCenteredMedia = this.medias.find(media => (media.index % numOriginalItems) === this.centeredCardIndex && Math.abs(media.plane.position.x) < this.medias[0].width / 2);
-         if(visuallyCenteredMedia) {
-             const screenPosition = visuallyCenteredMedia.plane.position.clone().project(this.camera);
-             const canvasRect = this.renderer.gl.canvas.getBoundingClientRect();
-             const screenX = canvasRect.left + (screenPosition.x * 0.5 + 0.5) * canvasRect.width;
-             const screenY = canvasRect.top + (screenPosition.y * -0.5 + 0.5) * canvasRect.height;
+    // Add stabilization - only update if we're close enough to the center
+    const distanceFromCenter = Math.abs(this.scroll.current - (targetIndex * width));
+    const isStable = distanceFromCenter < width * 0.1; // Only consider stable if within 10% of card width
 
-              if (this.onCenteredCardChange) {
+    if (centeredIndex !== -1 && isStable) {
+        // Only update if the centered index has actually changed and we're stable
+        if (centeredIndex !== this.centeredCardIndex) {
+            this.centeredCardIndex = centeredIndex;
+            const centeredItemData = this.mediasImages[this.centeredCardIndex];
+
+            // Find the currently visually centered media instance
+            const visuallyCenteredMedia = this.medias.find(media => 
+                (media.index % numOriginalItems) === this.centeredCardIndex && 
+                Math.abs(media.plane.position.x) < this.viewport.width
+            );
+
+            if (visuallyCenteredMedia && this.onCenteredCardChange) {
+                const screenPosition = visuallyCenteredMedia.plane.position.clone();
+                this.camera.project(screenPosition);
+
+                const canvasRect = this.renderer.gl.canvas.getBoundingClientRect();
+                const screenX = canvasRect.left + (screenPosition.x * 0.5 + 0.5) * canvasRect.width;
+                const screenY = canvasRect.top + (screenPosition.y * -0.5 + 0.5) * canvasRect.height;
+
                 this.onCenteredCardChange(centeredItemData, { x: screenX, y: screenY });
-              }
-         }
-    }
-
-    const itemIndexTarget = Math.round(Math.abs(this.scroll.target) / width);
-    const itemTarget = width * itemIndexTarget;
-    this.scroll.target = this.scroll.target < 0 ? -itemTarget : itemTarget;
-
-    if (this.playHover) {
-      this.playHover();
+            }
+        }
+    } else if (this.centeredCardIndex !== -1 && !isStable) {
+        // Only clear if we were previously stable and now we're not
+        this.centeredCardIndex = -1;
+        if (this.onCenteredCardChange) {
+            this.onCenteredCardChange(null, null);
+        }
     }
   }
 
@@ -453,17 +459,30 @@ class App {
   }
 
   update() {
+    if (this.isUpdating) return;
+    this.isUpdating = true;
+
     this.scroll.current = lerp(
       this.scroll.current,
       this.scroll.target,
       this.scroll.ease
     );
+
     const direction = this.scroll.current > this.scroll.last ? 'right' : 'left';
+    
     if (this.medias) {
       this.medias.forEach((media) => media.update(this.scroll, direction));
     }
+
+    // Only check for centered card when actually moving
+    if (Math.abs(this.scroll.current - this.scroll.last) > 0.1) {
+      this.onCheckDebounce();
+    }
+
     this.renderer.render({ scene: this.scene, camera: this.camera });
     this.scroll.last = this.scroll.current;
+    
+    this.isUpdating = false;
     this.raf = window.requestAnimationFrame(this.update.bind(this));
   }
 
@@ -492,21 +511,31 @@ class App {
           return;
       }
 
-      const hit = this.renderer.render({ scene: this.scene, camera: this.camera, checkBounds: false, x: e.clientX, y: this.renderer.canvas.height - e.clientY });
+      if (!this.renderer || !this.renderer.gl || !this.renderer.gl.canvas) {
+          return;
+      }
+
+      const hit = this.renderer.render({ 
+          scene: this.scene, 
+          camera: this.camera, 
+          checkBounds: false, 
+          x: e.clientX, 
+          y: this.renderer.gl.canvas.height - e.clientY 
+      });
 
       if (hit) {
           const clickedMedia = this.medias.find(media => media.plane === hit.object);
           if (clickedMedia) {
               const numOriginalItems = this.mediasImages.length;
-               const clickedOriginalIndex = clickedMedia.index % numOriginalItems;
-
-               if (clickedOriginalIndex === this.centeredCardIndex && this.onCardClick) {
-                   const clickedItemData = this.mediasImages[clickedOriginalIndex];
-                   this.onCardClick(clickedItemData);
-               }
+              const clickedOriginalIndex = clickedMedia.index % numOriginalItems;
+              const clickedItemData = this.mediasImages[clickedOriginalIndex];
+              
+              if (this.onCardClick) {
+                  this.onCardClick(clickedItemData);
+              }
           }
       }
-       this.isDragging = false;
+      this.isDragging = false;
   }
 
   destroy() {
@@ -527,6 +556,8 @@ class App {
   }
 }
 
+export { App };
+
 export default function CircularGallery({
   items,
   bend = 3,
@@ -537,22 +568,70 @@ export default function CircularGallery({
   onCardClick
 }) {
   const containerRef = useRef(null);
+  const appInstanceRef = useRef(null);
   const { playHover } = useSound();
 
   useEffect(() => {
-    const itemsWithOverlay = items.map(item => ({
-      ...item,
-      overlayImage: item.overlayImage || '',
-    }));
+    console.log('CircularGallery useEffect triggered with items:', items);
 
-    const app = new App(containerRef.current, { items: itemsWithOverlay, bend, textColor, borderRadius, font, onCenteredCardChange, onCardClick });
-    app.playHover = playHover;
+    if (!containerRef.current || items.length === 0) {
+      console.log('CircularGallery useEffect: Container not ready or items empty. Skipping App initialization.');
+      return;
+    }
+
+    // Only create a new instance if one doesn't exist
+    if (!appInstanceRef.current) {
+      console.log('CircularGallery useEffect: Initializing new App instance.');
+      const itemsWithOverlay = items.map(item => ({
+        ...item,
+        overlayImage: item.overlayImage || '',
+      }));
+
+      const app = new App(containerRef.current, { 
+        items: itemsWithOverlay, 
+        bend, 
+        textColor, 
+        borderRadius, 
+        font, 
+        onCenteredCardChange, 
+        onCardClick 
+      });
+      app.playHover = playHover;
+      appInstanceRef.current = app;
+    } else {
+      // Update existing instance with new items
+      console.log('CircularGallery useEffect: Updating existing App instance.');
+      appInstanceRef.current.mediasImages = items.map(item => ({
+        ...item,
+        overlayImage: item.overlayImage || '',
+      }));
+      appInstanceRef.current.createMedias(items, bend, textColor, borderRadius, font);
+    }
+
     return () => {
-      app.destroy();
+      console.log('CircularGallery useEffect cleanup: Destroying App instance.');
+      if (appInstanceRef.current) {
+        appInstanceRef.current.destroy();
+        appInstanceRef.current = null;
+      }
     };
   }, [items, bend, textColor, borderRadius, font, playHover, onCenteredCardChange, onCardClick]);
 
   return (
-    <div className='w-full h-full cursor-grab active:cursor-grabbing' ref={containerRef} />
+    <div className='w-full h-full cursor-grab active:cursor-grabbing' ref={containerRef}>
+      {/* Center Marker */}
+      <div
+        style={{
+          position: 'absolute',
+          left: '50%',
+          top: '0',
+          bottom: '0',
+          width: '2px',
+          backgroundColor: 'red',
+          zIndex: 9999,
+          transform: 'translateX(-50%)'
+        }}
+      ></div>
+    </div>
   );
 } 
