@@ -6,20 +6,8 @@ import { AnimatePresence } from 'framer-motion';
 import LoadingScreen from '../components/LoadingScreen';
 import Cutscene from '../components/Cutscene';
 import '../styles/Game.css';
+
 // Import character sprites
-/*import eugeneStand from '../assets/characters/eugene/stand.gif';
-import eugeneWalkUp from '../assets/characters/eugene/walk-up.gif';
-import eugeneWalkDown from '../assets/characters/eugene/walk-down.gif';
-import eugeneWalkLeft from '../assets/characters/eugene/walk-left.gif';
-import eugeneWalkRight from '../assets/characters/eugene/walk-right.gif';
-
-import alexStand from '../assets/characters/alex/stand.gif';
-import alexWalkUp from '../assets/characters/alex/walk-up.gif';
-import alexWalkDown from '../assets/characters/alex/walk-down.gif';
-import alexWalkLeft from '../assets/characters/alex/walk-left.gif';
-import alexWalkRight from '../assets/characters/alex/walk-right.gif';
-*/
-
 import louiseStand from '../assets/characters/louise/stand.gif';
 import louiseWalkUp from '../assets/characters/louise/walk-up.gif';
 import louiseWalkDown from '../assets/characters/louise/walk-down.gif';
@@ -67,7 +55,6 @@ const COLLISION_MAP = [
   {x: 43, y: 39, type: 'half-bottom'},
   {x: 44, y: 39, type: 'half-bottom'},
 
-
   { x: 29, y: 7, type: 'half-right' },   
   { x: 29, y: 8, type: 'half-right' },   
   { x: 29, y: 9, type: 'half-right' },   
@@ -76,8 +63,6 @@ const COLLISION_MAP = [
   { x: 14, y: 37, type: 'half-bottom' },
   { x: 8, y: 35, type: 'half-left' },
   { x: 35, y: 36, type: 'half-right' },
-  // { x: 30, y: 37, type: 'half-bottom' },
-  // { x: 23, y: 42, type: 'half-left' },
   {x: 36, y: 35, type: 'half-right'},
   {x: 37, y: 35, type: 'full'},
   {x: 42, y: 34, type: 'half-right'},
@@ -88,14 +73,12 @@ const COLLISION_MAP = [
   {x: 10, y: 27, type: 'half-left'},
   {x: 8, y: 27, type: 'half-right'},
 
-
   // ujung map
   ...Array.from({ length: 60 }, (_, i) => ({ x: i , y: 0, type: 'half-top' })), // atas
   ...Array.from({ length: 60 }, (_, i) => ({ x: i , y: 44, type: 'half-bottom' })), // bawah
   ...Array.from({ length: 60 }, (_, i) => ({ x: 59 , y: i, type: 'half-right' })), // kanan
   ...Array.from({ length: 60 }, (_, i) => ({ x: 0 , y: i, type: 'half-left' })), // kiri
-// end ujung map
-
+  // end ujung map
 
   // jembatan uhuy
   ...Array.from({ length: 3 }, (_, i) => ({ x: 41 , y: i+36, type: 'half-right' })),
@@ -107,7 +90,6 @@ const COLLISION_MAP = [
   ...Array.from({ length: 2 }, (_, i) => ({ x: 42 , y: i+20, type: 'half-left'  })),
   ...Array.from({ length: 3 }, (_, i) => ({ x: 44 , y: i+20, type: 'half-right'  })),
   // end jembatan uhuy
-
 
   // buat danau + air (full collision)
   ...Array.from({ length: 3 }, (_, i) => ({ x: i+36 , y: 36, type: 'full' })),
@@ -166,9 +148,7 @@ const COLLISION_MAP = [
   ...Array.from({ length: 3 }, (_, i) => ({ x: i+47 , y: 34  , type: 'full' })), 
   ...Array.from({ length: 5 }, (_, i) => ({ x: 53 , y: i+26  , type: 'half-left' })), 
   ...Array.from({ length: 2 }, (_, i) => ({ x: 52 , y: i+31  , type: 'half-right' })), 
-
   // end buat danau + air
-
 ];
 
 const Game = () => {
@@ -177,6 +157,13 @@ const Game = () => {
   const character = location.state?.character;
   const [isLoading, setIsLoading] = useState(true);
   const [showCutscene, setShowCutscene] = useState(false);
+
+  // Status effects states
+  const [health, setHealth] = useState(100);
+  const [energy, setEnergy] = useState(100);
+  const [hunger, setHunger] = useState(100);
+  const [happiness, setHappiness] = useState(100);
+  const [money, setMoney] = useState(0);
 
   // If no character is selected, redirect to main menu
   useEffect(() => {
@@ -197,6 +184,25 @@ const Game = () => {
 
     return () => clearTimeout(timer);
   }, [character]);
+
+  // Status effects decay over time
+  useEffect(() => {
+    const decayInterval = setInterval(() => {
+      setHealth(prev => Math.max(0, prev - 0.1)); // Health decreases slowly
+      setEnergy(prev => Math.max(0, prev - 0.2)); // Energy decreases faster
+      setHunger(prev => Math.max(0, prev - 0.3)); // Hunger decreases
+      setHappiness(prev => Math.max(0, prev - 0.1)); // Happiness decreases slowly
+    }, 1000); // Every second
+
+    return () => clearInterval(decayInterval);
+  }, []);
+
+  // Affect happiness based on hunger and health
+  useEffect(() => {
+    if (hunger < 30 || health < 30) {
+      setHappiness(prev => Math.max(0, prev - 0.5));
+    }
+  }, [hunger, health]);
 
   const handleCutsceneComplete = () => {
     setShowCutscene(false);
@@ -286,7 +292,6 @@ const Game = () => {
 
     switch (collisionPoint.type) {
       case 'full':
-        // Full grid collision check
         return (
           playerX < gridX + GRID_SIZE &&
           playerX + PLAYER_SIZE > gridX &&
@@ -303,7 +308,6 @@ const Game = () => {
         );
 
       case 'half-bottom':
-        // Only bottom half of the grid has collision
         return (
           playerX < gridX + GRID_SIZE &&
           playerX + PLAYER_SIZE > gridX &&
@@ -312,7 +316,6 @@ const Game = () => {
         );
 
       case 'half-left':
-        // Only left half of the grid has collision
         return (
           playerX < gridX + (GRID_SIZE / 2) &&
           playerX + PLAYER_SIZE > gridX &&
@@ -321,7 +324,6 @@ const Game = () => {
         );
 
       case 'half-right':
-        // Only right half of the grid has collision
         return (
           playerX < gridX + GRID_SIZE &&
           playerX + PLAYER_SIZE > gridX + (GRID_SIZE / 2) &&
@@ -365,7 +367,6 @@ const Game = () => {
   // Handle exit from interior
   const handleExitInterior = (spawnPoint) => {
     setIsInInterior(false);
-    // Convert grid coordinates to pixel coordinates
     setPosition({ 
       x: spawnPoint.x * GRID_SIZE, 
       y: spawnPoint.y * GRID_SIZE 
@@ -374,10 +375,13 @@ const Game = () => {
 
   useEffect(() => {
     const handleKeyPress = (e) => {
-      if (isInInterior) return; // Let interior handle its own movement
+      if (isInInterior) return;
 
       let newX = position.x;
       let newY = position.y;
+
+      // Reduce energy when moving
+      const energyCost = 0.5;
 
       switch (e.key.toLowerCase()) {
         case 'w':
@@ -389,6 +393,7 @@ const Game = () => {
               ...prev, 
               y: Math.max(0, newY)
             }));
+            setEnergy(prev => Math.max(0, prev - energyCost));
             checkTeleport(newX, newY);
           }
           break;
@@ -401,6 +406,7 @@ const Game = () => {
               ...prev, 
               y: Math.min(MAP_HEIGHT - PLAYER_SIZE, newY)
             }));
+            setEnergy(prev => Math.max(0, prev - energyCost));
             checkTeleport(newX, newY);
           }
           break;
@@ -413,6 +419,7 @@ const Game = () => {
               ...prev, 
               x: Math.max(0, newX)
             }));
+            setEnergy(prev => Math.max(0, prev - energyCost));
             checkTeleport(newX, newY);
           }
           break;
@@ -425,6 +432,7 @@ const Game = () => {
               ...prev, 
               x: Math.min(MAP_WIDTH - PLAYER_SIZE, newX)
             }));
+            setEnergy(prev => Math.max(0, prev - energyCost));
             checkTeleport(newX, newY);
           }
           break;
@@ -434,7 +442,6 @@ const Game = () => {
     };
 
     const handleKeyUp = (e) => {
-      // Hanya set facing ke 'stand' jika key yang dilepas adalah WASD atau arrow key
       const movementKeys = ['w', 's', 'a', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
       if (movementKeys.includes(e.key.toLowerCase())) {
         setFacing('stand');
@@ -450,15 +457,10 @@ const Game = () => {
   }, [position, isInInterior]);
 
   const getCameraStyle = () => {
-    // Calculate the center position of the viewport
     const viewportCenterX = window.innerWidth / 2;
     const viewportCenterY = window.innerHeight / 2;
-
-    // Calculate the player's center position
     const playerCenterX = position.x + (PLAYER_SIZE / 2);
     const playerCenterY = position.y + (PLAYER_SIZE / 2);
-
-    // Calculate the translation needed to center the player
     const translateX = viewportCenterX - (playerCenterX * scale);
     const translateY = viewportCenterY - (playerCenterY * scale);
     
@@ -501,6 +503,37 @@ const Game = () => {
 
   return (
     <div className="relative w-full h-screen bg-black overflow-hidden">
+      {/* Status Effects UI */}
+      <div className="absolute top-4 left-4 z-50 flex flex-col gap-2 text-white">
+        <div className="flex items-center gap-2">
+          <span>❤️ Health: {Math.round(health)}</span>
+          <div className="w-24 h-4 bg-gray-700 rounded">
+            <div className="h-full bg-red-500 rounded" style={{ width: `${health}%` }}></div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span>⚡ Energy: {Math.round(energy)}</span>
+          <div className="w-24 h-4 bg-gray-700 rounded">
+            <div className="h-full bg-blue-500 rounded" style={{ width: `${energy}%` }}></div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span>🍽️ Hunger: {Math.round(hunger)}</span>
+          <div className="w-24 h-4 bg-gray-700 rounded">
+            <div className="h-full bg-yellow-500 rounded" style={{ width: `${hunger}%` }}></div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span>😊 Happiness: {Math.round(happiness)}</span>
+          <div className="w-24 h-4 bg-gray-700 rounded">
+            <div className="h-full bg-green-500 rounded" style={{ width: `${happiness}%` }}></div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span>💰 Money: {money}</span>
+        </div>
+      </div>
+
       {/* Loading Screen */}
       <AnimatePresence mode="wait">
         {isLoading && (
@@ -548,7 +581,7 @@ const Game = () => {
                   imageRendering: 'pixelated',
                 }}
               />
-              <div 
+              <div  
                 className="map-foreground"
                 style={{
                   width: `${MAP_WIDTH}px`,
@@ -570,4 +603,4 @@ const Game = () => {
   );
 };
 
-export default Game; 
+export default Game;
