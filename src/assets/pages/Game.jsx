@@ -7,6 +7,7 @@ import playerWalkLeft from '../../assets/Character/player-a-wl.gif';
 import playerWalkRight from '../../assets/Character/player-a-wr.gif';
 import allMap from '../../assets/maps/all-map.png';
 import foregroundMap from '../../assets/maps/all-map-foreground.png';
+import HouseInterior from './interiors/HouseInterior';
 
 // Define collision points using grid coordinates
 const COLLISION_MAP = [
@@ -14,12 +15,35 @@ const COLLISION_MAP = [
   ...Array.from({ length: 10 }, (_, i) => ({ x: 30, y: i, type: 'full' })),
   ...Array.from({ length: 8 }, (_, i) => ({ x: 31, y: i, type: 'full' })),
   ...Array.from({ length: 3 }, (_, i) => ({ x: 32, y: i, type: 'full' })),
-
-  // Contoh partial collision
-  // { x: 33, y: 5, type: 'half-top' },    // Setengah atas
-  // { x: 33, y: 6, type: 'half-bottom' }, // Setengah bawah
-  // { x: 29, y: 7, type: 'half-right' },   // Setengah kiri
-  // { x: 34, y: 6, type: 'half-left' },  // Setengah kanan
+  
+  // pagar
+  ...Array.from({ length: 4 }, (_, i) => ({ x: i+1, y: 2, type: 'half-bottom' })),
+  ...Array.from({ length: 4 }, (_, i) => ({ x: i+2, y: 4, type: 'half-bottom' })),
+  ...Array.from({ length: 2 }, (_, i) => ({ x: 6, y: i+3, type: 'half-left' })),
+  {x: 1, y: 3, type: 'full'},
+  {x: 1, y: 4, type: 'full'},
+  // end pagar
+  
+  // pillar
+  ...Array.from({ length: 2 }, (_, i) => ({ x: 32, y: i+8, type: 'full' })),
+  ...Array.from({ length: 2 }, (_, i) => ({ x: 33, y: i+8, type: 'full' })),
+  ...Array.from({ length: 2 }, (_, i) => ({ x: i+32, y: 12, type: 'full' })),
+  ...Array.from({ length: 2 }, (_, i) => ({ x: i+32, y: 13, type: 'half-top' })),
+  ...Array.from({ length: 2 }, (_, i) => ({ x: i+40, y: 19, type: 'half-top' })),
+  ...Array.from({ length: 3 }, (_, i) => ({ x: i+46, y: 20, type: 'half-top' })),
+  ...Array.from({ length: 3 }, (_, i) => ({ x: i+44, y: 26, type: 'half-top' })),
+  ...Array.from({ length: 3 }, (_, i) => ({ x: i+44, y: 25, type: 'half-bottom' })),
+  {x: 46, y: 19, type: 'half-right'},
+  {x: 47, y: 19, type: 'full'},
+  {x: 48, y: 19, type: 'half-left'},
+  {x: 39, y: 24, type: 'full'},
+  {x: 40, y: 24, type: 'half-left'},
+  {x: 38, y: 24, type: 'half-right'},
+  
+  ...Array.from({ length: 2 }, (_, i) => ({ x: i+36, y: 39, type: 'half-bottom' })),
+  ...Array.from({ length: 2 }, (_, i) => ({ x: i+36, y: 40, type: 'half-bottom' })),
+  {x: 43, y: 39, type: 'half-bottom'},
+  {x: 44, y: 39, type: 'half-bottom'},
 
 
   { x: 29, y: 7, type: 'half-right' },   
@@ -32,6 +56,16 @@ const COLLISION_MAP = [
   { x: 35, y: 36, type: 'half-right' },
   // { x: 30, y: 37, type: 'half-bottom' },
   // { x: 23, y: 42, type: 'half-left' },
+  {x: 36, y: 35, type: 'half-right'},
+  {x: 37, y: 35, type: 'full'},
+  {x: 42, y: 34, type: 'half-right'},
+  {x: 43, y: 34, type: 'full'},
+  {x: 44, y: 34, type: 'half-left'},
+  ...Array.from({ length: 2 }, (_, i) => ({ x: i+14 , y: 25, type: 'full' })), 
+  {x: 9, y: 27, type: 'full'},
+  {x: 10, y: 27, type: 'half-left'},
+  {x: 8, y: 27, type: 'half-right'},
+
 
   // ujung map
   ...Array.from({ length: 60 }, (_, i) => ({ x: i , y: 0, type: 'half-top' })), // atas
@@ -101,6 +135,7 @@ const COLLISION_MAP = [
   ...Array.from({ length: 4 }, (_, i) => ({ x: 51, y: i+24  , type: 'full' })), 
   ...Array.from({ length: 6 }, (_, i) => ({ x: 50, y: i+25  , type: (i >= 2 && i <= 6) ? 'half-right' : 'full' })),  
   ...Array.from({ length: 6 }, (_, i) => ({ x: 49-i, y: 31+i, type: 'half-right' })),
+  ...Array.from({ length: 6 }, (_, i) => ({ x: 50-i, y: 31+i, type: 'full' })),
   {x: 45, y: 34, type: 'half-bottom'},
   {x: 47, y: 36, type: 'half-bottom'},
   {x: 50, y: 34, type: 'half-left'},
@@ -117,6 +152,7 @@ const COLLISION_MAP = [
 const Game = () => {
   const [position, setPosition] = useState({ x: 350, y: 150 });
   const [facing, setFacing] = useState('stand');
+  const [isInInterior, setIsInInterior] = useState(false);
   const speed = 20;
   const scale = 1.2;
   const GRID_SIZE = 40;
@@ -152,7 +188,6 @@ const Game = () => {
         );
 
       case 'half-top':
-        // Only top half of the grid has collision
         return (
           playerX < gridX + GRID_SIZE &&
           playerX + PLAYER_SIZE > gridX &&
@@ -212,8 +247,43 @@ const Game = () => {
     }
   };
 
+  // Teleport points
+  const TELEPORT_POINTS = [
+    { 
+      x: 6, 
+      y: 1, 
+      destination: 'house', 
+      spawnPoint: { x: 700, y: 300 }  
+    }
+  ];
+
+  // Check if player is on teleport point
+  const checkTeleport = (x, y) => {
+    const playerGridPos = getGridPosition(x, y);
+    const teleportPoint = TELEPORT_POINTS.find(
+      point => point.x === playerGridPos.gridX && point.y === playerGridPos.gridY
+    );
+
+    if (teleportPoint) {
+      setIsInInterior(true);
+      setPosition(teleportPoint.spawnPoint);
+    }
+  };
+
+  // Handle exit from interior
+  const handleExitInterior = (spawnPoint) => {
+    setIsInInterior(false);
+    // Convert grid coordinates to pixel coordinates
+    setPosition({ 
+      x: spawnPoint.x * GRID_SIZE, 
+      y: spawnPoint.y * GRID_SIZE 
+    });
+  };
+
   useEffect(() => {
     const handleKeyPress = (e) => {
+      if (isInInterior) return; // Let interior handle its own movement
+
       let newX = position.x;
       let newY = position.y;
 
@@ -227,6 +297,7 @@ const Game = () => {
               ...prev, 
               y: Math.max(0, newY)
             }));
+            checkTeleport(newX, newY);
           }
           break;
         case 's':
@@ -238,6 +309,7 @@ const Game = () => {
               ...prev, 
               y: Math.min(MAP_HEIGHT - PLAYER_SIZE, newY)
             }));
+            checkTeleport(newX, newY);
           }
           break;
         case 'a':
@@ -249,6 +321,7 @@ const Game = () => {
               ...prev, 
               x: Math.max(0, newX)
             }));
+            checkTeleport(newX, newY);
           }
           break;
         case 'd':
@@ -260,6 +333,7 @@ const Game = () => {
               ...prev, 
               x: Math.min(MAP_WIDTH - PLAYER_SIZE, newX)
             }));
+            checkTeleport(newX, newY);
           }
           break;
         default:
@@ -281,7 +355,7 @@ const Game = () => {
       window.removeEventListener('keydown', handleKeyPress);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [position]);
+  }, [position, isInInterior]);
 
   const getCameraStyle = () => {
     // Calculate the center position of the viewport
@@ -307,12 +381,14 @@ const Game = () => {
     for (let row = 0; row < GRID_ROWS; row++) {
       for (let col = 0; col < GRID_COLS; col++) {
         const collisionPoint = COLLISION_MAP.find(point => point.x === col && point.y === row);
-        const collisionClass = collisionPoint ? `collision ${collisionPoint.type}` : '';
+        const teleportPoint = TELEPORT_POINTS.find(point => point.x === col && point.y === row);
+        const cellClass = collisionPoint ? `collision ${collisionPoint.type}` : '';
+        const teleportClass = teleportPoint ? 'teleport' : '';
         
         cells.push(
           <div
             key={`${row}-${col}`}
-            className={`grid-cell ${collisionClass}`}
+            className={`grid-cell ${cellClass} ${teleportClass}`}
             style={{
               left: col * GRID_SIZE,
               top: row * GRID_SIZE,
@@ -326,6 +402,10 @@ const Game = () => {
     }
     return cells;
   };
+
+  if (isInInterior) {
+    return <HouseInterior position={position} setPosition={setPosition} onExit={handleExitInterior} />;
+  }
 
   return (
     <div className="game-container">
