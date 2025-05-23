@@ -100,6 +100,11 @@
   border-bottom: 1px solid rgba(255, 0, 0, 0.5);
 }
 
+.grid-cell.teleport {
+  background-color: rgba(0, 0, 255, 0.3);
+  border: 1px solid rgba(0, 0, 255, 0.5);
+}
+
 .player {
   position: absolute;
   width: 13px;
@@ -113,4 +118,32 @@
   transition: all 0.1s linear;
   transform-origin: center;
   will-change: transform, left, top;
+}
+.player-interior {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  transform: scale(3.5);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+  z-index: 2;
+  image-rendering: pixelated;
+  transition: all 0.1s linear;
+  transform-origin: center;
+  will-change: transform, left, top;
+}
+
+.interior-container {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #000;
+}
+
+.interior {
+  position: relative;
+  image-rendering: pixelated;
 } 
