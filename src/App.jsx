@@ -6,7 +6,7 @@ import { AuthProvider } from './context/AuthContext';
 import MainMenu from './pages/mainMenu';
 import Game from './pages/Game';
 import LoadGame from './components/LoadGame';
-import LoginForm from './components/LoginForm';
+import LoginForm from './components/loginForm';
 import SignUpForm from './components/SignUpForm';
 
 function App() {
