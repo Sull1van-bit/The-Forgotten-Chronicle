@@ -156,6 +156,15 @@ const COLLISION_MAP = [
   ...Array.from({ length: 2 }, (_, i) => ({ x: 52 , y: i+31 , type: 'half-right' })), 
 ];
 
+// Add monologue script
+const monologueScript = [
+  "The air carries the scent of damp earth and firewood, familiar yet distant. This place… it should feel like home. But does it?",
+  "The cottage stands behind me, quiet and worn. My inheritance—though it is more a burden than a gift. Once, hands worked this land, voices filled these walls. Now, only I remain.",
+  "The village elder watches from afar, eyes filled with something unspoken. They remember my family, their deeds, their fall. I have returned, but for what purpose?",
+  "Will I mend what was broken, rebuild what was lost? Or will I carve a new path, unshackled from their legacy?",
+  "The village calls, the fields await, and somewhere, beneath stone and memory, a forgotten truth lingers. Today, my story begins."
+];
+
 const Game = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -173,6 +182,15 @@ const Game = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showShop, setShowShop] = useState(false);
   const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume } = useSound();
+
+  // Add character stats state
+  const [health, setHealth] = useState(100);
+  const [energy, setEnergy] = useState(100);
+  const [hunger, setHunger] = useState(100);
+  const [happiness, setHappiness] = useState(100);
+  const [money, setMoney] = useState(0);
+  const [cleanliness, setCleanliness] = useState(100);
+  const [isSleeping, setIsSleeping] = useState(false);
 
   // Define shop trigger points
   const shopPoints = [
