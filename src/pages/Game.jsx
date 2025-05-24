@@ -169,6 +169,8 @@ const Game = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume } = useSound();
+  const { musicEnabled, setMusicEnabled, musicVolume, setMusicVolume } = useMusic();
   const character = location.state?.character;
   const isLoadedGame = location.state?.isLoadedGame;
   const [isLoading, setIsLoading] = useState(true);
@@ -294,7 +296,12 @@ const Game = () => {
           money,
           cleanliness
         },
-        settings: {}
+        settings: {
+          soundEnabled,
+          sfxVolume,
+          musicEnabled,
+          musicVolume
+        }
       };
 
       const saveData = createSaveFileData(gameState);
@@ -321,6 +328,13 @@ const Game = () => {
         setHappiness(gameState.stats.happiness || 100);
         setMoney(gameState.stats.money || 0);
         setCleanliness(gameState.stats.cleanliness || 100);
+        // Load settings if they exist
+        if (gameState.settings) {
+          setSoundEnabled(gameState.settings.soundEnabled ?? true);
+          setSfxVolume(gameState.settings.sfxVolume ?? 0.5);
+          setMusicEnabled(gameState.settings.musicEnabled ?? true);
+          setMusicVolume(gameState.settings.musicVolume ?? 0.5);
+        }
       }
     } catch (error) {
       console.error('Error loading game:', error);
@@ -467,107 +481,115 @@ const Game = () => {
   const handleCloseSettings = () => setShowSettings(false);
   const handleExit = () => navigate('/');
 
-  // Prevent movement when paused
+  // Prevent movement and interactions when paused or in dialogue
   useEffect(() => {
     const handleKeyPress = (e) => {
-      if (isPaused || showShop) return; // Prevent movement when paused or shop is open
-      console.log('Key pressed:', e.key); // Debug log
-      console.log('isInInterior:', isInInterior); // Debug log
-      
-      if (!isInInterior) {
-        let newX = position.x;
-        let newY = position.y;
+      if (isSleeping || isPaused || showDialog) return; // Block movement when paused or in dialogue
+      console.log('Key pressed:', e.key);
+      console.log('isInInterior:', isInInterior);
 
-        switch (e.key.toLowerCase()) {
-          case 'w':
-          case 'arrowup':
-            console.log('Moving up'); // Debug log
-            newY = position.y - speed;
-            if (!hasCollision(newX, newY)) {
-              setFacing('up');
-              setPosition(prev => {
-                const newPos = { ...prev, y: Math.max(0, newY) };
-                // Check for shop trigger after setting position
-                checkShopTrigger(newPos.x, newPos.y);
-                console.log('New position:', newPos); // Debug log
-                return newPos;
-              });
-              // Check if player is at save point
-              if (checkSavePoint(newX, newY)) {
-                setCanSave(true);
-                setShowSavePrompt(true);
-              } else {
-                setCanSave(false);
-                setShowSavePrompt(false);
-              }
+      if (isInInterior) return;
+
+      let newX = position.x;
+      let newY = position.y;
+      const energyCost = 0.5;
+      const cleanlinessCost = 0.5;
+
+      switch (e.key.toLowerCase()) {
+        case 'w':
+        case 'arrowup':
+          console.log('Moving up');
+          newY = position.y - speed;
+          if (!hasCollision(newX, newY)) {
+            setFacing('up');
+            setPosition((prev) => ({
+              ...prev,
+              y: Math.max(0, newY),
+            }));
+            setEnergy((prev) => Math.max(0, prev - energyCost));
+            setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));
+            if (checkSavePoint(newX, newY)) {
+              setCanSave(true);
+              setShowSavePrompt(true);
+            } else {
+              setCanSave(false);
+              setShowSavePrompt(false);
             }
-            break;
-          case 's':
-          case 'arrowdown':
-            console.log('Moving down'); // Debug log
-            newY = position.y + speed;
-            if (!hasCollision(newX, newY)) {
-              setFacing('down');
-              setPosition(prev => {
-                const newPos = { ...prev, y: Math.min(MAP_HEIGHT - PLAYER_SIZE, newY) };
-                checkTeleport(newX, newY);
-                // Check for shop trigger after setting position
-                checkShopTrigger(newPos.x, newPos.y);
-                console.log('New position:', newPos); // Debug log
-                return newPos;
-              });
-            }
-            break;
-          case 'a':
-          case 'arrowleft':
-            console.log('Moving left'); // Debug log
-            newX = position.x - speed;
-            if (!hasCollision(newX, newY)) {
-              setFacing('left');
-              setPosition(prev => {
-                const newPos = { ...prev, x: Math.max(0, newX) };
-                checkTeleport(newX, newY);
-                // Check for shop trigger after setting position
-                checkShopTrigger(newPos.x, newPos.y);
-                console.log('New position:', newPos); // Debug log
-                return newPos;
-              });
-            }
-            break;
-          case 'd':
-          case 'arrowright':
-            console.log('Moving right'); // Debug log
-            newX = position.x + speed;
-            if (!hasCollision(newX, newY)) {
-              setFacing('right');
-              setPosition(prev => {
-                const newPos = { ...prev, x: Math.min(MAP_WIDTH - PLAYER_SIZE, newX) };
-                checkTeleport(newX, newY);
-                // Check for shop trigger after setting position
-                checkShopTrigger(newPos.x, newPos.y);
-                console.log('New position:', newPos); // Debug log
-                return newPos;
-              });
-            }
-            break;
-          default:
-            break;
-        }
+            checkTeleport(newX, newY);
+          }
+          break;
+        case 's':
+        case 'arrowdown':
+          console.log('Moving down');
+          newY = position.y + speed;
+          if (!hasCollision(newX, newY)) {
+            setFacing('down');
+            setPosition((prev) => ({
+              ...prev,
+              y: Math.min(MAP_HEIGHT - PLAYER_SIZE, newY),
+            }));
+            setEnergy((prev) => Math.max(0, prev - energyCost));
+            setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));
+            checkTeleport(newX, newY);
+          }
+          break;
+        case 'a':
+        case 'arrowleft':
+          console.log('Moving left');
+          newX = position.x - speed;
+          if (!hasCollision(newX, newY)) {
+            setFacing('left');
+            setPosition((prev) => ({
+              ...prev,
+              x: Math.max(0, newX),
+            }));
+            setEnergy((prev) => Math.max(0, prev - energyCost));
+            setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));
+            checkTeleport(newX, newY);
+          }
+          break;
+        case 'd':
+        case 'arrowright':
+          console.log('Moving right');
+          newX = position.x + speed;
+          if (!hasCollision(newX, newY)) {
+            setFacing('right');
+            setPosition((prev) => ({
+              ...prev,
+              x: Math.min(MAP_WIDTH - PLAYER_SIZE, newX),
+            }));
+            setEnergy((prev) => Math.max(0, prev - energyCost));
+            setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));
+            checkTeleport(newX, newY);
+          }
+          break;
+        case 'p': // Pause with 'P' key
+          setIsPaused(true);
+          break;
+        case 's': // Save game when at save point
+          if (canSave && !showDialog) {
+            saveGame();
+          }
+          break;
+        default:
+          break;
+      }
+    };
+
+    const handleKeyUp = (e) => {
+      const movementKeys = ['w', 's', 'a', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
+      if (movementKeys.includes(e.key.toLowerCase())) {
+        setFacing('stand');
       }
     };
 
     window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [position, isInInterior, isPaused, showShop]);
-
-  // ESC to pause
-  useEffect(() => {
-    const handleEsc = (e) => {
-      if (e.key === 'Escape') setIsPaused((prev) => !prev);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyPress);
+      window.removeEventListener('keyup', handleKeyUp);
     };
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, []);
+  }, [position, isInInterior, speed, MAP_HEIGHT, MAP_WIDTH, PLAYER_SIZE, isSleeping, isPaused, showDialog, canSave, setEnergy, setCleanliness, setFacing, setPosition, checkSavePoint, setCanSave, setShowSavePrompt, checkTeleport]);
 
   const getCameraStyle = () => {
     const viewportCenterX = window.innerWidth / 2;
@@ -616,7 +638,7 @@ const Game = () => {
   };
 
   const renderSavePrompt = () => {
-    if (!showSavePrompt || !canSave) return null;
+    if (!showSavePrompt || !canSave || isPaused || showDialog) return null;
 
     return (
       <div className="fixed bottom-4 right-4 bg-black bg-opacity-75 p-4 rounded-lg text-white z-50">
@@ -696,7 +718,7 @@ const Game = () => {
         </div>
         <div className="flex items-center gap-2">
           <span>😊 Happiness: {Math.round(happiness)}</span>
-          <div className="w-24 h-4 bg-gray-700 rounded">
+          <div className="h-4 bg-gray-700 rounded">
             <div className="h-full bg-green-500 rounded" style={{ width: `${happiness}%` }}></div>
           </div>
         </div>
@@ -727,7 +749,7 @@ const Game = () => {
         )}
       </AnimatePresence>
 
-      {user && !isLoading && !showCutscene && renderSavePrompt()}
+      {user && !isLoading && !showCutscene && !isPaused && !showDialog && renderSavePrompt()}
 
       {/* Dialog Box */}
       {showDialog && (
@@ -790,7 +812,7 @@ const Game = () => {
         </div>
       )}
 
-      {/* Settings Popup (from pause menu or elsewhere) */}
+      {/* Settings Popup */}
       {showSettings && (
         <Settings
           onClose={handleCloseSettings}
@@ -798,6 +820,10 @@ const Game = () => {
           setSoundEnabled={setSoundEnabled}
           sfxVolume={sfxVolume}
           setSfxVolume={setSfxVolume}
+          musicEnabled={musicEnabled}
+          setMusicEnabled={setMusicEnabled}
+          musicVolume={musicVolume}
+          setMusicVolume={setMusicVolume}
         />
       )}
 
