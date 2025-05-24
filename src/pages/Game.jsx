@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useSound } from '../context/SoundContext';
 import { useMusic } from '../context/MusicContext';
@@ -7,21 +7,10 @@ import LoadingScreen from '../components/LoadingScreen';
 import Cutscene from '../components/Cutscene';
 import DialogBox from '../components/DialogBox';
 import Settings from '../components/Settings';
+import Minimap from '../components/Minimap';
 import '../styles/Game.css';
-// Import character sprites
-import eugeneStand from '../assets/characters/eugene/stand.gif';
-import eugeneWalkUp from '../assets/characters/eugene/walk-up.gif';
-import eugeneWalkDown from '../assets/characters/eugene/walk-down.gif';
-import eugeneWalkLeft from '../assets/characters/eugene/walk-left.gif';
-import eugeneWalkRight from '../assets/characters/eugene/walk-right.gif';
-/*
-import alexStand from '../assets/characters/alex/stand.gif';
-import alexWalkUp from '../assets/characters/alex/walk-up.gif';
-import alexWalkDown from '../assets/characters/alex/walk-down.gif';
-import alexWalkLeft from '../assets/characters/alex/walk-left.gif';
-import alexWalkRight from '../assets/characters/alex/walk-right.gif';
-*/
 
+// Import character sprites (only Louise for now)
 import louiseStand from '../assets/characters/louise/stand.gif';
 import louiseWalkUp from '../assets/characters/louise/walk-up.gif';
 import louiseWalkDown from '../assets/characters/louise/walk-down.gif';
@@ -253,6 +242,7 @@ const Game = () => {
   const [saveFiles, setSaveFiles] = useState([]);
   const [canSave, setCanSave] = useState(false);
   const [showSavePrompt, setShowSavePrompt] = useState(false);
+  const [isSleeping, setIsSleeping] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showShop, setShowShop] = useState(false);
@@ -346,7 +336,6 @@ const Game = () => {
 
   const handleCutsceneComplete = () => {
     setShowCutscene(false);
-    // Start monologue for new games after cutscene
     if (!isLoadedGame) {
       setShowDialog(true);
       setCurrentDialogueIndex(0);
@@ -358,9 +347,8 @@ const Game = () => {
     if (currentDialogueIndex < monologueScript.length - 1) {
       setCurrentDialogueIndex(prevIndex => prevIndex + 1);
     } else {
-      // End of monologue
       setShowDialog(false);
-      setCurrentDialogueIndex(0); // Reset for next time if needed
+      setCurrentDialogueIndex(0);
     }
   };
 
@@ -437,7 +425,6 @@ const Game = () => {
         setHappiness(gameState.stats.happiness || 100);
         setMoney(gameState.stats.money || 0);
         setCleanliness(gameState.stats.cleanliness || 100);
-        // Load settings if they exist
         if (gameState.settings) {
           setSoundEnabled(gameState.settings.soundEnabled ?? true);
           setSfxVolume(gameState.settings.sfxVolume ?? 0.5);
@@ -594,6 +581,19 @@ const Game = () => {
     }
   };
 
+  // Check if player is at a shop trigger point
+  const checkShopTrigger = (x, y, justCheck = false) => {
+    const playerGridPos = getGridPosition(x, y);
+    const isAtShop = shopPoints.some(point =>
+      point.x === playerGridPos.gridX && point.y === playerGridPos.gridY
+    );
+
+    if (!justCheck) {
+      setShowShop(isAtShop);
+    }
+    return isAtShop;
+  };
+
   // Handle exit from interior
   const handleExitInterior = (spawnPoint) => {
     setIsInInterior(false);
@@ -610,10 +610,10 @@ const Game = () => {
   const handleCloseSettings = () => setShowSettings(false);
   const handleExit = () => navigate('/');
 
-  // Prevent movement and interactions when paused or in dialogue
+  // Prevent movement and interactions when paused, in dialogue, or in shop
   useEffect(() => {
     const handleKeyPress = (e) => {
-      if (isSleeping || isPaused || showDialog) return; // Block movement when paused or in dialogue
+      if (isSleeping || isPaused || showDialog || showShop) return;
       console.log('Key pressed:', e.key);
       console.log('isInInterior:', isInInterior);
 
@@ -645,6 +645,7 @@ const Game = () => {
               setShowSavePrompt(false);
             }
             checkTeleport(newX, newY);
+            checkShopTrigger(newX, newY);
           }
           break;
         case 's':
@@ -660,6 +661,7 @@ const Game = () => {
             setEnergy((prev) => Math.max(0, prev - energyCost));
             setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));
             checkTeleport(newX, newY);
+            checkShopTrigger(newX, newY);
           }
           break;
         case 'a':
@@ -675,6 +677,7 @@ const Game = () => {
             setEnergy((prev) => Math.max(0, prev - energyCost));
             setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));
             checkTeleport(newX, newY);
+            checkShopTrigger(newX, newY);
           }
           break;
         case 'd':
@@ -690,15 +693,19 @@ const Game = () => {
             setEnergy((prev) => Math.max(0, prev - energyCost));
             setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));
             checkTeleport(newX, newY);
+            checkShopTrigger(newX, newY);
           }
           break;
-        case 'p': // Pause with 'P' key
+        case 'p':
           setIsPaused(true);
           break;
-        case 's': // Save game when at save point
+        case 's':
           if (canSave && !showDialog) {
             saveGame();
           }
+          break;
+        case 'e':
+          checkShopTrigger(position.x, position.y);
           break;
         default:
           break;
@@ -718,7 +725,7 @@ const Game = () => {
       window.removeEventListener('keydown', handleKeyPress);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [position, isInInterior, speed, MAP_HEIGHT, MAP_WIDTH, PLAYER_SIZE, isSleeping, isPaused, showDialog, canSave, setEnergy, setCleanliness, setFacing, setPosition, checkSavePoint, setCanSave, setShowSavePrompt, checkTeleport]);
+  }, [position, isInInterior, speed, MAP_HEIGHT, MAP_WIDTH, PLAYER_SIZE, isSleeping, isPaused, showDialog, showShop, canSave]);
 
   const getCameraStyle = () => {
     const viewportCenterX = window.innerWidth / 2;
@@ -734,15 +741,20 @@ const Game = () => {
     };
   };
 
-  const renderGrid = () => {
+  // Pre-compute shop point coordinates for fast lookup
+  const shopPointSet = useMemo(() => {
+    const set = new Set();
+    shopPoints.forEach(point => set.add(`${point.x},${point.y}`));
+    return set;
+  }, []);
+
+  const renderGrid = useMemo(() => {
     const cells = [];
     for (let row = 0; row < GRID_ROWS; row++) {
       for (let col = 0; col < GRID_COLS; col++) {
         const collisionPoint = COLLISION_MAP.find(point => point.x === col && point.y === row);
         const teleportPoint = TELEPORT_POINTS.find(point => point.x === col && point.y === row);
-        
-        // Check for shop trigger points
-        const isShopPoint = checkShopTrigger({ x: col * GRID_SIZE, y: row * GRID_SIZE }, true); // Pass coordinates and a flag to just check without triggering state change
+        const isShopPoint = shopPointSet.has(`${col},${row}`);
 
         const cellClass = collisionPoint ? `collision ${collisionPoint.type}` : '';
         const teleportClass = teleportPoint ? 'teleport' : '';
@@ -764,10 +776,10 @@ const Game = () => {
       }
     }
     return cells;
-  };
+  }, [shopPointSet]);
 
   const renderSavePrompt = () => {
-    if (!showSavePrompt || !canSave || isPaused || showDialog) return null;
+    if (!showSavePrompt || !canSave || isPaused || showDialog || showShop) return null;
 
     return (
       <div className="fixed bottom-4 right-4 bg-black bg-opacity-75 p-4 rounded-lg text-white z-50">
@@ -932,12 +944,11 @@ const Game = () => {
         )}
       </AnimatePresence>
 
-      {user && !isLoading && !showCutscene && !isPaused && !showDialog && renderSavePrompt()}
+      {user && !isLoading && !showCutscene && !isPaused && !showDialog && !showShop && renderSavePrompt()}
 
       {/* Dialog Box */}
       {showDialog && (
         <>
-          {/* Skip button at the top center, always clickable */}
           <div
             className="fixed top-8 left-1/2 transform -translate-x-1/2 z-[100] pointer-events-auto"
           >
@@ -949,14 +960,11 @@ const Game = () => {
               Skip
             </button>
           </div>
-          {/* Overlay that allows click anywhere to advance monologue */}
           <div
             className="fixed inset-0 z-50 flex items-end justify-center p-4 pointer-events-auto"
             onClick={handleAdvanceMonologue}
           >
-            <div
-              className="flex flex-col items-center pointer-events-auto"
-            >
+            <div className="flex flex-col items-center pointer-events-auto">
               <DialogBox
                 key={currentDialogueIndex}
                 dialogue={monologueScript[currentDialogueIndex]}
@@ -968,7 +976,7 @@ const Game = () => {
       )}
 
       {/* Pause Button */}
-      {!isPaused && !isLoading && !showCutscene && !showDialog && (
+      {!isPaused && !isLoading && !showCutscene && !showDialog && !showShop && (
         <img
           src={pauseButton}
           alt="Pause"
@@ -1010,14 +1018,18 @@ const Game = () => {
         />
       )}
 
-      {/* Shop Popup Placeholder */}
+      {/* Shop Popup */}
       {showShop && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
           <div className="bg-[#8B4513] p-8 rounded-lg text-white border-8 border-[#D2B48C] shadow-lg">
             <h2 className="text-2xl mb-4">Shop</h2>
-            <p>This is the shop!</p>
-            {/* Add shop content here */}
-            <button onClick={() => setShowShop(false)} className="mt-4 px-4 py-2 bg-yellow-600 rounded">Close Shop</button>
+            <p>Welcome to the shop! (Placeholder)</p>
+            <button
+              onClick={() => setShowShop(false)}
+              className="mt-4 px-4 py-2 bg-yellow-600 rounded hover:bg-yellow-700"
+            >
+              Close Shop
+            </button>
           </div>
         </div>
       )}
@@ -1085,35 +1097,3 @@ const Game = () => {
 };
 
 export default Game;
-
-<style>
-{`
-.grid-cell.interactive-cell {
-  background-color: rgba(255, 215, 0, 0.6) !important; /* Semi-transparent gold - increased opacity */
-  border: 1px solid rgba(255, 215, 0, 0.9) !important;
-}
-
-.pause-menu-btn {
-  background: linear-gradient(180deg, rgba(224,185,125,0.92) 0%, rgba(169,124,80,0.92) 100%);
-  color: #3a220a;
-  font-size: 1.25rem;
-  font-weight: bold;
-  border: 2.5px solid #7c4f21;
-  border-radius: 18px;
-  box-shadow: 0 4px 12px rgba(60, 40, 10, 0.18);
-  padding: 0.75rem 0;
-  margin: 0.5rem 0;
-  transition: background 0.2s, color 0.2s, transform 0.1s;
-  opacity: 0.96;
-  width: 100%;
-  max-width: 260px;
-  letter-spacing: 1px;
-}
-.pause-menu-btn:hover {
-  background: linear-gradient(180deg, rgba(245,215,161,0.98) 0%, rgba(196,154,108,0.98) 100%);
-  color: #a97c50;
-  transform: translateY(-2px) scale(1.04);
-  opacity: 1;
-}
-`}
-</style> 
