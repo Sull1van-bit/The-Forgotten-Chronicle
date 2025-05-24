@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import houseInside from '../../assets/Interior/house-inside.png';
 // Import character sprites
 import eugeneStand from '../../assets/characters/eugene/stand.gif';
@@ -21,26 +21,34 @@ import louiseWalkRight from '../../assets/characters/louise/walk-right.gif';
 
 // Define collision points for interior
 const INTERIOR_COLLISION_MAP = [
-  // Dinding atas
   ...Array.from({ length: 8 }, (_, i) => ({ x: i, y: 0, type: 'full' })),
   ...Array.from({ length: 8 }, (_, i) => ({ x: i, y: 1, type: 'half-top' })),
-  
-  // Dinding bawah
   ...Array.from({ length: 5 }, (_, i) => ({ x: i, y: 5, type: 'half-bottom' })),
   {x: 6, y: 5, type: 'full'},
-  // Dinding kiri
   ...Array.from({ length: 6 }, (_, i) => ({ x: 0, y: i, type: 'half-left' })),
   {x: 0, y: 6, type: 'full'},
-  
-  // Dinding kanan
   ...Array.from({ length: 6 }, (_, i) => ({ x: 7, y: i, type: 'half-right' })),
   {x: 7, y: 6, type: 'full'},
-
-
 ];
 
-const HouseInterior = ({ position, setPosition, onExit, character }) => {
+const HouseInterior = ({ 
+  position, 
+  setPosition, 
+  onExit, 
+  character, 
+  energy, 
+  setEnergy, 
+  hunger, 
+  setHunger, 
+  happiness, 
+  setHappiness, 
+  isSleeping, 
+  setIsSleeping,
+  cleanliness, 
+  setCleanliness 
+}) => {
   const [facing, setFacing] = useState('stand');
+  const [showSleepButton, setShowSleepButton] = useState(false);
   const INTERIOR_WIDTH = 800;
   const INTERIOR_HEIGHT = 600;
   const GRID_SIZE = 100;
@@ -48,42 +56,43 @@ const HouseInterior = ({ position, setPosition, onExit, character }) => {
   const GRID_COLS = Math.floor(INTERIOR_WIDTH / GRID_SIZE);
   const GRID_ROWS = Math.floor(INTERIOR_HEIGHT / GRID_SIZE);
 
-  // Get character-specific sprites
+  // Define the sleep area
+  const SLEEP_AREA = { x: 2, y: 2 };
+  const SLEEP_AREA_PIXEL = { x: SLEEP_AREA.x * GRID_SIZE, y: SLEEP_AREA.y * GRID_SIZE };
+
+  // Check if the player is near the sleep area
+  const checkSleepProximity = (x, y) => {
+    const playerCenterX = x + (PLAYER_SIZE / 2);
+    const playerCenterY = y + (PLAYER_SIZE / 2);
+    const sleepCenterX = SLEEP_AREA_PIXEL.x + (GRID_SIZE / 2);
+    const sleepCenterY = SLEEP_AREA_PIXEL.y + (GRID_SIZE / 2);
+    const distance = Math.sqrt(
+      Math.pow(playerCenterX - sleepCenterX, 2) + Math.pow(playerCenterY - sleepCenterY, 2)
+    );
+    setShowSleepButton(distance < GRID_SIZE);
+  };
+
+  // Handle sleep action
+  const handleSleep = () => {
+    setIsSleeping(true);
+    setTimeout(() => {
+      setEnergy(prev => Math.min(100, prev + 50));
+      setHappiness(prev => Math.min(100, prev + 30));
+      setHunger(prev => Math.max(0, prev - 10));
+      setCleanliness(prev => Math.min(100, prev + 50)); // Restore cleanliness
+      setIsSleeping(false);
+    }, 3000);
+  };
+
+  // Get character-specific sprites (only louise for now)
   const getCharacterSprites = () => {
-    switch (character.name.toLowerCase()) {
-      case 'eugene':
-        return {
-          stand: eugeneStand,
-          walkUp: eugeneWalkUp,
-          walkDown: eugeneWalkDown,
-          walkLeft: eugeneWalkLeft,
-          walkRight: eugeneWalkRight
-        };
-      case 'alex':
-        return {
-          stand: alexStand,
-          walkUp: alexWalkUp,
-          walkDown: alexWalkDown,
-          walkLeft: alexWalkLeft,
-          walkRight: alexWalkRight
-        };
-      case 'louise':
-        return {
-          stand: louiseStand,
-          walkUp: louiseWalkUp,
-          walkDown: louiseWalkDown,
-          walkLeft: louiseWalkLeft,
-          walkRight: louiseWalkRight
-        };
-      default:
-        return {
-          stand: eugeneStand,
-          walkUp: eugeneWalkUp,
-          walkDown: eugeneWalkDown,
-          walkLeft: eugeneWalkLeft,
-          walkRight: eugeneWalkRight
-        };
-    }
+    return {
+      stand: louiseStand,
+      walkUp: louiseWalkUp,
+      walkDown: louiseWalkDown,
+      walkLeft: louiseWalkLeft,
+      walkRight: louiseWalkRight
+    };
   };
 
   const characterSprites = getCharacterSprites();
@@ -118,7 +127,6 @@ const HouseInterior = ({ position, setPosition, onExit, character }) => {
           playerY < gridY + GRID_SIZE &&
           playerY + PLAYER_SIZE > gridY
         );
-
       case 'half-top':
         return (
           playerX < gridX + GRID_SIZE &&
@@ -126,7 +134,6 @@ const HouseInterior = ({ position, setPosition, onExit, character }) => {
           playerY < gridY + (GRID_SIZE / 2) &&
           playerY + PLAYER_SIZE > gridY
         );
-
       case 'half-bottom':
         return (
           playerX < gridX + GRID_SIZE &&
@@ -134,7 +141,6 @@ const HouseInterior = ({ position, setPosition, onExit, character }) => {
           playerY < gridY + GRID_SIZE &&
           playerY + PLAYER_SIZE > gridY + (GRID_SIZE / 2)
         );
-
       case 'half-left':
         return (
           playerX < gridX + (GRID_SIZE / 2) &&
@@ -142,7 +148,6 @@ const HouseInterior = ({ position, setPosition, onExit, character }) => {
           playerY < gridY + GRID_SIZE &&
           playerY + PLAYER_SIZE > gridY
         );
-
       case 'half-right':
         return (
           playerX < gridX + GRID_SIZE &&
@@ -150,7 +155,6 @@ const HouseInterior = ({ position, setPosition, onExit, character }) => {
           playerY < gridY + GRID_SIZE &&
           playerY + PLAYER_SIZE > gridY
         );
-
       default:
         return false;
     }
@@ -170,7 +174,6 @@ const HouseInterior = ({ position, setPosition, onExit, character }) => {
     };
 
     if (playerGridPos.x === exitPoint.x && playerGridPos.y === exitPoint.y) {
-      // Spawn player at x:6, y:2 when exiting
       onExit({ x: 6, y: 2 });
     }
   };
@@ -180,13 +183,14 @@ const HouseInterior = ({ position, setPosition, onExit, character }) => {
     for (let row = 0; row < GRID_ROWS; row++) {
       for (let col = 0; col < GRID_COLS; col++) {
         const isExitPoint = col === 5 && row === 5;
+        const isSleepArea = col === SLEEP_AREA.x && row === SLEEP_AREA.y;
         const collisionPoint = INTERIOR_COLLISION_MAP.find(point => point.x === col && point.y === row);
         const collisionClass = collisionPoint ? `collision ${collisionPoint.type}` : '';
         
         cells.push(
           <div
             key={`${row}-${col}`}
-            className={`grid-cell ${collisionClass} ${isExitPoint ? 'teleport' : ''}`}
+            className={`grid-cell ${collisionClass} ${isExitPoint ? 'teleport' : ''} ${isSleepArea ? 'sleep-area' : ''}`}
             style={{
               left: col * GRID_SIZE,
               top: row * GRID_SIZE,
@@ -212,30 +216,42 @@ const HouseInterior = ({ position, setPosition, onExit, character }) => {
 
   // Handle movement with collision check
   const handleKeyPress = (e) => {
+    if (isSleeping) return;
+
     let newX = position.x;
     let newY = position.y;
     const speed = 20;
+    const energyCost = 0.5;
+    const cleanlinessCost = 0.5;
 
     switch (e.key.toLowerCase()) {
       case 'w':
       case 'arrowup':
         newY = Math.max(0, position.y - speed);
         setFacing('up');
+        setEnergy(prev => Math.max(0, prev - energyCost));
+        setCleanliness(prev => Math.max(0, prev - cleanlinessCost));
         break;
       case 's':
       case 'arrowdown':
         newY = Math.min(INTERIOR_HEIGHT - PLAYER_SIZE, position.y + speed);
         setFacing('down');
+        setEnergy(prev => Math.max(0, prev - energyCost));
+        setCleanliness(prev => Math.max(0, prev - cleanlinessCost));
         break;
       case 'a':
       case 'arrowleft':
         newX = Math.max(0, position.x - speed);
         setFacing('left');
+        setEnergy(prev => Math.max(0, prev - energyCost));
+        setCleanliness(prev => Math.max(0, prev - cleanlinessCost));
         break;
       case 'd':
       case 'arrowright':
         newX = Math.min(INTERIOR_WIDTH - PLAYER_SIZE, position.x + speed);
         setFacing('right');
+        setEnergy(prev => Math.max(0, prev - energyCost));
+        setCleanliness(prev => Math.max(0, prev - cleanlinessCost));
         break;
       default:
         return;
@@ -244,6 +260,7 @@ const HouseInterior = ({ position, setPosition, onExit, character }) => {
     if (!hasCollision(newX, newY)) {
       checkExitPoint(newX, newY);
       setPosition({ x: newX, y: newY });
+      checkSleepProximity(newX, newY);
     }
   };
 
@@ -254,17 +271,44 @@ const HouseInterior = ({ position, setPosition, onExit, character }) => {
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     window.addEventListener('keydown', handleKeyPress);
     window.addEventListener('keyup', handleKeyUp);
     return () => {
       window.removeEventListener('keydown', handleKeyPress);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [position]);
+  }, [position, energy, cleanliness, isSleeping]);
 
   return (
-    <div className="interior-container">
+    <div className="interior-container relative">
+      {showSleepButton && !isSleeping && (
+        <button
+          className="absolute z-50 bg-blue-500 text-white px-4 py-2 rounded shadow-lg hover:bg-blue-600"
+          style={{
+            left: `${SLEEP_AREA_PIXEL.x + GRID_SIZE / 2}px`,
+            top: `${SLEEP_AREA_PIXEL.y - 40}px`,
+            transform: 'translateX(-50%)',
+          }}
+          onClick={handleSleep}
+        >
+          Sleep
+        </button>
+      )}
+
+      {isSleeping && (
+        <div
+          className="absolute z-50 bg-gray-800 text-white px-4 py-2 rounded shadow-lg"
+          style={{
+            left: `${SLEEP_AREA_PIXEL.x + GRID_SIZE / 2}px`,
+            top: `${SLEEP_AREA_PIXEL.y - 40}px`,
+            transform: 'translateX(-50%)',
+          }}
+        >
+          Sleeping...
+        </div>
+      )}
+
       <div 
         className="interior"
         style={{
@@ -303,4 +347,4 @@ const HouseInterior = ({ position, setPosition, onExit, character }) => {
   );
 };
 
-export default HouseInterior; 
+export default HouseInterior;
