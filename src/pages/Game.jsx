@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useSound } from '../context/SoundContext';
 import { useMusic } from '../context/MusicContext';
 import { AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import LoadingScreen from '../components/LoadingScreen';
 import Cutscene from '../components/Cutscene';
 import DialogBox from '../components/DialogBox';
@@ -22,6 +23,10 @@ import eugeneWalkUp from '../assets/characters/eugene/walk-up.gif';
 import eugeneWalkDown from '../assets/characters/eugene/walk-down.gif';
 import eugeneWalkLeft from '../assets/characters/eugene/walk-left.gif';
 import eugeneWalkRight from '../assets/characters/eugene/walk-right.gif';
+
+// Import character portraits
+import louisePortrait from '../assets/characters/louise/character.png';
+import eugenePortrait from '../assets/characters/eugene/character.png';
 
 // Import maps
 import allMap from '../assets/Maps/all-map.png';
@@ -48,6 +53,14 @@ import ledgerIcon from '../assets/items/ledger.png';
 import royalDocumentIcon from '../assets/items/royal-document.png';
 import meatIcon from '../assets/items/meat.png';
 import mushroomIcon from '../assets/items/mushroom.png';
+
+// Import UI icons
+import heartIcon from '../assets/statbar/heart.png';
+import hungerIcon from '../assets/statbar/hunger.png';
+import hygieneIcon from '../assets/statbar/hygiene.png';
+import happinessIcon from '../assets/statbar/happiness.png';
+import energyIcon from '../assets/statbar/energy.png';
+import moneyIcon from '../assets/statbar/money.png';
 
 // Define collision points using grid coordinates
 const COLLISION_MAP = [
@@ -253,6 +266,13 @@ const Game = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showShop, setShowShop] = useState(false);
 
+  // State for new quest pop-up - MOVED HERE
+  const [showNewQuestPopup, setShowNewQuestPopup] = useState(false);
+  const [newQuestTitle, setNewQuestTitle] = useState('');
+
+  // Ref to store previous quests state for comparison - MOVED HERE
+  const prevQuestsRef = useRef([]);
+
   // Add character stats state
   const [health, setHealth] = useState(100);
   const [energy, setEnergy] = useState(100);
@@ -273,22 +293,7 @@ const Game = () => {
   ]);
 
   // Add quest state
-  const [quests, setQuests] = useState([
-    {
-      title: "Welcome Home",
-      description: "Get settled in your new home and explore the village.",
-      objectives: [
-        {
-          description: "Enter your house",
-          completed: false
-        },
-        {
-          description: "Meet the village elder",
-          completed: false
-        }
-      ]
-    }
-  ]);
+  const [quests, setQuests] = useState([]);
 
   // If no character is selected, redirect to main menu
   useEffect(() => {
@@ -325,6 +330,18 @@ const Game = () => {
     return () => clearTimeout(timer);
   }, [character, isLoadedGame]);
 
+  // Effect to auto-hide new quest pop-up
+  useEffect(() => {
+    let timer;
+    if (showNewQuestPopup) {
+      timer = setTimeout(() => {
+        setShowNewQuestPopup(false);
+        setNewQuestTitle(''); // Clear title after hiding
+      }, 5000); // Show for 5 seconds
+    }
+    return () => clearTimeout(timer);
+  }, [showNewQuestPopup]);
+
   const handleCutsceneComplete = () => {
     setShowCutscene(false);
     if (!isLoadedGame) {
@@ -338,8 +355,30 @@ const Game = () => {
     if (currentDialogueIndex < monologueScript.length - 1) {
       setCurrentDialogueIndex(prevIndex => prevIndex + 1);
     } else {
+      // Dialogue ends here
       setShowDialog(false);
       setCurrentDialogueIndex(0);
+      // Add the initial quest after dialogue
+      setQuests(prevQuests => [
+        ...prevQuests,
+        {
+          title: "Welcome Home",
+          description: "Get settled in your new home and explore the village.",
+          objectives: [
+            {
+              description: "Enter your house",
+              completed: false
+            },
+            {
+              description: "Meet the village elder",
+              completed: false
+            }
+          ]
+        }
+      ]);
+      // Directly trigger the popup after adding the quest
+      setNewQuestTitle("Welcome Home"); // Set the title directly
+      setShowNewQuestPopup(true); // Show the popup directly
     }
   };
 
@@ -347,6 +386,26 @@ const Game = () => {
   const handleSkipMonologue = () => {
     setShowDialog(false);
     setCurrentDialogueIndex(0);
+    // Add the initial quest and trigger popup when skipping
+    setQuests(prevQuests => [
+      ...prevQuests,
+      {
+        title: "Welcome Home",
+        description: "Get settled in your new home and explore the village.",
+        objectives: [
+          {
+            description: "Enter your house",
+            completed: false
+          },
+          {
+            description: "Meet the village elder",
+            completed: false
+          }
+        ]
+      }
+    ]);
+    setNewQuestTitle("Welcome Home"); // Set the title directly
+    setShowNewQuestPopup(true); // Show the popup directly
   };
 
   // Add save point coordinates
@@ -484,6 +543,18 @@ const Game = () => {
   const characterSprites = getCharacterSprites();
   console.log('Current sprites:', characterSprites); // Debug log
 
+  // Get character-specific portrait
+  const getCharacterPortrait = () => {
+    const characterName = typeof character === 'object' && character !== null ? character.name : character;
+    switch (String(characterName).toLowerCase()) {
+      case 'eugene':
+        return eugenePortrait;
+      case 'louise':
+      default:
+        return louisePortrait; // Default to louise
+    }
+  };
+
   const getSprite = () => {
     const sprite = characterSprites[facing === 'stand' ? 'stand' : `walk${facing.charAt(0).toUpperCase() + facing.slice(1)}`];
     console.log('Current facing:', facing, 'Using sprite:', sprite); // Debug log
@@ -614,6 +685,16 @@ const Game = () => {
       let newY = position.y;
       const energyCost = 0.5;
       const cleanlinessCost = 0.5;
+
+      // Handle number keys for item slots (1-9)
+      if (e.key >= '1' && e.key <= '9') {
+        const slotIndex = parseInt(e.key) - 1;
+        const item = inventory[slotIndex];
+        if (item) {
+          handleUseItem(item);
+        }
+        return;
+      }
 
       switch (e.key.toLowerCase()) {
         case 'w':
@@ -861,46 +942,83 @@ const Game = () => {
 
   return (
     <div className="relative w-full h-screen bg-black overflow-hidden">
-      {/* Status Effects UI */}
+      {/* Styled Status Bar (HP, Hunger, Hygiene, Happiness) */}
       {!showDialog && !isLoading && !showCutscene && (
         <>
-          <div className="absolute top-4 left-4 z-50 flex flex-col gap-2 text-white">
-            <div className="flex items-center gap-2">
-              <span>❤️ Health: {Math.round(health)}</span>
-              <div className="w-24 h-4 bg-gray-700 rounded">
-                <div className="h-full bg-red-500 rounded" style={{ width: `${health}%` }}></div>
-              </div>
+          <div className="absolute top-4 left-4 z-50 text-white flex items-center border-8 border-[#D2B48C]" style={{ backgroundColor: '#8B4513', padding: '10px', borderRadius: '10px' }}>
+            {/* Character Portrait */}
+            <div className="w-16 h-16 rounded-full border-2 border-yellow-500 overflow-hidden flex items-center justify-center bg-gray-700">
+              <img
+                src={getCharacterPortrait()}
+                alt={`${character?.name || character} Portrait`}
+                className="w-full h-full object-cover"
+              />
             </div>
-            <div className="flex items-center gap-2">
-              <span>⚡ Energy: {Math.round(energy)}</span>
-              <div className="w-24 h-4 bg-gray-700 rounded">
-                <div className="h-full bg-blue-500 rounded" style={{ width: `${energy}%` }}></div>
+
+            {/* Character Info and Stats */}
+            <div className="ml-4 flex flex-col justify-center">
+              {/* Character Name */}
+              <span className="text-base font-bold mb-1">{character?.name || 'Character Name'}</span>
+
+              {/* Stat Bars */}
+              <div className="flex items-center gap-3 mb-1">
+                <span className="text-sm flex items-center">
+                  <img src={heartIcon} alt="HP" className="w-6 h-6 mr-1" /> {Math.round(health)}/100
+                </span>
+                <div className="w-28 h-4 bg-gray-700 rounded overflow-hidden">
+                  <div className="h-full bg-red-500" style={{ width: `${health}%` }}></div>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span>🍽️ Hunger: {Math.round(hunger)}</span>
-              <div className="w-24 h-4 bg-gray-700 rounded">
-                <div className="h-full bg-yellow-500 rounded" style={{ width: `${hunger}%` }}></div>
+
+              <div className="flex items-center gap-3 mb-1">
+                <span className="text-sm flex items-center">
+                  <img src={hungerIcon} alt="Hunger" className="w-6 h-6 mr-1" /> {Math.round(hunger)}/100
+                </span>
+                <div className="w-28 h-4 bg-gray-700 rounded overflow-hidden">
+                  <div className="h-full bg-yellow-500" style={{ width: `${hunger}%` }}></div>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span>😊 Happiness: {Math.round(happiness)}</span>
-              <div className="h-4 bg-gray-700 rounded">
-                <div className="h-full bg-green-500 rounded" style={{ width: `${happiness}%` }}></div>
+
+              <div className="flex items-center gap-3 mb-1">
+                <span className="text-sm flex items-center">
+                  <img src={hygieneIcon} alt="Cleanliness" className="w-6 h-6 mr-1" /> {Math.round(cleanliness)}/100
+                </span>
+                <div className="w-28 h-4 bg-gray-700 rounded overflow-hidden">
+                  <div className="h-full bg-cyan-500" style={{ width: `${cleanliness}%` }}></div>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span>🛁 Cleanliness: {Math.round(cleanliness)}</span>
-              <div className="w-24 h-4 bg-gray-700 rounded">
-                <div className="h-full bg-cyan-500 rounded" style={{ width: `${cleanliness}%` }}></div>
+
+              <div className="flex items-center gap-3 mb-1">
+                <span className="text-sm flex items-center">
+                  <img src={happinessIcon} alt="Happiness" className="w-6 h-6 mr-1" /> {Math.round(happiness)}/100
+                </span>
+                <div className="w-28 h-4 bg-gray-700 rounded overflow-hidden">
+                  <div className="h-full bg-green-500" style={{ width: `${happiness}%` }}></div>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span>💰 Money: {money}</span>
+
+              {/* Energy Stat Bar */}
+              <div className="flex items-center gap-3 mt-1">
+                <span className="text-sm flex items-center">
+                  <img src={energyIcon} alt="Energy" className="w-6 h-6 mr-1" /> {Math.round(energy)}/100
+                </span>
+                <div className="w-28 h-4 bg-gray-700 rounded overflow-hidden">
+                  <div className="h-full bg-blue-500" style={{ width: `${energy}%` }}></div>
+                </div>
+              </div>
             </div>
           </div>
+
+          {/* Money stat below the styled bar */}
+          <div className="absolute top-[180px] left-4 z-50 flex flex-col gap-1 text-white text-xs border-4 border-[#D2B48C]" style={{ backgroundColor: '#8B4513', padding: '5px', borderRadius: '5px' }}>
+            <div className="flex items-center gap-2">
+              <img src={moneyIcon} alt="Money" className="w-6 h-6 mr-1" />
+              <span>{money}</span>
+            </div>
+          </div>
+
           {/* Wrap ActiveQuestFolderUI for positioning */}
-          <div className="fixed right-4 top-[25%] transform -translate-y-1/2 z-[90]">
+          <div className="fixed right-8 top-[25%] transform -translate-y-1/2 z-[90] scale-125">
             <ActiveQuestFolderUI quests={quests} />
           </div>
           <QuestFolder quests={quests} />
@@ -961,7 +1079,7 @@ const Game = () => {
           alt="Pause"
           onClick={handlePause}
           className="fixed top-4 right-4 z-50 cursor-pointer"
-          style={{ width: 64, height: 64, objectFit: 'contain' }}
+          style={{ width: 96, height: 96, objectFit: 'contain' }}
         />
       )}
 
@@ -1020,6 +1138,24 @@ const Game = () => {
           onUseItem={handleUseItem}
         />
       )}
+
+      {/* New Quest Pop-up */}
+      <AnimatePresence>
+      {showNewQuestPopup && (
+        <motion.div
+          className="fixed inset-x-0 top-4 z-[110] flex justify-center pointer-events-none"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5, ease: "easeInOut" }}
+        >
+          <div className="text-white text-center text-3xl font-bold leading-tight">
+            <p>New Quest Added</p>
+            <p>{newQuestTitle}</p>
+          </div>
+        </motion.div>
+      )}
+      </AnimatePresence>
 
       {/* Rest of your game content */}
       {!isLoading && !showCutscene && !showDialog && !isInInterior && (
