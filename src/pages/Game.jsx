@@ -17,12 +17,14 @@ import louiseWalkUp from '../assets/characters/louise/walk-up.gif';
 import louiseWalkDown from '../assets/characters/louise/walk-down.gif';
 import louiseWalkLeft from '../assets/characters/louise/walk-left.gif';
 import louiseWalkRight from '../assets/characters/louise/walk-right.gif';
+import louiseEat from '../assets/characters/louise/eat.gif';
 
 import eugeneStand from '../assets/characters/eugene/stand.gif';
 import eugeneWalkUp from '../assets/characters/eugene/walk-up.gif';
 import eugeneWalkDown from '../assets/characters/eugene/walk-down.gif';
 import eugeneWalkLeft from '../assets/characters/eugene/walk-left.gif';
 import eugeneWalkRight from '../assets/characters/eugene/walk-right.gif';
+import eugeneEat from '../assets/characters/eugene/eat.gif';
 
 // Import character portraits
 import louisePortrait from '../assets/characters/louise/character.png';
@@ -269,6 +271,7 @@ const Game = () => {
   // State for new quest pop-up - MOVED HERE
   const [showNewQuestPopup, setShowNewQuestPopup] = useState(false);
   const [newQuestTitle, setNewQuestTitle] = useState('');
+  const [showEatAnimation, setShowEatAnimation] = useState(false);
 
   // Ref to store previous quests state for comparison - MOVED HERE
   const prevQuestsRef = useRef([]);
@@ -280,6 +283,7 @@ const Game = () => {
   const [happiness, setHappiness] = useState(100);
   const [money, setMoney] = useState(0);
   const [cleanliness, setCleanliness] = useState(100);
+  const [gameTime, setGameTime] = useState({ hours: 6, minutes: 0 }); // Start at 6:00 AM
 
   // Define shop trigger points
   const shopPoints = [
@@ -517,7 +521,8 @@ const Game = () => {
           walkUp: eugeneWalkUp,
           walkDown: eugeneWalkDown,
           walkLeft: eugeneWalkLeft,
-          walkRight: eugeneWalkRight
+          walkRight: eugeneWalkRight,
+          eat: eugeneEat
         };
       case 'louise':
         console.log('Loading Louise sprites');
@@ -526,7 +531,8 @@ const Game = () => {
           walkUp: louiseWalkUp,
           walkDown: louiseWalkDown,
           walkLeft: louiseWalkLeft,
-          walkRight: louiseWalkRight
+          walkRight: louiseWalkRight,
+          eat: louiseEat
         };
       default:
         console.log('No valid character selected, defaulting to Louise');
@@ -535,7 +541,8 @@ const Game = () => {
           walkUp: louiseWalkUp,
           walkDown: louiseWalkDown,
           walkLeft: louiseWalkLeft,
-          walkRight: louiseWalkRight
+          walkRight: louiseWalkRight,
+          eat: louiseEat
         };
     }
   };
@@ -868,6 +875,10 @@ const Game = () => {
 
   const handleUseItem = (item) => {
     if (item.type === 'consumable') {
+      // Show eating animation
+      setShowEatAnimation(true);
+      setTimeout(() => setShowEatAnimation(false), 1000); // Hide after 1 second
+
       // Apply item effects
       if (item.effect.health) {
         setHealth(prev => Math.min(100, prev + item.effect.health));
@@ -915,6 +926,77 @@ const Game = () => {
     });
   };
 
+  // Add time system effect
+  useEffect(() => {
+    const timeInterval = setInterval(() => {
+      setGameTime(prevTime => {
+        let newMinutes = prevTime.minutes + 1;
+        let newHours = prevTime.hours;
+
+        if (newMinutes >= 60) {
+          newMinutes = 0;
+          newHours = (newHours + 1) % 24;
+        }
+
+        return { hours: newHours, minutes: newMinutes };
+      });
+    }, 1000); // Update every second
+
+    return () => clearInterval(timeInterval);
+  }, []);
+
+  // Format time for display
+  const formatTime = (time) => {
+    let hours = time.hours;
+    const minutes = time.minutes.toString().padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    
+    // Convert to 12-hour format
+    hours = hours % 12;
+    hours = hours ? hours : 12; // Convert 0 to 12
+    
+    return `${hours}:${minutes} ${ampm}`;
+  };
+
+  // Calculate darkness level based on time
+  const getDarknessLevel = (time) => {
+    const hour = time.hours;
+    const minute = time.minutes;
+    const totalMinutes = hour * 60 + minute;
+
+    // Define time periods
+    const sunriseStart = 5 * 60; // 5:00 AM
+    const sunriseEnd = 7 * 60;   // 7:00 AM
+    const sunsetStart = 17 * 60; // 5:00 PM
+    const sunsetEnd = 19 * 60;   // 7:00 PM
+    const nightStart = 20 * 60;  // 8:00 PM
+    const nightEnd = 4 * 60;     // 4:00 AM
+
+    // Calculate darkness level with smoother transitions
+    if (totalMinutes >= nightStart || totalMinutes < nightEnd) {
+      // Night time - very dark
+      return 0.8;
+    } else if (totalMinutes >= sunsetStart && totalMinutes < sunsetEnd) {
+      // Sunset transition - smooth gradient from day to dusk
+      const progress = (totalMinutes - sunsetStart) / (sunsetEnd - sunsetStart);
+      // Use a smooth easing function (cubic)
+      const easedProgress = progress * progress * (3 - 2 * progress);
+      return 0.4 + (easedProgress * 0.4);
+    } else if (totalMinutes >= sunriseStart && totalMinutes < sunriseEnd) {
+      // Sunrise transition - smooth gradient from night to day
+      const progress = (totalMinutes - sunriseStart) / (sunriseEnd - sunriseStart);
+      // Use a smooth easing function (cubic)
+      const easedProgress = progress * progress * (3 - 2 * progress);
+      return 0.8 - (easedProgress * 0.4);
+    } else if (totalMinutes >= sunsetEnd && totalMinutes < nightStart) {
+      // Dusk - moderately dark
+      return 0.4;
+    } else {
+      // Day time - no darkness
+      return 0;
+    }
+  };
+
   if (isInInterior) {
     return (
       <HouseInterior 
@@ -936,6 +1018,18 @@ const Game = () => {
         setIsSleeping={setIsSleeping}
         cleanliness={cleanliness}
         setCleanliness={setCleanliness}
+        inventory={inventory}
+        quests={quests}
+        setQuests={setQuests}
+        onUseItem={handleUseItem}
+        isPaused={isPaused}
+        handlePause={handlePause}
+        handleResume={handleResume}
+        handleSettings={handleSettings}
+        handleCloseSettings={handleCloseSettings}
+        handleExit={handleExit}
+        showSettings={showSettings}
+        gameTime={gameTime}
       />
     );
   }
@@ -1017,6 +1111,13 @@ const Game = () => {
             </div>
           </div>
 
+          {/* Time Display */}
+          <div className="absolute top-[220px] left-4 z-50 text-white text-xs border-4 border-[#D2B48C]" style={{ backgroundColor: '#8B4513', padding: '5px', borderRadius: '5px' }}>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold">{formatTime(gameTime)}</span>
+            </div>
+          </div>
+
           {/* Wrap ActiveQuestFolderUI for positioning */}
           <div className="fixed right-8 top-[25%] transform -translate-y-1/2 z-[90] scale-125">
             <ActiveQuestFolderUI quests={quests} />
@@ -1073,7 +1174,7 @@ const Game = () => {
       )}
 
       {/* Pause Button */}
-      {!isPaused && !isLoading && !showCutscene && !showDialog && !showShop && (
+      {!isPaused && !isLoading && !showCutscene && !showDialog && !showShop && !isInInterior && (
         <img
           src={pauseButton}
           alt="Pause"
@@ -1084,7 +1185,7 @@ const Game = () => {
       )}
 
       {/* Pause Menu Popup */}
-      {isPaused && (
+      {isPaused && !isInInterior && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center"
           style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}
@@ -1101,7 +1202,7 @@ const Game = () => {
       )}
 
       {/* Settings Popup */}
-      {showSettings && (
+      {showSettings && !isInInterior && (
         <Settings
           onClose={handleCloseSettings}
           soundEnabled={soundEnabled}
@@ -1116,7 +1217,7 @@ const Game = () => {
       )}
 
       {/* Shop Popup */}
-      {showShop && (
+      {showShop && !isInInterior && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
           <div className="bg-[#8B4513] p-8 rounded-lg text-white border-8 border-[#D2B48C] shadow-lg">
             <h2 className="text-2xl mb-4">Shop</h2>
@@ -1157,54 +1258,124 @@ const Game = () => {
       )}
       </AnimatePresence>
 
-      {/* Rest of your game content */}
-      {!isLoading && !showCutscene && !showDialog && !isInInterior && (
+      {/* Add Eating Animation */}
+      <AnimatePresence>
+        {showEatAnimation && (
+          <motion.div
+            className="fixed inset-0 z-[120] flex items-center justify-center pointer-events-none"
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.5 }}
+            transition={{ duration: 0.3 }}
+          >
+            <img 
+              src={characterSprites.eat}
+              alt="Eating" 
+              className="w-32 h-32 object-contain"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Day/Night Cycle Overlay */}
+      <div 
+        className="fixed inset-0 z-[40] pointer-events-none"
+        style={{
+          backgroundColor: 'black',
+          opacity: getDarknessLevel(gameTime),
+          transition: 'opacity 2s cubic-bezier(0.4, 0, 0.2, 1)'
+        }}
+      />
+
+      {/* Render HouseInterior or Main Game */}
+      {isInInterior ? (
+        <HouseInterior 
+          position={position} 
+          setPosition={setPosition} 
+          onExit={handleExitInterior} 
+          character={character}
+          health={health}
+          setHealth={setHealth}
+          energy={energy}
+          setEnergy={setEnergy}
+          hunger={hunger}
+          setHunger={setHunger}
+          happiness={happiness}
+          setHappiness={setHappiness}
+          money={money}
+          setMoney={setMoney}
+          isSleeping={isSleeping}
+          setIsSleeping={setIsSleeping}
+          cleanliness={cleanliness}
+          setCleanliness={setCleanliness}
+          inventory={inventory}
+          quests={quests}
+          setQuests={setQuests}
+          onUseItem={handleUseItem}
+          isPaused={isPaused}
+          handlePause={handlePause}
+          handleResume={handleResume}
+          handleSettings={handleSettings}
+          handleCloseSettings={handleCloseSettings}
+          handleExit={handleExit}
+          showSettings={showSettings}
+          gameTime={gameTime}
+        />
+      ) : (
         <>
+          {/* Minimap */}
           <Minimap position={position} shopPoints={shopPoints} />
-          <div className="game-container">
-            <div className="camera">
-              <div className="map" style={getCameraStyle()}>
+
+          {/* Rest of your game content (excluding UI moved to HouseInterior) */}
+          {!isLoading && !showCutscene && (
+            <div className="game-container">
+              <div className="camera">
                 <div 
-                  className="map-background"
-                  style={{
-                    width: `${MAP_WIDTH}px`,
-                    height: `${MAP_HEIGHT}px`,
-                    backgroundImage: `url(${allMap})`,
-                    backgroundSize: '100% 100%',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                  }}
-                />
-                <div className="grid" style={{ width: `${MAP_WIDTH}px`, height: `${MAP_HEIGHT}px` }}>
-                  {renderGrid}
+                  className="map" 
+                  style={getCameraStyle()}
+                >
+                  <div 
+                    className="map-background"
+                    style={{
+                      width: `${MAP_WIDTH}px`,
+                      height: `${MAP_HEIGHT}px`,
+                      backgroundImage: `url(${allMap})`,
+                      backgroundSize: '100% 100%',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                    }}
+                  />
+                  <div className="grid" style={{ width: `${MAP_WIDTH}px`, height: `${MAP_HEIGHT}px` }}>
+                    {renderGrid}
+                  </div>
+                  <div
+                    className="player"
+                    style={{
+                      left: `${position.x}px`,
+                      top: `${position.y}px`,
+                      backgroundImage: `url(${getSprite()})`,
+                      imageRendering: 'pixelated',
+                    }}
+                  />
+                  <div 
+                    className="map-foreground"
+                    style={{
+                      width: `${MAP_WIDTH}px`,
+                      height: `${MAP_HEIGHT}px`,
+                      backgroundImage: `url(${foregroundMap})`,
+                      backgroundSize: '100% 100%',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      pointerEvents: 'none',
+                      zIndex: 3,
+                    }}
+                  />
                 </div>
-                <div
-                  className="player"
-                  style={{
-                    left: `${position.x}px`,
-                    top: `${position.y}px`,
-                    backgroundImage: `url(${getSprite()})`,
-                    imageRendering: 'pixelated',
-                  }}
-                />
-                <div 
-                  className="map-foreground"
-                  style={{
-                    width: `${MAP_WIDTH}px`,
-                    height: `${MAP_HEIGHT}px`,
-                    backgroundImage: `url(${foregroundMap})`,
-                    backgroundSize: '100% 100%',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    pointerEvents: 'none',
-                    zIndex: 3,
-                  }}
-                />
               </div>
             </div>
-          </div>
+          )}
         </>
       )}
     </div>

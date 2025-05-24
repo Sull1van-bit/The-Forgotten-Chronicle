@@ -1,5 +1,3 @@
-"use client";
-
 import {
   motion,
   useMotionValue,
@@ -149,7 +147,7 @@ function Dock({
           <DockItem
             key={index}
             onClick={item.onClick}
-            className={item.type === 'quest' ? 'opacity-75' : ''}
+            className={item.className}
             mouseX={mouseX}
             spring={spring}
             distance={distance}

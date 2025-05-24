@@ -19,9 +19,6 @@ const ActiveQuestFolderUI = ({ quests = [] }) => {
         className="bg-[#8B4513] py-2 rounded-md shadow-lg hover:bg-[#A0522D] cursor-pointer flex justify-center items-center gap-2 px-3 border border-[#D2B48C]"
         onClick={toggleVisibility} // Add click handler
       >
-        {/* SVG icon - Keep the folder icon colors as they seem thematic */}
-        {/* REMOVED SVG ICON */}
-        
         {/* Text label */}
         <p className="text-sm font-semibold text-[#F5DEB3]">Quest</p>
       </div>
@@ -42,12 +39,12 @@ const ActiveQuestFolderUI = ({ quests = [] }) => {
               <h3 className="font-semibold text-[#F5DEB3]">{quest.title}</h3>
               {quest.objectives && quest.objectives.length > 0 && (
                 <ul className="list-none p-0 m-0 space-y-1 text-sm mt-1">
-                  {quest.objectives.map((objective, idx) => (
+                  {quest.objectives.map((objective, objIndex) => (
                     <li 
-                      key={idx}
+                      key={objIndex}
                       className={`flex items-center gap-1 ${objective.completed ? 'text-gray-400 line-through' : 'text-white'}`}
                     >
-                       {objective.completed ? '✓' : '☐'} {objective.description}
+                      {objective.description}
                     </li>
                   ))}
                 </ul>

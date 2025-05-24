@@ -94,9 +94,9 @@ const QuestFolder = ({ quests = [] }) => {
                     {selectedQuest.objectives.map((objective, index) => (
                       <li 
                         key={index}
-                        className={`flex items-center gap-2 ${objective.completed ? 'text-green-400' : ''} drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]`}
+                        className={`flex items-center gap-2 ${objective.completed ? 'text-gray-400 line-through' : 'text-white'} drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]`}
                       >
-                        {objective.completed ? '✓' : '○'} {objective.description}
+                        {objective.description}
                       </li>
                     ))}
                   </ul>

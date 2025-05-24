@@ -1,25 +1,43 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import houseInside from '../../assets/Interior/house-inside.png';
 import { useAuth } from '../../context/AuthContext';
 import { saveFileService } from '../../services/saveFileService';
+import { useSound } from '../../context/SoundContext';
+import { useMusic } from '../../context/MusicContext';
+
+// Import components
+import Inventory from '../../components/Inventory';
+import QuestFolder from '../../components/QuestFolder';
+import ActiveQuestFolderUI from '../../components/ActiveQuestFolderUI';
+import Settings from '../../components/Settings';
+import DialogBox from '../../components/DialogBox';
+
+// Import UI icons
+import heartIcon from '../../assets/statbar/heart.png';
+import hungerIcon from '../../assets/statbar/hunger.png';
+import hygieneIcon from '../../assets/statbar/hygiene.png';
+import happinessIcon from '../../assets/statbar/happiness.png';
+import energyIcon from '../../assets/statbar/energy.png';
+import moneyIcon from '../../assets/statbar/money.png';
+import pauseButton from '../../assets/menu/pause.png';
+
+// Import character portraits
+import louisePortrait from '../../assets/characters/louise/character.png';
+import eugenePortrait from '../../assets/characters/eugene/character.png';
+
 // Import character sprites
 import eugeneStand from '../../assets/characters/eugene/stand.gif';
 import eugeneWalkUp from '../../assets/characters/eugene/walk-up.gif';
 import eugeneWalkDown from '../../assets/characters/eugene/walk-down.gif';
 import eugeneWalkLeft from '../../assets/characters/eugene/walk-left.gif';
 import eugeneWalkRight from '../../assets/characters/eugene/walk-right.gif';
-/*
-import alexStand from '../../assets/characters/alex/stand.gif';
-import alexWalkUp from '../../assets/characters/alex/walk-up.gif';
-import alexWalkDown from '../../assets/characters/alex/walk-down.gif';
-import alexWalkLeft from '../../assets/characters/alex/walk-left.gif';
-import alexWalkRight from '../../assets/characters/alex/walk-right.gif';
-*/
 import louiseStand from '../../assets/characters/louise/stand.gif';
 import louiseWalkUp from '../../assets/characters/louise/walk-up.gif';
 import louiseWalkDown from '../../assets/characters/louise/walk-down.gif';
 import louiseWalkLeft from '../../assets/characters/louise/walk-left.gif';
 import louiseWalkRight from '../../assets/characters/louise/walk-right.gif';
+import eugeneSleep from '../../assets/characters/eugene/sleep.gif';
+import louiseSleep from '../../assets/characters/louise/sleep.gif';
 
 // Define collision points for interior
 const INTERIOR_COLLISION_MAP = [
@@ -38,20 +56,46 @@ const HouseInterior = ({
   setPosition, 
   onExit, 
   character, 
+  health,
+  setHealth,
   energy, 
   setEnergy, 
   hunger, 
   setHunger, 
   happiness, 
   setHappiness, 
+  money,
+  setMoney,
   isSleeping, 
   setIsSleeping,
   cleanliness, 
-  setCleanliness 
+  setCleanliness,
+  gameTime,
+  inventory,
+  quests,
+  setQuests,
+  onUseItem,
+  isPaused,
+  handlePause,
+  handleResume,
+  handleSettings,
+  handleCloseSettings,
+  handleExit,
+  showSettings,
+  onTimeUpdate
 }) => {
   const { user } = useAuth();
+  const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume } = useSound();
+  const { musicEnabled, setMusicEnabled, musicVolume, setMusicVolume } = useMusic();
   const [facing, setFacing] = useState('stand');
   const [showSleepButton, setShowSleepButton] = useState(false);
+  const [showSleepConfirmPopup, setShowSleepConfirmPopup] = useState(false);
+  const [isNearSleepArea, setIsNearSleepArea] = useState(false);
+  const prevIsNearSleepArea = useRef(false);
+  const hasShownSleepPopup = useRef(false);
+  const [showDialog, setShowDialog] = useState(false);
+  const [currentDialogueIndex, setCurrentDialogueIndex] = useState(0);
+  const hasShownHouseDialog = useRef(false);
   const INTERIOR_WIDTH = 800;
   const INTERIOR_HEIGHT = 600;
   const GRID_SIZE = 100;
@@ -63,20 +107,95 @@ const HouseInterior = ({
   const SLEEP_AREA = { x: 2, y: 2 };
   const SLEEP_AREA_PIXEL = { x: SLEEP_AREA.x * GRID_SIZE, y: SLEEP_AREA.y * GRID_SIZE };
 
+  // House entrance monologue
+  const houseEntranceMonologue = [
+    "So this is it... Home. Or, at least, it once was.",
+    "The walls have held stories—laughter, arguments, quiet moments by the fire. Now, only silence remains.",
+    "Everything feels smaller than I remembered. Or perhaps, I have simply grown too much for this place.",
+    "If I am to live here, it will need work. A roof that doesn't leak, fields that don't sit barren, a reason to stay.",
+    "But before that, the elder waits. If anyone remembers what this place once was, it would be them."
+  ];
+
+  // Add effect to show dialog when entering house for the first time
+  useEffect(() => {
+    const hasSeenDialog = localStorage.getItem('hasSeenHouseDialog');
+    if (!hasSeenDialog) {
+      setShowDialog(true);
+      localStorage.setItem('hasSeenHouseDialog', 'true');
+    }
+  }, []);
+
+  // Handle advancing the monologue
+  const handleAdvanceMonologue = () => {
+    if (currentDialogueIndex < houseEntranceMonologue.length - 1) {
+      setCurrentDialogueIndex(prevIndex => prevIndex + 1);
+    } else {
+      setShowDialog(false);
+      setCurrentDialogueIndex(0);
+    }
+  };
+
   // Check if the player is near the sleep area
   const checkSleepProximity = (x, y) => {
     const playerCenterX = x + (PLAYER_SIZE / 2);
     const playerCenterY = y + (PLAYER_SIZE / 2);
-    const sleepCenterX = SLEEP_AREA_PIXEL.x + (GRID_SIZE / 2);
+    // Set the sleep center point to be further left
+    const sleepCenterX = SLEEP_AREA_PIXEL.x - 50; // Move 50 pixels to the left
     const sleepCenterY = SLEEP_AREA_PIXEL.y + (GRID_SIZE / 2);
     const distance = Math.sqrt(
       Math.pow(playerCenterX - sleepCenterX, 2) + Math.pow(playerCenterY - sleepCenterY, 2)
     );
-    setShowSleepButton(distance < GRID_SIZE);
+    // Update proximity state - only show when very close (within 30 pixels)
+    const isNear = distance < 30;
+    setIsNearSleepArea(isNear);
+    setShowSleepButton(isNear);
   };
+
+  // Check if it's sleep time (9 PM to 6 AM)
+  const isSleepTime = () => {
+    const hour = gameTime.hours;
+    return hour >= 21 || hour < 6; // 9 PM to 6 AM
+  };
+
+  // Effect to trigger popup when entering sleep area
+  useEffect(() => {
+    // Only show popup if it hasn't been shown before and it's sleep time
+    if (isNearSleepArea && !prevIsNearSleepArea.current && !showSleepConfirmPopup && !isSleeping && !hasShownSleepPopup.current && isSleepTime()) {
+      setShowSleepConfirmPopup(true);
+      setShowSleepButton(false);
+      hasShownSleepPopup.current = true;
+    }
+
+    prevIsNearSleepArea.current = isNearSleepArea;
+  }, [isNearSleepArea, showSleepConfirmPopup, isSleeping, gameTime]);
+
+  // Add effect to check quest progress when entering house
+  useEffect(() => {
+    if (quests && quests.length > 0) {
+      const updatedQuests = quests.map(quest => {
+        if (quest.title === "Welcome Home") {
+          const updatedObjectives = quest.objectives.map(objective => {
+            if (objective.description === "Enter your house" && !objective.completed) {
+              return { ...objective, completed: true };
+            }
+            return objective;
+          });
+          return { ...quest, objectives: updatedObjectives };
+        }
+        return quest;
+      });
+      setQuests(updatedQuests);
+    }
+  }, []); // Run once when component mounts
 
   // Handle sleep action
   const handleSleep = async () => {
+    if (!isSleepTime()) {
+      setShowSleepConfirmPopup(false);
+      return;
+    }
+
+    setShowSleepConfirmPopup(false);
     setIsSleeping(true);
     
     // Save game state
@@ -101,28 +220,77 @@ const HouseInterior = ({
         }
       };
 
-      // Save the game
       await saveFileService.saveGame(user.uid, gameState);
       console.log('Game saved after sleeping');
     } catch (error) {
       console.error('Error saving game after sleep:', error);
     }
 
-    // Update stats after sleep
+    // Calculate time until 6 AM
+    const currentHour = gameTime.hours;
+    const currentMinute = gameTime.minutes;
+    let hoursUntilWake = 0;
+    
+    if (currentHour >= 21) { // If sleeping after 9 PM
+      hoursUntilWake = 24 - currentHour + 6; // Hours until 6 AM next day
+    } else { // If sleeping before 6 AM
+      hoursUntilWake = 6 - currentHour;
+    }
+
+    // Convert hours to milliseconds (1 hour = 1 second in game time)
+    const sleepDuration = hoursUntilWake * 1000;
+
+    // Create an interval to update time every second
+    const timeInterval = setInterval(() => {
+      const newHour = gameTime.hours + 1;
+      const newTime = {
+        hours: newHour >= 24 ? 0 : newHour,
+        minutes: 0
+      };
+      // Update the game time in the parent component
+      if (typeof onTimeUpdate === 'function') {
+        onTimeUpdate(newTime);
+      }
+    }, 1000);
+
+    // Update stats and wake up after sleep duration
     setTimeout(() => {
+      clearInterval(timeInterval); // Stop the time updates
       setEnergy(prev => Math.min(100, prev + 50));
       setHappiness(prev => Math.min(100, prev + 30));
       setHunger(prev => Math.max(0, prev - 10));
       setCleanliness(prev => Math.min(100, prev + 50));
       setIsSleeping(false);
-    }, 3000);
+      
+      // Set time to 6 AM
+      const wakeTime = { hours: 6, minutes: 0 };
+      if (typeof onTimeUpdate === 'function') {
+        onTimeUpdate(wakeTime);
+      }
+
+      // Update quest progress after sleeping
+      if (quests && quests.length > 0) {
+        const updatedQuests = quests.map(quest => {
+          if (quest.title === "Welcome Home") {
+            const updatedObjectives = quest.objectives.map(objective => {
+              if (objective.description === "Meet the village elder" && !objective.completed) {
+                return { ...objective, completed: true };
+              }
+              return objective;
+            });
+            return { ...quest, objectives: updatedObjectives };
+          }
+          return quest;
+        });
+        setQuests(updatedQuests);
+      }
+    }, sleepDuration);
   };
 
   // Get character-specific sprites
   const getCharacterSprites = () => {
-    console.log('House Interior - Selected character:', character); // Debug log
+    console.log('House Interior - Selected character:', character);
     
-    // Handle case where character might be an object with a name property
     const characterName = typeof character === 'object' && character !== null ? character.name : character;
     console.log('House Interior - Character name:', characterName);
 
@@ -134,7 +302,8 @@ const HouseInterior = ({
           walkUp: eugeneWalkUp,
           walkDown: eugeneWalkDown,
           walkLeft: eugeneWalkLeft,
-          walkRight: eugeneWalkRight
+          walkRight: eugeneWalkRight,
+          sleep: eugeneSleep
         };
       case 'louise':
         console.log('Loading Louise sprites in house');
@@ -143,7 +312,8 @@ const HouseInterior = ({
           walkUp: louiseWalkUp,
           walkDown: louiseWalkDown,
           walkLeft: louiseWalkLeft,
-          walkRight: louiseWalkRight
+          walkRight: louiseWalkRight,
+          sleep: louiseSleep
         };
       default:
         console.log('No valid character selected in house, defaulting to Louise');
@@ -152,7 +322,8 @@ const HouseInterior = ({
           walkUp: louiseWalkUp,
           walkDown: louiseWalkDown,
           walkLeft: louiseWalkLeft,
-          walkRight: louiseWalkRight
+          walkRight: louiseWalkRight,
+          sleep: louiseSleep
         };
     }
   };
@@ -273,6 +444,7 @@ const HouseInterior = ({
         );
       }
     }
+
     return cells;
   };
 
@@ -342,32 +514,213 @@ const HouseInterior = ({
     };
   }, [position, energy, cleanliness, isSleeping]);
 
+  // Add getCharacterPortrait function
+  const getCharacterPortrait = () => {
+    const characterName = typeof character === 'object' && character !== null ? character.name : character;
+    switch (String(characterName).toLowerCase()) {
+      case 'eugene':
+        return eugenePortrait;
+      case 'louise':
+      default:
+        return louisePortrait;
+    }
+  };
+
+  // Add formatTime function
+  const formatTime = (time) => {
+    let hours = time.hours;
+    const minutes = time.minutes.toString().padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    
+    return `${hours}:${minutes} ${ampm}`;
+  };
+
   return (
     <div className="interior-container relative">
+      {/* Add Dialog Box */}
+      {showDialog && (
+        <>
+          <div
+            className="fixed top-8 right-8 z-[100] pointer-events-auto"
+          >
+            <button
+              onClick={() => {
+                setShowDialog(false);
+                setCurrentDialogueIndex(0);
+              }}
+              style={{ backgroundColor: 'rgba(55, 65, 81, 0.85)' }}
+              className="px-4 py-2 text-white rounded-lg hover:bg-gray-600 transition-colors shadow-lg"
+            >
+              Skip
+            </button>
+          </div>
+          <div
+            className="fixed inset-0 z-50 flex items-end justify-center p-4 pointer-events-auto"
+            onClick={handleAdvanceMonologue}
+          >
+            <div className="flex flex-col items-center pointer-events-auto">
+              <DialogBox
+                key={currentDialogueIndex}
+                dialogue={houseEntranceMonologue[currentDialogueIndex]}
+                onAdvance={handleAdvanceMonologue}
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Add UI Elements - Hide during dialog */}
+      {!showDialog && (
+        <>
+          <div className="absolute top-4 left-4 z-50 text-white flex items-center border-8 border-[#D2B48C]" style={{ backgroundColor: '#8B4513', padding: '10px', borderRadius: '10px' }}>
+            {/* Character Portrait */}
+            <div className="w-16 h-16 rounded-full border-2 border-yellow-500 overflow-hidden flex items-center justify-center bg-gray-700">
+              <img
+                src={getCharacterPortrait()}
+                alt={`${character?.name || character} Portrait`}
+                className="w-full h-full object-cover"
+              />
+            </div>
+
+            {/* Character Info and Stats */}
+            <div className="ml-4 flex flex-col justify-center">
+              {/* Character Name */}
+              <span className="text-base font-bold mb-1">{character?.name || 'Character Name'}</span>
+
+              {/* Stat Bars */}
+              <div className="flex items-center gap-3 mb-1">
+                <span className="text-sm flex items-center">
+                  <img src={heartIcon} alt="HP" className="w-6 h-6 mr-1" /> {Math.round(health)}/100
+                </span>
+                <div className="w-28 h-4 bg-gray-700 rounded overflow-hidden">
+                  <div className="h-full bg-red-500" style={{ width: `${health}%` }}></div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 mb-1">
+                <span className="text-sm flex items-center">
+                  <img src={hungerIcon} alt="Hunger" className="w-6 h-6 mr-1" /> {Math.round(hunger)}/100
+                </span>
+                <div className="w-28 h-4 bg-gray-700 rounded overflow-hidden">
+                  <div className="h-full bg-yellow-500" style={{ width: `${hunger}%` }}></div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 mb-1">
+                <span className="text-sm flex items-center">
+                  <img src={hygieneIcon} alt="Cleanliness" className="w-6 h-6 mr-1" /> {Math.round(cleanliness)}/100
+                </span>
+                <div className="w-28 h-4 bg-gray-700 rounded overflow-hidden">
+                  <div className="h-full bg-cyan-500" style={{ width: `${cleanliness}%` }}></div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 mb-1">
+                <span className="text-sm flex items-center">
+                  <img src={happinessIcon} alt="Happiness" className="w-6 h-6 mr-1" /> {Math.round(happiness)}/100
+                </span>
+                <div className="w-28 h-4 bg-gray-700 rounded overflow-hidden">
+                  <div className="h-full bg-green-500" style={{ width: `${happiness}%` }}></div>
+                </div>
+              </div>
+
+              {/* Energy Stat Bar */}
+              <div className="flex items-center gap-3 mt-1">
+                <span className="text-sm flex items-center">
+                  <img src={energyIcon} alt="Energy" className="w-6 h-6 mr-1" /> {Math.round(energy)}/100
+                </span>
+                <div className="w-28 h-4 bg-gray-700 rounded overflow-hidden">
+                  <div className="h-full bg-blue-500" style={{ width: `${energy}%` }}></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Money stat */}
+          <div className="absolute top-[180px] left-4 z-50 flex flex-col gap-1 text-white text-xs border-4 border-[#D2B48C]" style={{ backgroundColor: '#8B4513', padding: '5px', borderRadius: '5px' }}>
+            <div className="flex items-center gap-2">
+              <img src={moneyIcon} alt="Money" className="w-6 h-6 mr-1" />
+              <span>{money}</span>
+            </div>
+          </div>
+
+          {/* Time Display */}
+          <div className="absolute top-[220px] left-4 z-50 text-white text-xs border-4 border-[#D2B48C]" style={{ backgroundColor: '#8B4513', padding: '5px', borderRadius: '5px' }}>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold">{formatTime(gameTime)}</span>
+            </div>
+          </div>
+
+          {/* Add Inventory */}
+          <Inventory 
+            items={inventory} 
+            onUseItem={onUseItem}
+          />
+
+          {/* Add QuestFolder */}
+          <QuestFolder quests={quests} />
+
+          {/* Add ActiveQuestFolderUI */}
+          <div className="fixed right-8 top-[25%] transform -translate-y-1/2 z-[90] scale-125">
+            <ActiveQuestFolderUI quests={quests} />
+          </div>
+
+          {/* Add Pause Button */}
+          {!isPaused && !isSleeping && (
+            <img
+              src={pauseButton}
+              alt="Pause"
+              onClick={handlePause}
+              className="fixed top-4 right-4 z-50 cursor-pointer"
+              style={{ width: 96, height: 96, objectFit: 'contain' }}
+            />
+          )}
+        </>
+      )}
+
       {showSleepButton && !isSleeping && (
-        <button
-          className="absolute z-50 bg-blue-500 text-white px-4 py-2 rounded shadow-lg hover:bg-blue-600"
-          style={{
-            left: `${SLEEP_AREA_PIXEL.x + GRID_SIZE / 2}px`,
-            top: `${SLEEP_AREA_PIXEL.y - 40}px`,
-            transform: 'translateX(-50%)',
-          }}
-          onClick={handleSleep}
-        >
-          Sleep
-        </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}>
+          <div className="bg-[#8B4513] p-8 rounded-lg max-w-md w-full mx-4 relative border-8 border-[#D2B48C] shadow-lg flex flex-col items-center gap-4">
+            <h2 className="text-2xl font-bold text-center text-[#F5DEB3]">Sleep?</h2>
+            {!isSleepTime() && (
+              <p className="text-red-400 text-center text-sm">You can only sleep between 9 PM and 6 AM</p>
+            )}
+            <p className="text-[#F5DEB3] text-center text-sm">Restore energy and happiness</p>
+            <div className="flex flex-col gap-2">
+              <button 
+                className="bg-[#8B4513] text-[#F5DEB3] px-6 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 w-32"
+                onClick={handleSleep}
+                disabled={!isSleepTime()}
+              >
+                Yes
+              </button>
+              <button 
+                className="bg-[#8B4513] text-[#F5DEB3] px-6 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 w-32"
+                onClick={() => setShowSleepButton(false)}
+              >
+                No
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {isSleeping && (
         <div
-          className="absolute z-50 bg-gray-800 text-white px-4 py-2 rounded shadow-lg"
-          style={{
-            left: `${SLEEP_AREA_PIXEL.x + GRID_SIZE / 2}px`,
-            top: `${SLEEP_AREA_PIXEL.y - 40}px`,
-            transform: 'translateX(-50%)',
-          }}
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)' }}
         >
-          Sleeping...
+          <div className="text-[#F5DEB3] text-2xl font-bold flex flex-col items-center gap-4">
+            <img 
+              src={characterSprites.sleep}
+              alt="Sleeping"
+              className="w-32 h-32 object-contain"
+            />
+            <span>Sleeping...</span>
+          </div>
         </div>
       )}
 
@@ -380,6 +733,7 @@ const HouseInterior = ({
           backgroundSize: '100% 100%',
           position: 'relative',
           overflow: 'hidden',
+          zIndex: 1,
         }}
       >
         <div className="grid" style={{ position: 'absolute', width: '100%', height: '100%' }}>
@@ -405,6 +759,38 @@ const HouseInterior = ({
           }}
         />
       </div>
+
+      {/* Add Pause Menu */}
+      {isPaused && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}
+        >
+          <div className="bg-[#8B4513] p-8 rounded-lg max-w-md w-full mx-4 relative border-8 border-[#D2B48C] shadow-lg flex flex-col items-center gap-8">
+            <h2 className="text-2xl font-bold mb-2 text-center text-[#F5DEB3] tracking-widest">PAUSED</h2>
+            <div className="flex flex-col items-center gap-6 w-full">
+              <button className="pause-menu-btn w-56" onClick={handleResume}>Resume</button>
+              <button className="pause-menu-btn w-56" onClick={handleSettings}>Settings</button>
+              <button className="pause-menu-btn w-56" onClick={handleExit}>Exit</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Settings Popup */}
+      {showSettings && (
+        <Settings
+          onClose={handleCloseSettings}
+          soundEnabled={soundEnabled}
+          setSoundEnabled={setSoundEnabled}
+          sfxVolume={sfxVolume}
+          setSfxVolume={setSfxVolume}
+          musicEnabled={musicEnabled}
+          setMusicEnabled={setMusicEnabled}
+          musicVolume={musicVolume}
+          setMusicVolume={setMusicVolume}
+        />
+      )}
     </div>
   );
 };

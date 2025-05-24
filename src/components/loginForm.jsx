@@ -47,9 +47,18 @@ const LoginForm = () => {
 
     try {
       await signInWithGoogle();
+      navigate('/');
     } catch (error) {
-      setError('Failed to sign in with Google. Please try again.');
       console.error('Google sign in error:', error);
+      if (error.code === 'auth/popup-blocked') {
+        setError('Please allow popups for this website to sign in with Google.');
+      } else if (error.code === 'auth/popup-closed-by-user') {
+        setError('Sign in was cancelled. Please try again.');
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        setError('Sign in was cancelled. Please try again.');
+      } else {
+        setError('Failed to sign in with Google. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }

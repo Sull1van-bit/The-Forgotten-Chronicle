@@ -15,10 +15,10 @@ import louiseVeryHappy from '../assets/characters/louise/veryHappy.png';
 // import alexSmile from '../assets/characters/alex/smile.png';
 // import alexVeryHappy from '../assets/characters/alex/veryHappy.png';
 
-// import eugeneAngry from '../assets/characters/eugene/angry.png';
-// import eugeneHappy from '../assets/characters/eugene/happy.png';
-// import eugeneSmile from '../assets/characters/eugene/smile.png';
-// import eugeneVeryHappy from '../assets/characters/eugene/veryHappy.png';
+import eugeneAngry from '../assets/characters/eugene/angry.png';
+import eugeneHappy from '../assets/characters/eugene/happy.png';
+import eugeneSmile from '../assets/characters/eugene/smile.png';
+import eugeneVeryHappy from '../assets/characters/eugene/veryHappy.png';
 
 // Map character names and expressions to portrait images
 const portraits = {
@@ -33,10 +33,12 @@ const portraits = {
   //   angry: alexAngry,
   //   // ... other alex expressions
   // },
-  // eugene: {
-  //   angry: eugeneAngry,
-  //   // ... other eugene expressions
-  // },
+  eugene: {
+    angry: eugeneAngry,
+    happy: eugeneHappy,
+    smile: eugeneSmile,
+    veryHappy: eugeneVeryHappy,
+  },
 };
 
 const DialogBox = ({ characterName, expression, dialogue, onAdvance }) => {
