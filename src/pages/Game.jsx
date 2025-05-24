@@ -142,10 +142,31 @@ const COLLISION_MAP = [
   ...Array.from({ length: 2 }, (_, i) => ({ x: 52 , y: i+31 , type: 'half-right' })), 
 ];
 
+// Sample monologue script for the dialogue system
+const monologueScript = [
+  {
+    speaker: 'Louise',
+    text: 'Where am I? This place feels... strangely familiar.',
+    emotion: 'confused'
+  },
+  {
+    speaker: 'Louise',
+    text: 'I need to find out what’s going on here.',
+    emotion: 'determined'
+  },
+  {
+    speaker: 'Louise',
+    text: 'Let’s explore and see what this world has in store.',
+    emotion: 'curious'
+  }
+];
+
 const Game = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume } = useSound();
+  const { musicEnabled, setMusicEnabled, musicVolume, setMusicVolume } = useMusic();
   const character = location.state?.character;
   const isLoadedGame = location.state?.isLoadedGame;
   const [isLoading, setIsLoading] = useState(true);
@@ -156,6 +177,8 @@ const Game = () => {
   const [canSave, setCanSave] = useState(false);
   const [showSavePrompt, setShowSavePrompt] = useState(false);
   const [isSleeping, setIsSleeping] = useState(false);
+  const [isPaused, setIsPaused] = useState(false); // Added isPaused state
+  const [showSettings, setShowSettings] = useState(false); // Added showSettings state
 
   // Status effects states
   const [health, setHealth] = useState(100);
@@ -168,7 +191,7 @@ const Game = () => {
   // Status effects decay over time
   useEffect(() => {
     const decayInterval = setInterval(() => {
-      if (!isSleeping) {
+      if (!isSleeping && !isPaused) { // Pause decay when game is paused
         setHealth(prev => Math.max(0, prev - 0.1));
         setEnergy(prev => Math.max(0, prev - 0.2));
         setHunger(prev => Math.max(0, prev - 0.3));
@@ -178,7 +201,7 @@ const Game = () => {
     }, 1000);
 
     return () => clearInterval(decayInterval);
-  }, [isSleeping]);
+  }, [isSleeping, isPaused]);
 
   // Affect happiness based on hunger, health, and cleanliness
   useEffect(() => {
@@ -283,7 +306,12 @@ const Game = () => {
           money,
           cleanliness
         },
-        settings: {}
+        settings: {
+          soundEnabled,
+          sfxVolume,
+          musicEnabled,
+          musicVolume
+        }
       };
 
       const saveData = createSaveFileData(gameState);
@@ -310,6 +338,13 @@ const Game = () => {
         setHappiness(gameState.stats.happiness || 100);
         setMoney(gameState.stats.money || 0);
         setCleanliness(gameState.stats.cleanliness || 100);
+        // Load settings if they exist
+        if (gameState.settings) {
+          setSoundEnabled(gameState.settings.soundEnabled ?? true);
+          setSfxVolume(gameState.settings.sfxVolume ?? 0.5);
+          setMusicEnabled(gameState.settings.musicEnabled ?? true);
+          setMusicVolume(gameState.settings.musicVolume ?? 0.5);
+        }
       }
     } catch (error) {
       console.error('Error loading game:', error);
@@ -456,10 +491,10 @@ const Game = () => {
   const handleCloseSettings = () => setShowSettings(false);
   const handleExit = () => navigate('/');
 
-  // Prevent movement when paused
+  // Prevent movement and interactions when paused or in dialogue
   useEffect(() => {
     const handleKeyPress = (e) => {
-      if (isSleeping) return;
+      if (isSleeping || isPaused || showDialog) return; // Block movement when paused or in dialogue
       console.log('Key pressed:', e.key);
       console.log('isInInterior:', isInInterior);
 
@@ -538,6 +573,14 @@ const Game = () => {
             checkTeleport(newX, newY);
           }
           break;
+        case 'p': // Pause with 'P' key
+          setIsPaused(true);
+          break;
+        case 's': // Save game when at save point
+          if (canSave && !showDialog) {
+            saveGame();
+          }
+          break;
         default:
           break;
       }
@@ -556,7 +599,7 @@ const Game = () => {
       window.removeEventListener('keydown', handleKeyPress);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [position, isInInterior, speed, MAP_HEIGHT, MAP_WIDTH, PLAYER_SIZE, isSleeping, setEnergy, setCleanliness, setFacing, setPosition, checkSavePoint, setCanSave, setShowSavePrompt, checkTeleport]);
+  }, [position, isInInterior, speed, MAP_HEIGHT, MAP_WIDTH, PLAYER_SIZE, isSleeping, isPaused, showDialog, canSave, setEnergy, setCleanliness, setFacing, setPosition, checkSavePoint, setCanSave, setShowSavePrompt, checkTeleport]);
 
   const getCameraStyle = () => {
     const viewportCenterX = window.innerWidth / 2;
@@ -600,7 +643,7 @@ const Game = () => {
   };
 
   const renderSavePrompt = () => {
-    if (!showSavePrompt || !canSave) return null;
+    if (!showSavePrompt || !canSave || isPaused || showDialog) return null;
 
     return (
       <div className="fixed bottom-4 right-4 bg-black bg-opacity-75 p-4 rounded-lg text-white z-50">
@@ -664,7 +707,7 @@ const Game = () => {
         </div>
         <div className="flex items-center gap-2">
           <span>😊 Happiness: {Math.round(happiness)}</span>
-          <div className="w-24 h-4 bg-gray-700 rounded">
+          <div className="h-4 bg-gray-700 rounded">
             <div className="h-full bg-green-500 rounded" style={{ width: `${happiness}%` }}></div>
           </div>
         </div>
@@ -695,7 +738,7 @@ const Game = () => {
         )}
       </AnimatePresence>
 
-      {user && !isLoading && !showCutscene && renderSavePrompt()}
+      {user && !isLoading && !showCutscene && !isPaused && !showDialog && renderSavePrompt()}
 
       {/* Dialog Box */}
       {showDialog && (
@@ -758,7 +801,7 @@ const Game = () => {
         </div>
       )}
 
-      {/* Settings Popup (from pause menu or elsewhere) */}
+      {/* Settings Popup */}
       {showSettings && (
         <Settings
           onClose={handleCloseSettings}
@@ -766,6 +809,10 @@ const Game = () => {
           setSoundEnabled={setSoundEnabled}
           sfxVolume={sfxVolume}
           setSfxVolume={setSfxVolume}
+          musicEnabled={musicEnabled}
+          setMusicEnabled={setMusicEnabled}
+          musicVolume={musicVolume}
+          setMusicVolume={setMusicVolume}
         />
       )}
 
