@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useSound } from '../context/SoundContext';
 import { MusicProvider, useMusic } from '../context/MusicContext';
 import { AnimatePresence } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
+import { saveFileService } from '../services/saveFileService';
 import backgroundVideo from '../assets/menu/background.mp4';
 import gameTitleImage from '../assets/menu/title.png';
 import buttonImage from '../assets/menu/button.png';
@@ -16,16 +18,34 @@ import LoadingScreen from '../components/LoadingScreen';
 // Wrapper component that uses the music context
 function MainMenuContent() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume, playClick, playHover } = useSound();
   const { setMusicEnabled, startMusicPlayback, musicEnabled, musicVolume, setMusicVolume } = useMusic();
+  const { user, logout } = useAuth();
   const videoRef = useRef(null);
-  const [user, setUser] = useState(null);
   const [hasSavedGame, setHasSavedGame] = useState(false);
   const [showCredits, setShowCredits] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showMusicPrompt, setShowMusicPrompt] = useState(false);
   const [showCharacterSelection, setShowCharacterSelection] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const saveData = location.state?.saveData;
+
+  // Check for saved games when user is authenticated
+  useEffect(() => {
+    const checkSavedGames = async () => {
+      if (user) {
+        try {
+          const saveFiles = await saveFileService.getUserSaveFiles(user.uid);
+          setHasSavedGame(saveFiles.length > 0);
+        } catch (error) {
+          console.error('Error checking saved games:', error);
+        }
+      }
+    };
+
+    checkSavedGames();
+  }, [user]);
 
   useEffect(() => {
     console.log('MainMenu useEffect running');
@@ -36,14 +56,11 @@ function MainMenuContent() {
       });
     }
     
-    const demoLoginTimer = setTimeout(() => {
-       setUser({ uid: 'placeholder-uid' });
-       setHasSavedGame(true);
-       setShowMusicPrompt(true);
-    }, 3000);
-
-    return () => clearTimeout(demoLoginTimer);
-  }, []);
+    // Show music prompt when user is authenticated
+    if (user) {
+      setShowMusicPrompt(true);
+    }
+  }, [user]);
 
   const handleMusicAccept = () => {
     startMusicPlayback();
@@ -74,12 +91,7 @@ function MainMenuContent() {
 
   const handleLoadGame = () => {
     playClick();
-    console.log('Loading saved game');
-    setIsLoading(true);
-    setTimeout(() => {
-      // TODO: Implement load game logic
-      navigate('/game', { state: { character: 'saved' } });
-    }, 2000);
+    navigate('/load-game');
   };
 
   const handleSettings = () => {
@@ -94,12 +106,14 @@ function MainMenuContent() {
     setShowCredits(true);
   };
   
-  const handleLogout = () => {
+  const handleLogout = async () => {
     playClick();
-    console.log('Logging out');
-    setUser(null);
-    // TODO: Implement Firebase logout
-    // signOut(auth);
+    try {
+      await logout();
+      setHasSavedGame(false);
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
   };
 
   const buttonClass = "relative w-full h-16 bg-transparent border-none cursor-pointer transition-transform hover:scale-105 active:scale-95 overflow-hidden focus:outline-none focus:ring-0 focus:ring-offset-0 focus:border-0 focus:shadow-none select-none hover:border-transparent hover:border-none";
@@ -174,7 +188,7 @@ function MainMenuContent() {
               <span className={buttonTextClass}>NEW GAME</span>
             </button>
 
-            {user && hasSavedGame && (
+            {hasSavedGame && (
               <button
                 onClick={handleLoadGame}
                 onMouseEnter={playHover}

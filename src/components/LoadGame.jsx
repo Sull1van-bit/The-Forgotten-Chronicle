@@ -1,49 +1,103 @@
-import React, { useState } from 'react';
-import AnimatedList from './SaveFileUI';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { saveFileService } from '../services/saveFileService';
+import SaveFileUI from './SaveFileUI';
 
-export default function LoadGame({ onClose }) {
-  const [showSaveFiles, setShowSaveFiles] = useState(false);
+const LoadGame = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [saveFiles, setSaveFiles] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  // Mock save files - will be replaced with Firebase data later
-  const saveFiles = [
-    'Save Game 1 - Level 5 - 1000 Gold',
-    'Save Game 2 - Level 3 - 500 Gold',
-    'Save Game 3 - Level 7 - 2000 Gold',
-  ];
+  useEffect(() => {
+    const loadSaveFiles = async () => {
+      if (!user) {
+        navigate('/');
+        return;
+      }
 
-  const handleLoadSave = (saveFile, index) => {
-    // TODO: Implement actual save file loading logic
-    console.log('Loading save file:', saveFile, 'at index:', index);
-    onClose();
+      try {
+        const files = await saveFileService.getUserSaveFiles(user.uid);
+        setSaveFiles(files);
+      } catch (error) {
+        setError('Failed to load save files');
+        console.error('Error loading save files:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadSaveFiles();
+  }, [user, navigate]);
+
+  const handleLoad = async (saveId) => {
+    try {
+      const saveData = await saveFileService.loadSaveFile(saveId);
+      if (saveData) {
+        navigate('/game', { 
+          state: { 
+            character: saveData.character,
+            isLoadedGame: true,
+            saveData 
+          } 
+        });
+      }
+    } catch (error) {
+      setError('Failed to load game');
+      console.error('Error loading game:', error);
+    }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90">
-      <div className="bg-[#8B4513] p-8 rounded-lg max-w-md w-full mx-4 relative border-8 border-[#D2B48C] shadow-lg">
-        <div className="space-y-6 text-[#DEB887]">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold text-[#F5DEB3]">Load Game</h2>
-            <button
-              onClick={onClose}
-              className="text-[#F5DEB3] hover:text-[#DEB887] transition-colors focus:outline-none focus:ring-0"
-            >
-              ✕
-            </button>
-          </div>
+  const handleDelete = async (saveId) => {
+    try {
+      await saveFileService.deleteSaveFile(saveId);
+      setSaveFiles(prev => prev.filter(file => file.id !== saveId));
+    } catch (error) {
+      setError('Failed to delete save file');
+      console.error('Error deleting save file:', error);
+    }
+  };
 
-          <div className="space-y-4">
-            <AnimatedList
-              items={saveFiles}
-              onItemSelect={handleLoadSave}
-              showGradients={true}
-              enableArrowNavigation={true}
-              className="mx-auto"
-              itemClassName="bg-[#D2B48C] hover:bg-[#F5DEB3] text-[#8B4513]"
-              displayScrollbar={true}
-            />
+  const handleBack = () => {
+    navigate('/');
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-black">
+        <div className="text-white text-xl">Loading save files...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-black p-4">
+      <div className="w-full max-w-2xl">
+        <h1 className="text-white text-3xl font-bold mb-8 text-center">Load Game</h1>
+        
+        {error && (
+          <div className="bg-red-500 text-white p-4 rounded-lg mb-4">
+            {error}
           </div>
-        </div>
+        )}
+
+        <SaveFileUI
+          saveFiles={saveFiles}
+          onLoad={handleLoad}
+          onDelete={handleDelete}
+        />
+
+        <button
+          onClick={handleBack}
+          className="mt-8 px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+        >
+          Back to Main Menu
+        </button>
       </div>
     </div>
   );
-} 
+};
+
+export default LoadGame; 

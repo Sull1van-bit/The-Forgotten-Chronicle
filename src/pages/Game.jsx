@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useSound } from '../context/SoundContext';
 import { useMusic } from '../context/MusicContext';
@@ -7,7 +7,7 @@ import LoadingScreen from '../components/LoadingScreen';
 import Cutscene from '../components/Cutscene';
 import '../styles/Game.css';
 
-// Import character sprites
+// Import character sprites (only louise, since others are commented out)
 import louiseStand from '../assets/characters/louise/stand.gif';
 import louiseWalkUp from '../assets/characters/louise/walk-up.gif';
 import louiseWalkDown from '../assets/characters/louise/walk-down.gif';
@@ -19,22 +19,20 @@ import allMap from '../assets/Maps/all-map.png';
 import foregroundMap from '../assets/Maps/all-map-foreground.png';
 import HouseInterior from './interiors/HouseInterior';
 
+import { useAuth } from '../context/AuthContext';
+import { saveFileService } from '../services/saveFileService';
+import { createSaveFileData, loadSaveFileData } from '../utils/saveFileUtils';
+
 // Define collision points using grid coordinates
 const COLLISION_MAP = [
-  //kali diatas 30s (full collision)
   ...Array.from({ length: 10 }, (_, i) => ({ x: 30, y: i, type: 'full' })),
   ...Array.from({ length: 8 }, (_, i) => ({ x: 31, y: i, type: 'full' })),
   ...Array.from({ length: 3 }, (_, i) => ({ x: 32, y: i, type: 'full' })),
-  
-  // pagar
   ...Array.from({ length: 4 }, (_, i) => ({ x: i+1, y: 2, type: 'half-bottom' })),
   ...Array.from({ length: 4 }, (_, i) => ({ x: i+2, y: 4, type: 'half-bottom' })),
   ...Array.from({ length: 2 }, (_, i) => ({ x: 6, y: i+3, type: 'half-left' })),
   {x: 1, y: 3, type: 'full'},
   {x: 1, y: 4, type: 'full'},
-  // end pagar
-  
-  // pillar
   ...Array.from({ length: 2 }, (_, i) => ({ x: 32, y: i+8, type: 'full' })),
   ...Array.from({ length: 2 }, (_, i) => ({ x: 33, y: i+8, type: 'full' })),
   ...Array.from({ length: 2 }, (_, i) => ({ x: i+32, y: 12, type: 'full' })),
@@ -49,12 +47,10 @@ const COLLISION_MAP = [
   {x: 39, y: 24, type: 'full'},
   {x: 40, y: 24, type: 'half-left'},
   {x: 38, y: 24, type: 'half-right'},
-  
   ...Array.from({ length: 2 }, (_, i) => ({ x: i+36, y: 39, type: 'half-bottom' })),
   ...Array.from({ length: 2 }, (_, i) => ({ x: i+36, y: 40, type: 'half-bottom' })),
   {x: 43, y: 39, type: 'half-bottom'},
   {x: 44, y: 39, type: 'half-bottom'},
-
   { x: 29, y: 7, type: 'half-right' },   
   { x: 29, y: 8, type: 'half-right' },   
   { x: 29, y: 9, type: 'half-right' },   
@@ -72,15 +68,10 @@ const COLLISION_MAP = [
   {x: 9, y: 27, type: 'full'},
   {x: 10, y: 27, type: 'half-left'},
   {x: 8, y: 27, type: 'half-right'},
-
-  // ujung map
   ...Array.from({ length: 60 }, (_, i) => ({ x: i , y: 0, type: 'half-top' })), // atas
   ...Array.from({ length: 60 }, (_, i) => ({ x: i , y: 44, type: 'half-bottom' })), // bawah
   ...Array.from({ length: 60 }, (_, i) => ({ x: 59 , y: i, type: 'half-right' })), // kanan
   ...Array.from({ length: 60 }, (_, i) => ({ x: 0 , y: i, type: 'half-left' })), // kiri
-  // end ujung map
-
-  // jembatan uhuy
   ...Array.from({ length: 3 }, (_, i) => ({ x: 41 , y: i+36, type: 'half-right' })),
   ...Array.from({ length: 3 }, (_, i) => ({ x: 39 , y: i+36, type: 'half-left' })),
   ...Array.from({ length: 3 }, (_, i) => ({ x: i+29 , y: 10, type: 'half-top'  })),
@@ -89,9 +80,6 @@ const COLLISION_MAP = [
   {x: 44, y: 23, type: 'half-top'},
   ...Array.from({ length: 2 }, (_, i) => ({ x: 42 , y: i+20, type: 'half-left'  })),
   ...Array.from({ length: 3 }, (_, i) => ({ x: 44 , y: i+20, type: 'half-right'  })),
-  // end jembatan uhuy
-
-  // buat danau + air (full collision)
   ...Array.from({ length: 3 }, (_, i) => ({ x: i+36 , y: 36, type: 'full' })),
   ...Array.from({ length: 8 }, (_, i) => ({ x: i+31 , y: 37, type: 'full' })),
   ...Array.from({ length: 3 }, (_, i) => ({ x: i +23, y: 42, type: 'half-bottom' })),
@@ -104,7 +92,7 @@ const COLLISION_MAP = [
   ...Array.from({ length: 36 }, (_, i) => {
     if (i === 18 || i === 19) {
       return { x: i, y: 38, type: 'half-bottom' };
-    }else if (i === 15 || i === 16 || i === 17) {
+    } else if (i === 15 || i === 16 || i === 17) {
       return { x: i, y: 38, type: 'half-top' };
     }
     return { x: i, y: 38, type: 'full' };
@@ -125,7 +113,6 @@ const COLLISION_MAP = [
   ...Array.from({ length: 7 }, (_, i) => ({ x: i+32, y: 20, type: (i >= 4 && i <= 8) ? 'half-top' : 'full' })), 
   ...Array.from({ length: 9 }, (_, i) => ({ x: i+33, y: 21, type: 'full' })), 
   ...Array.from({ length: 3 }, (_, i) => ({ x: i+33, y: 19, type: 'full' })), 
-  
   {x: 45, y: 21, type: 'half-top'},
   {x: 46, y: 21, type: 'half-top'},
   {x: 46, y: 23, type: 'half-top'},
@@ -134,29 +121,34 @@ const COLLISION_MAP = [
   {x: 51, y: 23, type: 'half-bottom'},
   {x: 48, y: 24, type: 'half-right'},
   ...Array.from({ length: 5 }, (_, i) => ({ x: i+45, y: 22, type: 'full' })), 
-  ...Array.from({ length: 4 }, (_, i) => ({ x: i+47, y: 23  , type: 'full' })), 
-  ...Array.from({ length: 4 }, (_, i) => ({ x: i+49, y: 24  , type: 'full' })), 
-  ...Array.from({ length: 4 }, (_, i) => ({ x: 51, y: i+24  , type: 'full' })), 
-  ...Array.from({ length: 6 }, (_, i) => ({ x: 50, y: i+25  , type: (i >= 2 && i <= 6) ? 'half-right' : 'full' })),  
+  ...Array.from({ length: 4 }, (_, i) => ({ x: i+47, y: 23 , type: 'full' })), 
+  ...Array.from({ length: 4 }, (_, i) => ({ x: i+49, y: 24 , type: 'full' })), 
+  ...Array.from({ length: 4 }, (_, i) => ({ x: 51, y: i+24 , type: 'full' })), 
+  ...Array.from({ length: 6 }, (_, i) => ({ x: 50, y: i+25 , type: (i >= 2 && i <= 6) ? 'half-right' : 'full' })),  
   ...Array.from({ length: 6 }, (_, i) => ({ x: 49-i, y: 31+i, type: 'half-right' })),
   ...Array.from({ length: 6 }, (_, i) => ({ x: 50-i, y: 31+i, type: 'full' })),
   {x: 45, y: 34, type: 'half-bottom'},
   {x: 47, y: 36, type: 'half-bottom'},
   {x: 50, y: 34, type: 'half-left'},
   {x: 51, y: 33, type: 'full'},
-  ...Array.from({ length: 2 }, (_, i) => ({ x: i+45 , y: 36  , type: 'full' })), 
-  ...Array.from({ length: 3 }, (_, i) => ({ x: i+47 , y: 34  , type: 'full' })), 
-  ...Array.from({ length: 5 }, (_, i) => ({ x: 53 , y: i+26  , type: 'half-left' })), 
-  ...Array.from({ length: 2 }, (_, i) => ({ x: 52 , y: i+31  , type: 'half-right' })), 
-  // end buat danau + air
+  ...Array.from({ length: 2 }, (_, i) => ({ x: i+45 , y: 36 , type: 'full' })), 
+  ...Array.from({ length: 3 }, (_, i) => ({ x: i+47 , y: 34 , type: 'full' })), 
+  ...Array.from({ length: 5 }, (_, i) => ({ x: 53 , y: i+26 , type: 'half-left' })), 
+  ...Array.from({ length: 2 }, (_, i) => ({ x: 52 , y: i+31 , type: 'half-right' })), 
 ];
 
 const Game = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const character = location.state?.character;
+  const isLoadedGame = location.state?.isLoadedGame;
   const [isLoading, setIsLoading] = useState(true);
   const [showCutscene, setShowCutscene] = useState(false);
+  const [saveFiles, setSaveFiles] = useState([]);
+  const [canSave, setCanSave] = useState(false);
+  const [showSavePrompt, setShowSavePrompt] = useState(false);
+  const [isSleeping, setIsSleeping] = useState(false);
 
   // Status effects states
   const [health, setHealth] = useState(100);
@@ -164,6 +156,29 @@ const Game = () => {
   const [hunger, setHunger] = useState(100);
   const [happiness, setHappiness] = useState(100);
   const [money, setMoney] = useState(0);
+  const [cleanliness, setCleanliness] = useState(100);
+
+  // Status effects decay over time
+  useEffect(() => {
+    const decayInterval = setInterval(() => {
+      if (!isSleeping) {
+        setHealth(prev => Math.max(0, prev - 0.1));
+        setEnergy(prev => Math.max(0, prev - 0.2));
+        setHunger(prev => Math.max(0, prev - 0.3));
+        setHappiness(prev => Math.max(0, prev - 0.1));
+        setCleanliness(prev => Math.max(0, prev - 0.2));
+      }
+    }, 1000);
+
+    return () => clearInterval(decayInterval);
+  }, [isSleeping]);
+
+  // Affect happiness based on hunger, health, and cleanliness
+  useEffect(() => {
+    if (hunger < 30 || health < 30 || cleanliness < 30) {
+      setHappiness(prev => Math.max(0, prev - 0.5));
+    }
+  }, [hunger, health, cleanliness]);
 
   // If no character is selected, redirect to main menu
   useEffect(() => {
@@ -172,40 +187,104 @@ const Game = () => {
     }
   }, [character, navigate]);
 
+  // Load save files when user is authenticated
+  useEffect(() => {
+    const loadSaveFiles = async () => {
+      if (user) {
+        try {
+          const files = await saveFileService.getUserSaveFiles(user.uid);
+          setSaveFiles(files);
+        } catch (error) {
+          console.error('Error loading save files:', error);
+        }
+      }
+    };
+
+    loadSaveFiles();
+  }, [user]);
+
   // Initial loading effect
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
-      // Show cutscene for new players
-      if (character && character !== 'saved') {
+      if (character && !isLoadedGame) {
         setShowCutscene(true);
       }
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [character]);
-
-  // Status effects decay over time
-  useEffect(() => {
-    const decayInterval = setInterval(() => {
-      setHealth(prev => Math.max(0, prev - 0.1)); // Health decreases slowly
-      setEnergy(prev => Math.max(0, prev - 0.2)); // Energy decreases faster
-      setHunger(prev => Math.max(0, prev - 0.3)); // Hunger decreases
-      setHappiness(prev => Math.max(0, prev - 0.1)); // Happiness decreases slowly
-    }, 1000); // Every second
-
-    return () => clearInterval(decayInterval);
-  }, []);
-
-  // Affect happiness based on hunger and health
-  useEffect(() => {
-    if (hunger < 30 || health < 30) {
-      setHappiness(prev => Math.max(0, prev - 0.5));
-    }
-  }, [hunger, health]);
+  }, [character, isLoadedGame]);
 
   const handleCutsceneComplete = () => {
     setShowCutscene(false);
+  };
+
+  // Add save point coordinates
+  const SAVE_POINTS = [
+    { x: 0, y: 2 },
+    { x: 0, y: 1 }
+  ];
+
+  // Check if player is at a save point
+  const checkSavePoint = (x, y) => {
+    const playerGridPos = getGridPosition(x, y);
+    return SAVE_POINTS.some(point => 
+      point.x === playerGridPos.gridX && point.y === playerGridPos.gridY
+    );
+  };
+
+  // Update save game function
+  const saveGame = async () => {
+    if (!user || !canSave) return;
+
+    try {
+      const gameState = {
+        character,
+        position,
+        facing,
+        inventory: [],
+        quests: [],
+        stats: {
+          level: 1,
+          playTime: '0:00',
+          health,
+          energy,
+          hunger,
+          happiness,
+          money,
+          cleanliness
+        },
+        settings: {}
+      };
+
+      const saveData = createSaveFileData(gameState);
+      await saveFileService.saveGame(user.uid, saveData);
+      
+      const files = await saveFileService.getUserSaveFiles(user.uid);
+      setSaveFiles(files);
+      setShowSavePrompt(false);
+    } catch (error) {
+      console.error('Error saving game:', error);
+    }
+  };
+
+  // Load game function
+  const loadGame = async (saveId) => {
+    try {
+      const gameState = await loadSaveFileData(saveId);
+      if (gameState) {
+        setPosition(gameState.position);
+        setFacing(gameState.facing);
+        setHealth(gameState.stats.health || 100);
+        setEnergy(gameState.stats.energy || 100);
+        setHunger(gameState.stats.hunger || 100);
+        setHappiness(gameState.stats.happiness || 100);
+        setMoney(gameState.stats.money || 0);
+        setCleanliness(gameState.stats.cleanliness || 100);
+      }
+    } catch (error) {
+      console.error('Error loading game:', error);
+    }
   };
 
   const [position, setPosition] = useState({ x: 350, y: 150 });
@@ -222,42 +301,15 @@ const Game = () => {
   const GRID_COLS = Math.floor(MAP_WIDTH / GRID_SIZE);
   const GRID_ROWS = Math.floor(MAP_HEIGHT / GRID_SIZE);
 
-  // Get character-specific sprites
+  // Get character-specific sprites (only louise for now)
   const getCharacterSprites = () => {
-    switch (character.name.toLowerCase()) {
-      case 'eugene':
-        return {
-          stand: eugeneStand,
-          walkUp: eugeneWalkUp,
-          walkDown: eugeneWalkDown,
-          walkLeft: eugeneWalkLeft,
-          walkRight: eugeneWalkRight
-        };
-      case 'alex':
-        return {
-          stand: alexStand,
-          walkUp: alexWalkUp,
-          walkDown: alexWalkDown,
-          walkLeft: alexWalkLeft,
-          walkRight: alexWalkRight
-        };
-      case 'louise':
-        return {
-          stand: louiseStand,
-          walkUp: louiseWalkUp,
-          walkDown: louiseWalkDown,
-          walkLeft: louiseWalkLeft,
-          walkRight: louiseWalkRight
-        };
-      default:
-        return {
-          stand: eugeneStand,
-          walkUp: eugeneWalkUp,
-          walkDown: eugeneWalkDown,
-          walkLeft: eugeneWalkLeft,
-          walkRight: eugeneWalkRight
-        };
-    }
+    return {
+      stand: louiseStand,
+      walkUp: louiseWalkUp,
+      walkDown: louiseWalkDown,
+      walkLeft: louiseWalkLeft,
+      walkRight: louiseWalkRight
+    };
   };
 
   const characterSprites = getCharacterSprites();
@@ -298,7 +350,6 @@ const Game = () => {
           playerY < gridY + GRID_SIZE &&
           playerY + PLAYER_SIZE > gridY
         );
-
       case 'half-top':
         return (
           playerX < gridX + GRID_SIZE &&
@@ -306,7 +357,6 @@ const Game = () => {
           playerY < gridY + (GRID_SIZE / 2) &&
           playerY + PLAYER_SIZE > gridY
         );
-
       case 'half-bottom':
         return (
           playerX < gridX + GRID_SIZE &&
@@ -314,7 +364,6 @@ const Game = () => {
           playerY < gridY + GRID_SIZE &&
           playerY + PLAYER_SIZE > gridY + (GRID_SIZE / 2)
         );
-
       case 'half-left':
         return (
           playerX < gridX + (GRID_SIZE / 2) &&
@@ -322,7 +371,6 @@ const Game = () => {
           playerY < gridY + GRID_SIZE &&
           playerY + PLAYER_SIZE > gridY
         );
-
       case 'half-right':
         return (
           playerX < gridX + GRID_SIZE &&
@@ -330,7 +378,6 @@ const Game = () => {
           playerY < gridY + GRID_SIZE &&
           playerY + PLAYER_SIZE > gridY
         );
-
       default:
         return false;
     }
@@ -373,66 +420,85 @@ const Game = () => {
     });
   };
 
+  // Update useEffect for movement
   useEffect(() => {
     const handleKeyPress = (e) => {
+      if (isSleeping) return;
+      console.log('Key pressed:', e.key);
+      console.log('isInInterior:', isInInterior);
+
       if (isInInterior) return;
 
       let newX = position.x;
       let newY = position.y;
-
-      // Reduce energy when moving
       const energyCost = 0.5;
+      const cleanlinessCost = 0.5;
 
       switch (e.key.toLowerCase()) {
         case 'w':
         case 'arrowup':
+          console.log('Moving up');
           newY = position.y - speed;
           if (!hasCollision(newX, newY)) {
             setFacing('up');
-            setPosition(prev => ({ 
-              ...prev, 
-              y: Math.max(0, newY)
+            setPosition((prev) => ({
+              ...prev,
+              y: Math.max(0, newY),
             }));
-            setEnergy(prev => Math.max(0, prev - energyCost));
+            setEnergy((prev) => Math.max(0, prev - energyCost));
+            setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));
+            if (checkSavePoint(newX, newY)) {
+              setCanSave(true);
+              setShowSavePrompt(true);
+            } else {
+              setCanSave(false);
+              setShowSavePrompt(false);
+            }
             checkTeleport(newX, newY);
           }
           break;
         case 's':
         case 'arrowdown':
+          console.log('Moving down');
           newY = position.y + speed;
           if (!hasCollision(newX, newY)) {
             setFacing('down');
-            setPosition(prev => ({ 
-              ...prev, 
-              y: Math.min(MAP_HEIGHT - PLAYER_SIZE, newY)
+            setPosition((prev) => ({
+              ...prev,
+              y: Math.min(MAP_HEIGHT - PLAYER_SIZE, newY),
             }));
-            setEnergy(prev => Math.max(0, prev - energyCost));
+            setEnergy((prev) => Math.max(0, prev - energyCost));
+            setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));
             checkTeleport(newX, newY);
           }
           break;
         case 'a':
         case 'arrowleft':
+          console.log('Moving left');
           newX = position.x - speed;
           if (!hasCollision(newX, newY)) {
             setFacing('left');
-            setPosition(prev => ({ 
-              ...prev, 
-              x: Math.max(0, newX)
+            setPosition((prev) => ({
+              ...prev,
+              x: Math.max(0, newX),
             }));
-            setEnergy(prev => Math.max(0, prev - energyCost));
+            setEnergy((prev) => Math.max(0, prev - energyCost));
+            setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));
             checkTeleport(newX, newY);
           }
           break;
         case 'd':
         case 'arrowright':
+          console.log('Moving right');
           newX = position.x + speed;
           if (!hasCollision(newX, newY)) {
             setFacing('right');
-            setPosition(prev => ({ 
-              ...prev, 
-              x: Math.min(MAP_WIDTH - PLAYER_SIZE, newX)
+            setPosition((prev) => ({
+              ...prev,
+              x: Math.min(MAP_WIDTH - PLAYER_SIZE, newX),
             }));
-            setEnergy(prev => Math.max(0, prev - energyCost));
+            setEnergy((prev) => Math.max(0, prev - energyCost));
+            setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));
             checkTeleport(newX, newY);
           }
           break;
@@ -454,7 +520,7 @@ const Game = () => {
       window.removeEventListener('keydown', handleKeyPress);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [position, isInInterior]);
+  }, [position, isInInterior, speed, MAP_HEIGHT, MAP_WIDTH, PLAYER_SIZE, isSleeping, setEnergy, setCleanliness, setFacing, setPosition, checkSavePoint, setCanSave, setShowSavePrompt, checkTeleport]);
 
   const getCameraStyle = () => {
     const viewportCenterX = window.innerWidth / 2;
@@ -497,8 +563,45 @@ const Game = () => {
     return cells;
   };
 
+  const renderSavePrompt = () => {
+    if (!showSavePrompt || !canSave) return null;
+
+    return (
+      <div className="fixed bottom-4 right-4 bg-black bg-opacity-75 p-4 rounded-lg text-white z-50">
+        <p className="mb-2">Press 'S' to save your game</p>
+        <button
+          onClick={saveGame}
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+        >
+          Save Game
+        </button>
+      </div>
+    );
+  };
+
   if (isInInterior) {
-    return <HouseInterior position={position} setPosition={setPosition} onExit={handleExitInterior} character={character} />;
+    return (
+      <HouseInterior 
+        position={position} 
+        setPosition={setPosition} 
+        onExit={handleExitInterior} 
+        character={character}
+        health={health}
+        setHealth={setHealth}
+        energy={energy}
+        setEnergy={setEnergy}
+        hunger={hunger}
+        setHunger={setHunger}
+        happiness={happiness}
+        setHappiness={setHappiness}
+        money={money}
+        setMoney={setMoney}
+        isSleeping={isSleeping}
+        setIsSleeping={setIsSleeping}
+        cleanliness={cleanliness}
+        setCleanliness={setCleanliness}
+      />
+    );
   }
 
   return (
@@ -530,11 +633,16 @@ const Game = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <span>🛁 Cleanliness: {Math.round(cleanliness)}</span>
+          <div className="w-24 h-4 bg-gray-700 rounded">
+            <div className="h-full bg-cyan-500 rounded" style={{ width: `${cleanliness}%` }}></div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
           <span>💰 Money: {money}</span>
         </div>
       </div>
 
-      {/* Loading Screen */}
       <AnimatePresence mode="wait">
         {isLoading && (
           <div className="fixed inset-0 z-50">
@@ -543,7 +651,6 @@ const Game = () => {
         )}
       </AnimatePresence>
 
-      {/* Cutscene */}
       <AnimatePresence mode="wait">
         {showCutscene && (
           <div className="fixed inset-0 z-50">
@@ -552,7 +659,8 @@ const Game = () => {
         )}
       </AnimatePresence>
 
-      {/* Rest of your game content */}
+      {user && !isLoading && !showCutscene && renderSavePrompt()}
+
       {!isLoading && !showCutscene && (
         <div className="game-container">
           <div className="camera">
@@ -581,7 +689,7 @@ const Game = () => {
                   imageRendering: 'pixelated',
                 }}
               />
-              <div  
+              <div 
                 className="map-foreground"
                 style={{
                   width: `${MAP_WIDTH}px`,

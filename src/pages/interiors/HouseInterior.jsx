@@ -8,24 +8,34 @@ import louiseWalkRight from '../../assets/characters/louise/walk-right.gif';
 
 // Define collision points for interior
 const INTERIOR_COLLISION_MAP = [
-  // Dinding atas
   ...Array.from({ length: 8 }, (_, i) => ({ x: i, y: 0, type: 'full' })),
   ...Array.from({ length: 8 }, (_, i) => ({ x: i, y: 1, type: 'half-top' })),
-  
-  // Dinding bawah
   ...Array.from({ length: 5 }, (_, i) => ({ x: i, y: 5, type: 'half-bottom' })),
   {x: 6, y: 5, type: 'full'},
-  // Dinding kiri
   ...Array.from({ length: 6 }, (_, i) => ({ x: 0, y: i, type: 'half-left' })),
   {x: 0, y: 6, type: 'full'},
-  
-  // Dinding kanan
   ...Array.from({ length: 6 }, (_, i) => ({ x: 7, y: i, type: 'half-right' })),
   {x: 7, y: 6, type: 'full'},
 ];
 
-const HouseInterior = ({ position, setPosition, onExit, character }) => {
+const HouseInterior = ({ 
+  position, 
+  setPosition, 
+  onExit, 
+  character, 
+  energy, 
+  setEnergy, 
+  hunger, 
+  setHunger, 
+  happiness, 
+  setHappiness, 
+  isSleeping, 
+  setIsSleeping,
+  cleanliness, 
+  setCleanliness 
+}) => {
   const [facing, setFacing] = useState('stand');
+  const [showSleepButton, setShowSleepButton] = useState(false);
   const INTERIOR_WIDTH = 800;
   const INTERIOR_HEIGHT = 600;
   const GRID_SIZE = 100;
@@ -33,37 +43,7 @@ const HouseInterior = ({ position, setPosition, onExit, character }) => {
   const GRID_COLS = Math.floor(INTERIOR_WIDTH / GRID_SIZE);
   const GRID_ROWS = Math.floor(INTERIOR_HEIGHT / GRID_SIZE);
 
-  // Status effects states (mirroring Game.jsx)
-  const [health, setHealth] = useState(100);
-  const [energy, setEnergy] = useState(100);
-  const [hunger, setHunger] = useState(100);
-  const [happiness, setHappiness] = useState(100);
-  const [money, setMoney] = useState(0);
-  const [showSleepButton, setShowSleepButton] = useState(false);
-  const [isSleeping, setIsSleeping] = useState(false);
-
-  // Status effects decay over time (same as Game.jsx)
-  useEffect(() => {
-    const decayInterval = setInterval(() => {
-      if (!isSleeping) { // Pause decay while sleeping
-        setHealth(prev => Math.max(0, prev - 0.1));
-        setEnergy(prev => Math.max(0, prev - 0.2));
-        setHunger(prev => Math.max(0, prev - 0.3));
-        setHappiness(prev => Math.max(0, prev - 0.1));
-      }
-    }, 1000);
-
-    return () => clearInterval(decayInterval);
-  }, [isSleeping]);
-
-  // Affect happiness based on hunger and health (same as Game.jsx)
-  useEffect(() => {
-    if (hunger < 30 || health < 30) {
-      setHappiness(prev => Math.max(0, prev - 0.5));
-    }
-  }, [hunger, health]);
-
-  // Define the sleep area (e.g., near a bed at grid position 2,2)
+  // Define the sleep area
   const SLEEP_AREA = { x: 2, y: 2 };
   const SLEEP_AREA_PIXEL = { x: SLEEP_AREA.x * GRID_SIZE, y: SLEEP_AREA.y * GRID_SIZE };
 
@@ -76,57 +56,30 @@ const HouseInterior = ({ position, setPosition, onExit, character }) => {
     const distance = Math.sqrt(
       Math.pow(playerCenterX - sleepCenterX, 2) + Math.pow(playerCenterY - sleepCenterY, 2)
     );
-    setShowSleepButton(distance < GRID_SIZE); // Show button if within 1 grid square
+    setShowSleepButton(distance < GRID_SIZE);
   };
 
   // Handle sleep action
   const handleSleep = () => {
     setIsSleeping(true);
     setTimeout(() => {
-      // Restore energy and happiness after 3 seconds
-      setEnergy(prev => Math.min(100, prev + 50)); // Restore 50 energy
-      setHappiness(prev => Math.min(100, prev + 30)); // Restore 30 happiness
-      setHunger(prev => Math.max(0, prev - 10)); // Hunger decreases while sleeping
+      setEnergy(prev => Math.min(100, prev + 50));
+      setHappiness(prev => Math.min(100, prev + 30));
+      setHunger(prev => Math.max(0, prev - 10));
+      setCleanliness(prev => Math.min(100, prev + 50)); // Restore cleanliness
       setIsSleeping(false);
     }, 3000);
   };
 
-  // Get character-specific sprites
+  // Get character-specific sprites (only louise for now)
   const getCharacterSprites = () => {
-    switch (character.name.toLowerCase()) {
-      case 'eugene':
-        return {
-          stand: eugeneStand,
-          walkUp: eugeneWalkUp,
-          walkDown: eugeneWalkDown,
-          walkLeft: eugeneWalkLeft,
-          walkRight: eugeneWalkRight
-        };
-      case 'alex':
-        return {
-          stand: alexStand,
-          walkUp: alexWalkUp,
-          walkDown: alexWalkDown,
-          walkLeft: alexWalkLeft,
-          walkRight: alexWalkRight
-        };
-      case 'louise':
-        return {
-          stand: louiseStand,
-          walkUp: louiseWalkUp,
-          walkDown: louiseWalkDown,
-          walkLeft: louiseWalkLeft,
-          walkRight: louiseWalkRight
-        };
-      default:
-        return {
-          stand: eugeneStand,
-          walkUp: eugeneWalkUp,
-          walkDown: eugeneWalkDown,
-          walkLeft: eugeneWalkLeft,
-          walkRight: eugeneWalkRight
-        };
-    }
+    return {
+      stand: louiseStand,
+      walkUp: louiseWalkUp,
+      walkDown: louiseWalkDown,
+      walkLeft: louiseWalkLeft,
+      walkRight: louiseWalkRight
+    };
   };
 
   const characterSprites = getCharacterSprites();
@@ -161,7 +114,6 @@ const HouseInterior = ({ position, setPosition, onExit, character }) => {
           playerY < gridY + GRID_SIZE &&
           playerY + PLAYER_SIZE > gridY
         );
-
       case 'half-top':
         return (
           playerX < gridX + GRID_SIZE &&
@@ -169,7 +121,6 @@ const HouseInterior = ({ position, setPosition, onExit, character }) => {
           playerY < gridY + (GRID_SIZE / 2) &&
           playerY + PLAYER_SIZE > gridY
         );
-
       case 'half-bottom':
         return (
           playerX < gridX + GRID_SIZE &&
@@ -177,7 +128,6 @@ const HouseInterior = ({ position, setPosition, onExit, character }) => {
           playerY < gridY + GRID_SIZE &&
           playerY + PLAYER_SIZE > gridY + (GRID_SIZE / 2)
         );
-
       case 'half-left':
         return (
           playerX < gridX + (GRID_SIZE / 2) &&
@@ -185,7 +135,6 @@ const HouseInterior = ({ position, setPosition, onExit, character }) => {
           playerY < gridY + GRID_SIZE &&
           playerY + PLAYER_SIZE > gridY
         );
-
       case 'half-right':
         return (
           playerX < gridX + GRID_SIZE &&
@@ -193,7 +142,6 @@ const HouseInterior = ({ position, setPosition, onExit, character }) => {
           playerY < gridY + GRID_SIZE &&
           playerY + PLAYER_SIZE > gridY
         );
-
       default:
         return false;
     }
@@ -255,12 +203,13 @@ const HouseInterior = ({ position, setPosition, onExit, character }) => {
 
   // Handle movement with collision check
   const handleKeyPress = (e) => {
-    if (isSleeping) return; // Prevent movement while sleeping
+    if (isSleeping) return;
 
     let newX = position.x;
     let newY = position.y;
     const speed = 20;
     const energyCost = 0.5;
+    const cleanlinessCost = 0.5;
 
     switch (e.key.toLowerCase()) {
       case 'w':
@@ -268,24 +217,28 @@ const HouseInterior = ({ position, setPosition, onExit, character }) => {
         newY = Math.max(0, position.y - speed);
         setFacing('up');
         setEnergy(prev => Math.max(0, prev - energyCost));
+        setCleanliness(prev => Math.max(0, prev - cleanlinessCost));
         break;
       case 's':
       case 'arrowdown':
         newY = Math.min(INTERIOR_HEIGHT - PLAYER_SIZE, position.y + speed);
         setFacing('down');
         setEnergy(prev => Math.max(0, prev - energyCost));
+        setCleanliness(prev => Math.max(0, prev - cleanlinessCost));
         break;
       case 'a':
       case 'arrowleft':
         newX = Math.max(0, position.x - speed);
         setFacing('left');
         setEnergy(prev => Math.max(0, prev - energyCost));
+        setCleanliness(prev => Math.max(0, prev - cleanlinessCost));
         break;
       case 'd':
       case 'arrowright':
         newX = Math.min(INTERIOR_WIDTH - PLAYER_SIZE, position.x + speed);
         setFacing('right');
         setEnergy(prev => Math.max(0, prev - energyCost));
+        setCleanliness(prev => Math.max(0, prev - cleanlinessCost));
         break;
       default:
         return;
@@ -305,49 +258,17 @@ const HouseInterior = ({ position, setPosition, onExit, character }) => {
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     window.addEventListener('keydown', handleKeyPress);
     window.addEventListener('keyup', handleKeyUp);
     return () => {
       window.removeEventListener('keydown', handleKeyPress);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [position, energy, isSleeping]);
+  }, [position, energy, cleanliness, isSleeping]);
 
   return (
     <div className="interior-container relative">
-      {/* Status Effects UI (same as Game.jsx) */}
-      <div className="absolute top-4 left-4 z-50 flex flex-col gap-2 text-white">
-        <div className="flex items-center gap-2">
-          <span>❤️ Health: {Math.round(health)}</span>
-          <div className="w-24 h-4 bg-gray-700 rounded">
-            <div className="h-full bg-red-500 rounded" style={{ width: `${health}%` }}></div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span>⚡ Energy: {Math.round(energy)}</span>
-          <div className="w-24 h-4 bg-gray-700 rounded">
-            <div className="h-full bg-blue-500 rounded" style={{ width: `${energy}%` }}></div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span>🍽️ Hunger: {Math.round(hunger)}</span>
-          <div className="w-24 h-4 bg-gray-700 rounded">
-            <div className="h-full bg-yellow-500 rounded" style={{ width: `${hunger}%` }}></div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span>😊 Happiness: {Math.round(happiness)}</span>
-          <div className="w-24 h-4 bg-gray-700 rounded">
-            <div className="h-full bg-green-500 rounded" style={{ width: `${happiness}%` }}></div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span>💰 Money: {money}</span>
-        </div>
-      </div>
-
-      {/* Sleep Button */}
       {showSleepButton && !isSleeping && (
         <button
           className="absolute z-50 bg-blue-500 text-white px-4 py-2 rounded shadow-lg hover:bg-blue-600"
@@ -362,7 +283,6 @@ const HouseInterior = ({ position, setPosition, onExit, character }) => {
         </button>
       )}
 
-      {/* Sleep Indicator */}
       {isSleeping && (
         <div
           className="absolute z-50 bg-gray-800 text-white px-4 py-2 rounded shadow-lg"

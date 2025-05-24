@@ -1,0 +1,61 @@
+.save-files-container {
+  background-color: rgba(0, 0, 0, 0.8);
+  padding: 20px;
+  border-radius: 10px;
+  color: white;
+  max-width: 600px;
+  margin: 20px auto;
+}
+
+.save-files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.save-file-item {
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 15px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.save-file-info h3 {
+  margin: 0 0 10px 0;
+  color: #fff;
+}
+
+.save-file-info p {
+  margin: 5px 0;
+  color: #ccc;
+}
+
+.save-file-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.save-file-actions button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.save-file-actions button:first-child {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.save-file-actions button:last-child {
+  background-color: #f44336;
+  color: white;
+}
+
+.save-file-actions button:hover {
+  opacity: 0.9;
+} 
