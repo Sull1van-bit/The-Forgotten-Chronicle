@@ -37,6 +37,7 @@ import pauseMenuBg from '../assets/menu/pauseMenu.png';
 
 import Inventory from '../components/Inventory';
 import QuestFolder from '../components/QuestFolder';
+import ActiveQuestFolderUI from '../components/ActiveQuestFolderUI';
 
 // Import item images
 import seedsIcon from '../assets/items/seeds.png';
@@ -283,20 +284,6 @@ const Game = () => {
         },
         {
           description: "Meet the village elder",
-          completed: false
-        }
-      ]
-    },
-    {
-      title: "First Steps",
-      description: "Begin your journey in the village.",
-      objectives: [
-        {
-          description: "Find the village shop",
-          completed: false
-        },
-        {
-          description: "Collect 5 wheat",
           completed: false
         }
       ]
@@ -911,6 +898,10 @@ const Game = () => {
             <div className="flex items-center gap-2">
               <span>💰 Money: {money}</span>
             </div>
+          </div>
+          {/* Wrap ActiveQuestFolderUI for positioning */}
+          <div className="fixed right-4 top-[25%] transform -translate-y-1/2 z-[90]">
+            <ActiveQuestFolderUI quests={quests} />
           </div>
           <QuestFolder quests={quests} />
         </>

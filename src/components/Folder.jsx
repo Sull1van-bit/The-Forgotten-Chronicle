@@ -91,8 +91,8 @@ const Folder = ({
 
   const getOpenTransform = (index) => {
     if (index === 0) return "translate(-120%, -70%) rotate(-15deg)";
-    if (index === 1) return "translate(10%, -70%) rotate(15deg)";
-    if (index === 2) return "translate(-50%, -100%) rotate(5deg)";
+    if (index === 1) return "translate(-50%, -70%) rotate(0deg)";
+    if (index === 2) return "translate(20%, -70%) rotate(15deg)";
     return "";
   };
 
@@ -131,7 +131,7 @@ const Folder = ({
                 key={i}
                 onMouseMove={(e) => handlePaperMouseMove(e, i)}
                 onMouseLeave={(e) => handlePaperMouseLeave(e, i)}
-                className={`absolute z-20 bottom-[10%] left-1/2 transition-all duration-300 ease-in-out ${!open
+                className={`absolute bottom-[10%] left-1/2 transition-all duration-300 ease-in-out ${!open
                   ? "transform -translate-x-1/2 translate-y-[10%] group-hover:translate-y-0"
                   : "hover:scale-110"
                   } ${sizeClasses}`}
@@ -139,6 +139,8 @@ const Folder = ({
                   ...(!open ? {} : { transform: transformStyle }),
                   backgroundColor: i === 0 ? paper1 : i === 1 ? paper2 : paper3,
                   borderRadius: "10px",
+                  zIndex: i === 1 ? 25 : 20, // Middle paper has higher z-index
+                  pointerEvents: i === 1 ? 'auto' : 'none', // Only middle paper is clickable
                 }}
               >
                 {item}
