@@ -1,5 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import houseInside from '../../assets/Interior/house-inside.png';
+// Import character sprites
+import eugeneStand from '../../assets/characters/eugene/stand.gif';
+import eugeneWalkUp from '../../assets/characters/eugene/walk-up.gif';
+import eugeneWalkDown from '../../assets/characters/eugene/walk-down.gif';
+import eugeneWalkLeft from '../../assets/characters/eugene/walk-left.gif';
+import eugeneWalkRight from '../../assets/characters/eugene/walk-right.gif';
+/*
+import alexStand from '../../assets/characters/alex/stand.gif';
+import alexWalkUp from '../../assets/characters/alex/walk-up.gif';
+import alexWalkDown from '../../assets/characters/alex/walk-down.gif';
+import alexWalkLeft from '../../assets/characters/alex/walk-left.gif';
+import alexWalkRight from '../../assets/characters/alex/walk-right.gif';
+*/
 import louiseStand from '../../assets/characters/louise/stand.gif';
 import louiseWalkUp from '../../assets/characters/louise/walk-up.gif';
 import louiseWalkDown from '../../assets/characters/louise/walk-down.gif';

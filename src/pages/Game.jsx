@@ -8,8 +8,20 @@ import Cutscene from '../components/Cutscene';
 import DialogBox from '../components/DialogBox';
 import Settings from '../components/Settings';
 import '../styles/Game.css';
+// Import character sprites
+import eugeneStand from '../assets/characters/eugene/stand.gif';
+import eugeneWalkUp from '../assets/characters/eugene/walk-up.gif';
+import eugeneWalkDown from '../assets/characters/eugene/walk-down.gif';
+import eugeneWalkLeft from '../assets/characters/eugene/walk-left.gif';
+import eugeneWalkRight from '../assets/characters/eugene/walk-right.gif';
+/*
+import alexStand from '../assets/characters/alex/stand.gif';
+import alexWalkUp from '../assets/characters/alex/walk-up.gif';
+import alexWalkDown from '../assets/characters/alex/walk-down.gif';
+import alexWalkLeft from '../assets/characters/alex/walk-left.gif';
+import alexWalkRight from '../assets/characters/alex/walk-right.gif';
+*/
 
-// Import character sprites (only louise, since others are commented out)
 import louiseStand from '../assets/characters/louise/stand.gif';
 import louiseWalkUp from '../assets/characters/louise/walk-up.gif';
 import louiseWalkDown from '../assets/characters/louise/walk-down.gif';
@@ -27,6 +39,8 @@ import { createSaveFileData, loadSaveFileData } from '../utils/saveFileUtils';
 
 import pauseButton from '../assets/menu/pause.png';
 import pauseMenuBg from '../assets/menu/pauseMenu.png';
+
+import Minimap from '../components/Minimap';
 
 // Define collision points using grid coordinates
 const COLLISION_MAP = [
@@ -621,13 +635,18 @@ const Game = () => {
       for (let col = 0; col < GRID_COLS; col++) {
         const collisionPoint = COLLISION_MAP.find(point => point.x === col && point.y === row);
         const teleportPoint = TELEPORT_POINTS.find(point => point.x === col && point.y === row);
+        
+        // Check for shop trigger points
+        const isShopPoint = checkShopTrigger({ x: col * GRID_SIZE, y: row * GRID_SIZE }, true); // Pass coordinates and a flag to just check without triggering state change
+
         const cellClass = collisionPoint ? `collision ${collisionPoint.type}` : '';
         const teleportClass = teleportPoint ? 'teleport' : '';
-        
+        const interactiveClass = (teleportPoint || isShopPoint) ? 'interactive-cell' : '';
+
         cells.push(
           <div
             key={`${row}-${col}`}
-            className={`grid-cell ${cellClass} ${teleportClass}`}
+            className={`grid-cell ${cellClass} ${teleportClass} ${interactiveClass}`}
             style={{
               left: col * GRID_SIZE,
               top: row * GRID_SIZE,
@@ -656,6 +675,22 @@ const Game = () => {
         </button>
       </div>
     );
+  };
+
+  // Check if player is at a shop trigger point
+  const checkShopTrigger = (x, y, justCheck = false) => {
+    const playerGridPos = getGridPosition(x, y);
+
+    const isAtShop = shopPoints.some(point =>
+      point.x === playerGridPos.gridX && point.y === playerGridPos.gridY
+    );
+
+    if (isAtShop && !justCheck) {
+      setShowShop(true);
+    } else {
+      // Optionally hide shop if player moves away
+      // setShowShop(false);
+    }
   };
 
   if (isInInterior) {
@@ -816,54 +851,102 @@ const Game = () => {
         />
       )}
 
-      {!isLoading && !showCutscene && (
-        <div className="game-container">
-          <div className="camera">
-            <div className="map" style={getCameraStyle()}>
-              <div 
-                className="map-background"
-                style={{
-                  width: `${MAP_WIDTH}px`,
-                  height: `${MAP_HEIGHT}px`,
-                  backgroundImage: `url(${allMap})`,
-                  backgroundSize: '100% 100%',
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                }}
-              />
-              <div className="grid" style={{ width: `${MAP_WIDTH}px`, height: `${MAP_HEIGHT}px` }}>
-                {renderGrid()}
-              </div>
-              <div
-                className="player"
-                style={{
-                  left: `${position.x}px`,
-                  top: `${position.y}px`,
-                  backgroundImage: `url(${getSprite()})`,
-                  imageRendering: 'pixelated',
-                }}
-              />
-              <div 
-                className="map-foreground"
-                style={{
-                  width: `${MAP_WIDTH}px`,
-                  height: `${MAP_HEIGHT}px`,
-                  backgroundImage: `url(${foregroundMap})`,
-                  backgroundSize: '100% 100%',
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  pointerEvents: 'none',
-                  zIndex: 3,
-                }}
-              />
-            </div>
+      {/* Shop Popup Placeholder */}
+      {showShop && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+          <div className="bg-[#8B4513] p-8 rounded-lg text-white border-8 border-[#D2B48C] shadow-lg">
+            <h2 className="text-2xl mb-4">Shop</h2>
+            <p>This is the shop!</p>
+            {/* Add shop content here */}
+            <button onClick={() => setShowShop(false)} className="mt-4 px-4 py-2 bg-yellow-600 rounded">Close Shop</button>
           </div>
         </div>
+      )}
+
+      {/* Rest of your game content */}
+      {!isLoading && !showCutscene && !showDialog && !isInInterior && (
+        <>
+          <Minimap position={position} shopPoints={shopPoints} />
+          <div className="game-container">
+            <div className="camera">
+              <div className="map" style={getCameraStyle()}>
+                <div 
+                  className="map-background"
+                  style={{
+                    width: `${MAP_WIDTH}px`,
+                    height: `${MAP_HEIGHT}px`,
+                    backgroundImage: `url(${allMap})`,
+                    backgroundSize: '100% 100%',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                  }}
+                />
+                <div className="grid" style={{ width: `${MAP_WIDTH}px`, height: `${MAP_HEIGHT}px` }}>
+                  {renderGrid()}
+                </div>
+                <div
+                  className="player"
+                  style={{
+                    left: `${position.x}px`,
+                    top: `${position.y}px`,
+                    backgroundImage: `url(${getSprite()})`,
+                    imageRendering: 'pixelated',
+                  }}
+                />
+                <div 
+                  className="map-foreground"
+                  style={{
+                    width: `${MAP_WIDTH}px`,
+                    height: `${MAP_HEIGHT}px`,
+                    backgroundImage: `url(${foregroundMap})`,
+                    backgroundSize: '100% 100%',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    pointerEvents: 'none',
+                    zIndex: 3,
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
 };
 
 export default Game;
+
+<style>
+{`
+.grid-cell.interactive-cell {
+  background-color: rgba(255, 215, 0, 0.6) !important; /* Semi-transparent gold - increased opacity */
+  border: 1px solid rgba(255, 215, 0, 0.9) !important;
+}
+
+.pause-menu-btn {
+  background: linear-gradient(180deg, rgba(224,185,125,0.92) 0%, rgba(169,124,80,0.92) 100%);
+  color: #3a220a;
+  font-size: 1.25rem;
+  font-weight: bold;
+  border: 2.5px solid #7c4f21;
+  border-radius: 18px;
+  box-shadow: 0 4px 12px rgba(60, 40, 10, 0.18);
+  padding: 0.75rem 0;
+  margin: 0.5rem 0;
+  transition: background 0.2s, color 0.2s, transform 0.1s;
+  opacity: 0.96;
+  width: 100%;
+  max-width: 260px;
+  letter-spacing: 1px;
+}
+.pause-menu-btn:hover {
+  background: linear-gradient(180deg, rgba(245,215,161,0.98) 0%, rgba(196,154,108,0.98) 100%);
+  color: #a97c50;
+  transform: translateY(-2px) scale(1.04);
+  opacity: 1;
+}
+`}
+</style> 
