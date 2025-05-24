@@ -29,7 +29,6 @@ import { createSaveFileData, loadSaveFileData } from '../utils/saveFileUtils';
 import pauseButton from '../assets/menu/pause.png';
 import pauseMenuBg from '../assets/menu/pauseMenu.png';
 
-import Minimap from '../components/Minimap';
 import Inventory from '../components/Inventory';
 import QuestFolder from '../components/QuestFolder';
 
@@ -254,7 +253,6 @@ const Game = () => {
   const [happiness, setHappiness] = useState(100);
   const [money, setMoney] = useState(0);
   const [cleanliness, setCleanliness] = useState(100);
-  const [isSleeping, setIsSleeping] = useState(false);
 
   // Define shop trigger points
   const shopPoints = [
@@ -582,7 +580,7 @@ const Game = () => {
   };
 
   // Check if player is at a shop trigger point
-  const checkShopTrigger = (x, y, justCheck = false) => {
+  const checkShopTrigger = useMemo(() => (x, y, justCheck = false) => {
     const playerGridPos = getGridPosition(x, y);
     const isAtShop = shopPoints.some(point =>
       point.x === playerGridPos.gridX && point.y === playerGridPos.gridY
@@ -592,7 +590,7 @@ const Game = () => {
       setShowShop(isAtShop);
     }
     return isAtShop;
-  };
+  }, [shopPoints, setShowShop, getGridPosition]);
 
   // Handle exit from interior
   const handleExitInterior = (spawnPoint) => {
@@ -792,22 +790,6 @@ const Game = () => {
         </button>
       </div>
     );
-  };
-
-  // Check if player is at a shop trigger point
-  const checkShopTrigger = (x, y, justCheck = false) => {
-    const playerGridPos = getGridPosition(x, y);
-
-    const isAtShop = shopPoints.some(point =>
-      point.x === playerGridPos.gridX && point.y === playerGridPos.gridY
-    );
-
-    if (isAtShop && !justCheck) {
-      setShowShop(true);
-    } else {
-      // Optionally hide shop if player moves away
-      // setShowShop(false);
-    }
   };
 
   const handleUseItem = (item) => {
