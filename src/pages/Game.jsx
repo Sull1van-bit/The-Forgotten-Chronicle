@@ -183,7 +183,6 @@ const Game = () => {
   const [isPaused, setIsPaused] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showShop, setShowShop] = useState(false);
-  const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume } = useSound();
 
   // Add character stats state
   const [health, setHealth] = useState(100);
