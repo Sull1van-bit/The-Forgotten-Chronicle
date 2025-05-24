@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import houseInside from '../../assets/Interior/house-inside.png';
+import { useAuth } from '../../context/AuthContext';
+import { saveFileService } from '../../services/saveFileService';
 // Import character sprites
 import eugeneStand from '../../assets/characters/eugene/stand.gif';
 import eugeneWalkUp from '../../assets/characters/eugene/walk-up.gif';
@@ -47,6 +49,7 @@ const HouseInterior = ({
   cleanliness, 
   setCleanliness 
 }) => {
+  const { user } = useAuth();
   const [facing, setFacing] = useState('stand');
   const [showSleepButton, setShowSleepButton] = useState(false);
   const INTERIOR_WIDTH = 800;
@@ -73,26 +76,85 @@ const HouseInterior = ({
   };
 
   // Handle sleep action
-  const handleSleep = () => {
+  const handleSleep = async () => {
     setIsSleeping(true);
+    
+    // Save game state
+    try {
+      const gameState = {
+        character,
+        position,
+        facing,
+        stats: {
+          health: 100,
+          energy: Math.min(100, energy + 50),
+          hunger: Math.max(0, hunger - 10),
+          happiness: Math.min(100, happiness + 30),
+          money: 0,
+          cleanliness: Math.min(100, cleanliness + 50)
+        },
+        settings: {
+          soundEnabled: true,
+          sfxVolume: 0.5,
+          musicEnabled: true,
+          musicVolume: 0.5
+        }
+      };
+
+      // Save the game
+      await saveFileService.saveGame(user.uid, gameState);
+      console.log('Game saved after sleeping');
+    } catch (error) {
+      console.error('Error saving game after sleep:', error);
+    }
+
+    // Update stats after sleep
     setTimeout(() => {
       setEnergy(prev => Math.min(100, prev + 50));
       setHappiness(prev => Math.min(100, prev + 30));
       setHunger(prev => Math.max(0, prev - 10));
-      setCleanliness(prev => Math.min(100, prev + 50)); // Restore cleanliness
+      setCleanliness(prev => Math.min(100, prev + 50));
       setIsSleeping(false);
     }, 3000);
   };
 
-  // Get character-specific sprites (only louise for now)
+  // Get character-specific sprites
   const getCharacterSprites = () => {
-    return {
-      stand: louiseStand,
-      walkUp: louiseWalkUp,
-      walkDown: louiseWalkDown,
-      walkLeft: louiseWalkLeft,
-      walkRight: louiseWalkRight
-    };
+    console.log('House Interior - Selected character:', character); // Debug log
+    
+    // Handle case where character might be an object with a name property
+    const characterName = typeof character === 'object' && character !== null ? character.name : character;
+    console.log('House Interior - Character name:', characterName);
+
+    switch (String(characterName).toLowerCase()) {
+      case 'eugene':
+        console.log('Loading Eugene sprites in house');
+        return {
+          stand: eugeneStand,
+          walkUp: eugeneWalkUp,
+          walkDown: eugeneWalkDown,
+          walkLeft: eugeneWalkLeft,
+          walkRight: eugeneWalkRight
+        };
+      case 'louise':
+        console.log('Loading Louise sprites in house');
+        return {
+          stand: louiseStand,
+          walkUp: louiseWalkUp,
+          walkDown: louiseWalkDown,
+          walkLeft: louiseWalkLeft,
+          walkRight: louiseWalkRight
+        };
+      default:
+        console.log('No valid character selected in house, defaulting to Louise');
+        return {
+          stand: louiseStand,
+          walkUp: louiseWalkUp,
+          walkDown: louiseWalkDown,
+          walkLeft: louiseWalkLeft,
+          walkRight: louiseWalkRight
+        };
+    }
   };
 
   const characterSprites = getCharacterSprites();

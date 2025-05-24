@@ -41,6 +41,18 @@ import pauseButton from '../assets/menu/pause.png';
 import pauseMenuBg from '../assets/menu/pauseMenu.png';
 
 import Minimap from '../components/Minimap';
+import Inventory from '../components/Inventory';
+import QuestFolder from '../components/QuestFolder';
+
+// Import item images
+import seedsIcon from '../assets/items/seeds.png';
+import wheatIcon from '../assets/items/wheat.png';
+import breadIcon from '../assets/items/bread.png';
+import stewIcon from '../assets/items/stew.png';
+import ledgerIcon from '../assets/items/ledger.png';
+import royalDocumentIcon from '../assets/items/royal-document.png';
+import meatIcon from '../assets/items/meat.png';
+import mushroomIcon from '../assets/items/mushroom.png';
 
 // Define collision points using grid coordinates
 const COLLISION_MAP = [
@@ -165,6 +177,67 @@ const monologueScript = [
   "The village calls, the fields await, and somewhere, beneath stone and memory, a forgotten truth lingers. Today, my story begins."
 ];
 
+// Define all possible items
+const ITEMS = {
+  seeds: {
+    id: 1,
+    name: 'Seeds',
+    icon: seedsIcon,
+    type: 'material',
+    description: 'Plant these to grow crops'
+  },
+  wheat: {
+    id: 2,
+    name: 'Wheat',
+    icon: wheatIcon,
+    type: 'material',
+    description: 'Raw wheat, can be used to make bread'
+  },
+  bread: {
+    id: 3,
+    name: 'Bread',
+    icon: breadIcon,
+    type: 'consumable',
+    description: 'Freshly baked bread',
+    effect: { hunger: 30, energy: 10 }
+  },
+  stew: {
+    id: 4,
+    name: 'Stew',
+    icon: stewIcon,
+    type: 'quest',
+    description: 'A special stew that holds significance in the village\'s history'
+  },
+  ledger: {
+    id: 5,
+    name: 'Ledger',
+    icon: ledgerIcon,
+    type: 'quest',
+    description: 'An old ledger containing important information'
+  },
+  royalDocument: {
+    id: 6,
+    name: 'Royal Document',
+    icon: royalDocumentIcon,
+    type: 'quest',
+    description: 'An official document from the royal family'
+  },
+  meat: {
+    id: 7,
+    name: 'Meat',
+    icon: meatIcon,
+    type: 'material',
+    description: 'Raw meat, can be cooked'
+  },
+  mushroom: {
+    id: 8,
+    name: 'Mushroom',
+    icon: mushroomIcon,
+    type: 'material',
+    description: 'A wild mushroom, can be used in cooking'
+  }
+};
+
 const Game = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -198,6 +271,43 @@ const Game = () => {
     { x: 32, y: 30 },
     { x: 33, y: 30 }
   ];
+
+  // Initialize inventory with 2 bread
+  const [inventory, setInventory] = useState([
+    { ...ITEMS.bread, quantity: 2 }
+  ]);
+
+  // Add quest state
+  const [quests, setQuests] = useState([
+    {
+      title: "Welcome Home",
+      description: "Get settled in your new home and explore the village.",
+      objectives: [
+        {
+          description: "Enter your house",
+          completed: false
+        },
+        {
+          description: "Meet the village elder",
+          completed: false
+        }
+      ]
+    },
+    {
+      title: "First Steps",
+      description: "Begin your journey in the village.",
+      objectives: [
+        {
+          description: "Find the village shop",
+          completed: false
+        },
+        {
+          description: "Collect 5 wheat",
+          completed: false
+        }
+      ]
+    }
+  ]);
 
   // If no character is selected, redirect to main menu
   useEffect(() => {
@@ -354,32 +464,52 @@ const Game = () => {
   const GRID_COLS = Math.floor(MAP_WIDTH / GRID_SIZE);
   const GRID_ROWS = Math.floor(MAP_HEIGHT / GRID_SIZE);
 
-  // Get character-specific sprites (only louise for now)
+  // Get character-specific sprites
   const getCharacterSprites = () => {
-    return {
-      stand: louiseStand,
-      walkUp: louiseWalkUp,
-      walkDown: louiseWalkDown,
-      walkLeft: louiseWalkLeft,
-      walkRight: louiseWalkRight
-    };
+    console.log('Selected character:', character); // Debug log to see what we're receiving
+    
+    // Handle case where character might be an object with a name property
+    const characterName = typeof character === 'object' && character !== null ? character.name : character;
+    console.log('Character name:', characterName);
+
+    switch (String(characterName).toLowerCase()) {
+      case 'eugene':
+        console.log('Loading Eugene sprites');
+        return {
+          stand: eugeneStand,
+          walkUp: eugeneWalkUp,
+          walkDown: eugeneWalkDown,
+          walkLeft: eugeneWalkLeft,
+          walkRight: eugeneWalkRight
+        };
+      case 'louise':
+        console.log('Loading Louise sprites');
+        return {
+          stand: louiseStand,
+          walkUp: louiseWalkUp,
+          walkDown: louiseWalkDown,
+          walkLeft: louiseWalkLeft,
+          walkRight: louiseWalkRight
+        };
+      default:
+        console.log('No valid character selected, defaulting to Louise');
+        return {
+          stand: louiseStand,
+          walkUp: louiseWalkUp,
+          walkDown: louiseWalkDown,
+          walkLeft: louiseWalkLeft,
+          walkRight: louiseWalkRight
+        };
+    }
   };
 
   const characterSprites = getCharacterSprites();
+  console.log('Current sprites:', characterSprites); // Debug log
 
   const getSprite = () => {
-    switch (facing) {
-      case 'up':
-        return characterSprites.walkUp;
-      case 'down':
-        return characterSprites.walkDown;
-      case 'left':
-        return characterSprites.walkLeft;
-      case 'right':
-        return characterSprites.walkRight;
-      default:
-        return characterSprites.stand;
-    }
+    const sprite = characterSprites[facing === 'stand' ? 'stand' : `walk${facing.charAt(0).toUpperCase() + facing.slice(1)}`];
+    console.log('Current facing:', facing, 'Using sprite:', sprite); // Debug log
+    return sprite;
   };
 
   // Convert pixel position to grid coordinates
@@ -668,6 +798,55 @@ const Game = () => {
     }
   };
 
+  const handleUseItem = (item) => {
+    if (item.type === 'consumable') {
+      // Apply item effects
+      if (item.effect.health) {
+        setHealth(prev => Math.min(100, prev + item.effect.health));
+      }
+      if (item.effect.energy) {
+        setEnergy(prev => Math.min(100, prev + item.effect.energy));
+      }
+      if (item.effect.hunger) {
+        setHunger(prev => Math.min(100, prev + item.effect.hunger));
+      }
+      
+      // Update item quantity or remove if last one
+      setInventory(prev => {
+        const newInventory = prev.map(invItem => {
+          if (invItem.id === item.id) {
+            return {
+              ...invItem,
+              quantity: invItem.quantity - 1
+            };
+          }
+          return invItem;
+        });
+        
+        // Remove items with quantity 0
+        return newInventory.filter(invItem => invItem.quantity > 0);
+      });
+    }
+  };
+
+  // Function to add item to inventory
+  const addItemToInventory = (itemId, quantity = 1) => {
+    setInventory(prev => {
+      const existingItem = prev.find(item => item.id === itemId);
+      if (existingItem) {
+        // Update quantity if item exists
+        return prev.map(item => 
+          item.id === itemId 
+            ? { ...item, quantity: item.quantity + quantity }
+            : item
+        );
+      } else {
+        // Add new item
+        return [...prev, { ...ITEMS[itemId], quantity }];
+      }
+    });
+  };
+
   if (isInInterior) {
     return (
       <HouseInterior 
@@ -696,41 +875,46 @@ const Game = () => {
   return (
     <div className="relative w-full h-screen bg-black overflow-hidden">
       {/* Status Effects UI */}
-      <div className="absolute top-4 left-4 z-50 flex flex-col gap-2 text-white">
-        <div className="flex items-center gap-2">
-          <span>❤️ Health: {Math.round(health)}</span>
-          <div className="w-24 h-4 bg-gray-700 rounded">
-            <div className="h-full bg-red-500 rounded" style={{ width: `${health}%` }}></div>
+      {!showDialog && (
+        <>
+          <div className="absolute top-4 left-4 z-50 flex flex-col gap-2 text-white">
+            <div className="flex items-center gap-2">
+              <span>❤️ Health: {Math.round(health)}</span>
+              <div className="w-24 h-4 bg-gray-700 rounded">
+                <div className="h-full bg-red-500 rounded" style={{ width: `${health}%` }}></div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span>⚡ Energy: {Math.round(energy)}</span>
+              <div className="w-24 h-4 bg-gray-700 rounded">
+                <div className="h-full bg-blue-500 rounded" style={{ width: `${energy}%` }}></div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span>🍽️ Hunger: {Math.round(hunger)}</span>
+              <div className="w-24 h-4 bg-gray-700 rounded">
+                <div className="h-full bg-yellow-500 rounded" style={{ width: `${hunger}%` }}></div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span>😊 Happiness: {Math.round(happiness)}</span>
+              <div className="h-4 bg-gray-700 rounded">
+                <div className="h-full bg-green-500 rounded" style={{ width: `${happiness}%` }}></div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span>🛁 Cleanliness: {Math.round(cleanliness)}</span>
+              <div className="w-24 h-4 bg-gray-700 rounded">
+                <div className="h-full bg-cyan-500 rounded" style={{ width: `${cleanliness}%` }}></div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span>💰 Money: {money}</span>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span>⚡ Energy: {Math.round(energy)}</span>
-          <div className="w-24 h-4 bg-gray-700 rounded">
-            <div className="h-full bg-blue-500 rounded" style={{ width: `${energy}%` }}></div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span>🍽️ Hunger: {Math.round(hunger)}</span>
-          <div className="w-24 h-4 bg-gray-700 rounded">
-            <div className="h-full bg-yellow-500 rounded" style={{ width: `${hunger}%` }}></div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span>😊 Happiness: {Math.round(happiness)}</span>
-          <div className="h-4 bg-gray-700 rounded">
-            <div className="h-full bg-green-500 rounded" style={{ width: `${happiness}%` }}></div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span>🛁 Cleanliness: {Math.round(cleanliness)}</span>
-          <div className="w-24 h-4 bg-gray-700 rounded">
-            <div className="h-full bg-cyan-500 rounded" style={{ width: `${cleanliness}%` }}></div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span>💰 Money: {money}</span>
-        </div>
-      </div>
+          <QuestFolder quests={quests} />
+        </>
+      )}
 
       <AnimatePresence mode="wait">
         {isLoading && (
@@ -836,6 +1020,14 @@ const Game = () => {
             <button onClick={() => setShowShop(false)} className="mt-4 px-4 py-2 bg-yellow-600 rounded">Close Shop</button>
           </div>
         </div>
+      )}
+
+      {/* Add Inventory */}
+      {!showDialog && !isPaused && !isLoading && !showCutscene && (
+        <Inventory 
+          items={inventory} 
+          onUseItem={handleUseItem}
+        />
       )}
 
       {/* Rest of your game content */}
