@@ -2,11 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { saveFileService } from '../services/saveFileService';
-import SaveFileUI from './SaveFileUI';
+import { motion } from 'framer-motion';
+import { useSound } from '../context/SoundContext';
+import AnimatedList from './AnimatedList';
 
-const LoadGame = () => {
+const LoadGame = ({ onClose }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { playExit } = useSound();
   const [saveFiles, setSaveFiles] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -32,9 +35,10 @@ const LoadGame = () => {
     loadSaveFiles();
   }, [user, navigate]);
 
-  const handleLoad = async (saveId) => {
+  const handleLoad = async (saveFile) => {
+    if (!saveFile.character) return; // Don't load empty slots
     try {
-      const saveData = await saveFileService.loadSaveFile(saveId);
+      const saveData = await saveFileService.loadSaveFile(saveFile.id);
       if (saveData) {
         navigate('/game', { 
           state: { 
@@ -50,54 +54,109 @@ const LoadGame = () => {
     }
   };
 
-  const handleDelete = async (saveId) => {
+  const handleDelete = async (saveFile) => {
+    if (!saveFile.character) return; // Don't delete empty slots
     try {
-      await saveFileService.deleteSaveFile(saveId);
-      setSaveFiles(prev => prev.filter(file => file.id !== saveId));
+      await saveFileService.deleteSaveFile(saveFile.id);
+      setSaveFiles(prev => prev.filter(file => file.id !== saveFile.id));
     } catch (error) {
       setError('Failed to delete save file');
       console.error('Error deleting save file:', error);
     }
   };
 
-  const handleBack = () => {
-    navigate('/');
+  const handleClose = () => {
+    playExit();
+    onClose();
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-black">
-        <div className="text-white text-xl">Loading save files...</div>
+      <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}>
+        <div className="text-[#F5DEB3] text-xl">Loading save files...</div>
       </div>
     );
   }
 
+  const formatSaveFile = (saveFile) => {
+    if (!saveFile.character) {
+      return "Empty Slot";
+    }
+    const date = new Date(saveFile.createdAt);
+    return `${saveFile.character.name} - ${date.toLocaleDateString()}`;
+  };
+
+  const renderSaveFile = (saveFile) => (
+    <div className="flex justify-between items-center w-full">
+      <span className={`${!saveFile.character ? 'text-gray-500' : 'text-[#F5DEB3]'}`}>
+        {formatSaveFile(saveFile)}
+      </span>
+      {saveFile.character && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleDelete(saveFile);
+          }}
+          className="text-red-500 hover:text-red-400 transition-colors"
+        >
+          Delete
+        </button>
+      )}
+    </div>
+  );
+
+  // Create array of 3 save slots
+  const saveSlots = Array(3).fill(null).map((_, index) => {
+    const existingSave = saveFiles[index];
+    return existingSave || { id: `empty-${index}`, character: null };
+  });
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-black p-4">
-      <div className="w-full max-w-2xl">
-        <h1 className="text-white text-3xl font-bold mb-8 text-center">Load Game</h1>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}
+    >
+      <motion.div
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: -100, opacity: 0 }}
+        transition={{ type: "spring", bounce: 0.3 }}
+        className="p-8 rounded-lg max-w-2xl w-full mx-4 relative"
+      >
+        <button
+          onClick={handleClose}
+          className="absolute top-4 right-4 text-[#F5DEB3] text-2xl focus:outline-none hover:text-white transition-colors"
+        >
+          ✕
+        </button>
+
+        <h2 className="text-2xl font-bold mb-6 text-center text-[#F5DEB3]">LOAD GAME</h2>
         
         {error && (
-          <div className="bg-red-500 text-white p-4 rounded-lg mb-4">
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-red-500 text-white p-4 rounded-lg mb-4"
+          >
             {error}
-          </div>
+          </motion.div>
         )}
 
-        <SaveFileUI
-          saveFiles={saveFiles}
-          onLoad={handleLoad}
-          onDelete={handleDelete}
-        />
-
-        <button
-          onClick={handleBack}
-          className="mt-8 px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
-        >
-          Back to Main Menu
-        </button>
-      </div>
-    </div>
+        <div className="text-[#DEB887]">
+          <AnimatedList
+            items={saveSlots}
+            onItemSelect={handleLoad}
+            itemClassName="flex justify-between items-center"
+            className="mx-auto"
+            renderItem={renderSaveFile}
+          />
+        </div>
+      </motion.div>
+    </motion.div>
   );
 };
 
-export default LoadGame; 
+export default LoadGame;

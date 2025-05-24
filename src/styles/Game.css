@@ -146,4 +146,27 @@
 .interior {
   position: relative;
   image-rendering: pixelated;
+}
+
+.pause-menu-btn {
+  background: linear-gradient(180deg, rgba(224,185,125,0.92) 0%, rgba(169,124,80,0.92) 100%);
+  color: #3a220a;
+  font-size: 1.25rem;
+  font-weight: bold;
+  border: 2.5px solid #7c4f21;
+  border-radius: 18px;
+  box-shadow: 0 4px 12px rgba(60, 40, 10, 0.18);
+  padding: 0.75rem 0;
+  margin: 0.5rem 0;
+  transition: background 0.2s, color 0.2s, transform 0.1s;
+  opacity: 0.96;
+  width: 100%;
+  max-width: 260px;
+  letter-spacing: 1px;
+}
+.pause-menu-btn:hover {
+  background: linear-gradient(180deg, rgba(245,215,161,0.98) 0%, rgba(196,154,108,0.98) 100%);
+  color: #a97c50;
+  transform: translateY(-2px) scale(1.04);
+  opacity: 1;
 } 

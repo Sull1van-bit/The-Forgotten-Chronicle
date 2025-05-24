@@ -99,7 +99,7 @@ export default function CharacterSelection({ onSelect, onClose }) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex flex-col items-center justify-center"
-      style={{ backgroundColor: 'rgba(0, 0, 0, 0.05)' }}
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
     >
       {/* Title */}
       <h2 className="text-3xl font-bold mb-8 text-white z-20 mt-16">CHOOSE YOUR CHARACTER!</h2>
@@ -215,7 +215,8 @@ export default function CharacterSelection({ onSelect, onClose }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-05"
+          className="fixed inset-0 z-[60] flex items-center justify-center"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
         >
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}

@@ -5,6 +5,8 @@ import { useMusic } from '../context/MusicContext';
 import { AnimatePresence } from 'framer-motion';
 import LoadingScreen from '../components/LoadingScreen';
 import Cutscene from '../components/Cutscene';
+import DialogBox from '../components/DialogBox';
+import Settings from '../components/Settings';
 import '../styles/Game.css';
 
 // Import character sprites (only louise, since others are commented out)
@@ -22,6 +24,9 @@ import HouseInterior from './interiors/HouseInterior';
 import { useAuth } from '../context/AuthContext';
 import { saveFileService } from '../services/saveFileService';
 import { createSaveFileData, loadSaveFileData } from '../utils/saveFileUtils';
+
+import pauseButton from '../assets/menu/pause.png';
+import pauseMenuBg from '../assets/menu/pauseMenu.png';
 
 // Define collision points using grid coordinates
 const COLLISION_MAP = [
@@ -145,6 +150,8 @@ const Game = () => {
   const isLoadedGame = location.state?.isLoadedGame;
   const [isLoading, setIsLoading] = useState(true);
   const [showCutscene, setShowCutscene] = useState(false);
+  const [showDialog, setShowDialog] = useState(false);
+  const [currentDialogueIndex, setCurrentDialogueIndex] = useState(0);
   const [saveFiles, setSaveFiles] = useState([]);
   const [canSave, setCanSave] = useState(false);
   const [showSavePrompt, setShowSavePrompt] = useState(false);
@@ -217,6 +224,28 @@ const Game = () => {
 
   const handleCutsceneComplete = () => {
     setShowCutscene(false);
+    // Start monologue for new games after cutscene
+    if (!isLoadedGame) {
+      setShowDialog(true);
+      setCurrentDialogueIndex(0);
+    }
+  };
+
+  // Handle advancing the monologue
+  const handleAdvanceMonologue = () => {
+    if (currentDialogueIndex < monologueScript.length - 1) {
+      setCurrentDialogueIndex(prevIndex => prevIndex + 1);
+    } else {
+      // End of monologue
+      setShowDialog(false);
+      setCurrentDialogueIndex(0); // Reset for next time if needed
+    }
+  };
+
+  // Handle skipping the entire monologue
+  const handleSkipMonologue = () => {
+    setShowDialog(false);
+    setCurrentDialogueIndex(0);
   };
 
   // Add save point coordinates
@@ -420,7 +449,14 @@ const Game = () => {
     });
   };
 
-  // Update useEffect for movement
+  // Pause logic
+  const handlePause = () => setIsPaused(true);
+  const handleResume = () => setIsPaused(false);
+  const handleSettings = () => setShowSettings(true);
+  const handleCloseSettings = () => setShowSettings(false);
+  const handleExit = () => navigate('/');
+
+  // Prevent movement when paused
   useEffect(() => {
     const handleKeyPress = (e) => {
       if (isSleeping) return;
@@ -660,6 +696,78 @@ const Game = () => {
       </AnimatePresence>
 
       {user && !isLoading && !showCutscene && renderSavePrompt()}
+
+      {/* Dialog Box */}
+      {showDialog && (
+        <>
+          {/* Skip button at the top center, always clickable */}
+          <div
+            className="fixed top-8 left-1/2 transform -translate-x-1/2 z-[100] pointer-events-auto"
+          >
+            <button
+              onClick={handleSkipMonologue}
+              style={{ backgroundColor: 'rgba(55, 65, 81, 0.85)' }}
+              className="px-4 py-2 text-white rounded-lg hover:bg-gray-600 transition-colors shadow-lg"
+            >
+              Skip
+            </button>
+          </div>
+          {/* Overlay that allows click anywhere to advance monologue */}
+          <div
+            className="fixed inset-0 z-50 flex items-end justify-center p-4 pointer-events-auto"
+            onClick={handleAdvanceMonologue}
+          >
+            <div
+              className="flex flex-col items-center pointer-events-auto"
+            >
+              <DialogBox
+                key={currentDialogueIndex}
+                dialogue={monologueScript[currentDialogueIndex]}
+                onAdvance={handleAdvanceMonologue}
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Pause Button */}
+      {!isPaused && !isLoading && !showCutscene && !showDialog && (
+        <img
+          src={pauseButton}
+          alt="Pause"
+          onClick={handlePause}
+          className="fixed top-4 right-4 z-50 cursor-pointer"
+          style={{ width: 64, height: 64, objectFit: 'contain' }}
+        />
+      )}
+
+      {/* Pause Menu Popup */}
+      {isPaused && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}
+        >
+          <div className="bg-[#8B4513] p-8 rounded-lg max-w-md w-full mx-4 relative border-8 border-[#D2B48C] shadow-lg flex flex-col items-center gap-8">
+            <h2 className="text-2xl font-bold mb-2 text-center text-[#F5DEB3] tracking-widest">PAUSED</h2>
+            <div className="flex flex-col items-center gap-6 w-full">
+              <button className="pause-menu-btn w-56" onClick={handleResume}>Resume</button>
+              <button className="pause-menu-btn w-56" onClick={handleSettings}>Settings</button>
+              <button className="pause-menu-btn w-56" onClick={handleExit}>Exit</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Settings Popup (from pause menu or elsewhere) */}
+      {showSettings && (
+        <Settings
+          onClose={handleCloseSettings}
+          soundEnabled={soundEnabled}
+          setSoundEnabled={setSoundEnabled}
+          sfxVolume={sfxVolume}
+          setSfxVolume={setSfxVolume}
+        />
+      )}
 
       {!isLoading && !showCutscene && (
         <div className="game-container">
