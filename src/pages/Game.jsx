@@ -10,12 +10,18 @@ import Settings from '../components/Settings';
 import Minimap from '../components/Minimap';
 import '../styles/Game.css';
 
-// Import character sprites (only Louise for now)
+// Import character sprites
 import louiseStand from '../assets/characters/louise/stand.gif';
 import louiseWalkUp from '../assets/characters/louise/walk-up.gif';
 import louiseWalkDown from '../assets/characters/louise/walk-down.gif';
 import louiseWalkLeft from '../assets/characters/louise/walk-left.gif';
 import louiseWalkRight from '../assets/characters/louise/walk-right.gif';
+
+import eugeneStand from '../assets/characters/eugene/stand.gif';
+import eugeneWalkUp from '../assets/characters/eugene/walk-up.gif';
+import eugeneWalkDown from '../assets/characters/eugene/walk-down.gif';
+import eugeneWalkLeft from '../assets/characters/eugene/walk-left.gif';
+import eugeneWalkRight from '../assets/characters/eugene/walk-right.gif';
 
 // Import maps
 import allMap from '../assets/Maps/all-map.png';
@@ -869,7 +875,7 @@ const Game = () => {
   return (
     <div className="relative w-full h-screen bg-black overflow-hidden">
       {/* Status Effects UI */}
-      {!showDialog && (
+      {!showDialog && !isLoading && !showCutscene && (
         <>
           <div className="absolute top-4 left-4 z-50 flex flex-col gap-2 text-white">
             <div className="flex items-center gap-2">
@@ -1044,7 +1050,7 @@ const Game = () => {
                   }}
                 />
                 <div className="grid" style={{ width: `${MAP_WIDTH}px`, height: `${MAP_HEIGHT}px` }}>
-                  {renderGrid()}
+                  {renderGrid}
                 </div>
                 <div
                   className="player"
