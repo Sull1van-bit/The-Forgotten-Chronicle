@@ -10,6 +10,7 @@ import DialogBox from '../components/DialogBox';
 import Settings from '../components/Settings';
 import Minimap from '../components/Minimap';
 import '../styles/Game.css';
+import { DialogProvider, useDialog } from '../context/DialogContext';
 
 // Import character sprites
 import louiseStand from '../assets/characters/louise/stand.gif';
@@ -25,6 +26,10 @@ import eugeneWalkDown from '../assets/characters/eugene/walk-down.gif';
 import eugeneWalkLeft from '../assets/characters/eugene/walk-left.gif';
 import eugeneWalkRight from '../assets/characters/eugene/walk-right.gif';
 import eugeneEat from '../assets/characters/eugene/eat.gif';
+
+// Import elder assets (assuming these paths exist)
+// import elderStand from '../assets/characters/elder/stand.gif'; // Commented out
+import elderPortrait from '../assets/npc/elder/character.png';
 
 // Import character portraits
 import louisePortrait from '../assets/characters/louise/character.png';
@@ -321,12 +326,11 @@ const Game = () => {
   const { user } = useAuth();
   const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume } = useSound();
   const { musicEnabled, setMusicEnabled, musicVolume, setMusicVolume } = useMusic();
+  const { startDialog, advanceDialog, endDialog, isDialogActive, currentDialog, dialogIndex } = useDialog();
   const character = location.state?.character;
   const isLoadedGame = location.state?.isLoadedGame;
   const [isLoading, setIsLoading] = useState(true);
   const [showCutscene, setShowCutscene] = useState(false);
-  const [showDialog, setShowDialog] = useState(false);
-  const [currentDialogueIndex, setCurrentDialogueIndex] = useState(0);
   const [saveFiles, setSaveFiles] = useState([]);
   const [canSave, setCanSave] = useState(false);
   const [showSavePrompt, setShowSavePrompt] = useState(false);
@@ -351,6 +355,27 @@ const Game = () => {
   const [money, setMoney] = useState(0);
   const [cleanliness, setCleanliness] = useState(100);
   const [gameTime, setGameTime] = useState({ hours: 6, minutes: 0 }); // Start at 6:00 AM
+
+  // Add state for house dialog
+  const [hasSeenHouseDialog, setHasSeenHouseDialog] = useState(false);
+
+  // Add state for elder talk popup
+  const [showElderTalkPopup, setShowElderTalkPopup] = useState(false);
+
+  // Define basic game constants and initial player state - Moved up
+  const [position, setPosition] = useState({ x: 350, y: 150 });
+  const [facing, setFacing] = useState('stand');
+  const [isInInterior, setIsInInterior] = useState(false);
+  const speed = 20;
+  const scale = 1.2;
+  const GRID_SIZE = 40;
+  const PLAYER_BASE_SIZE = 10;
+  const PLAYER_SCALE = 1.3;
+  const PLAYER_SIZE = PLAYER_BASE_SIZE * PLAYER_SCALE;
+  const MAP_WIDTH = 2400;
+  const MAP_HEIGHT = 1800;
+  const GRID_COLS = Math.floor(MAP_WIDTH / GRID_SIZE);
+  const GRID_ROWS = Math.floor(MAP_HEIGHT / GRID_SIZE);
 
   // Define shop trigger points
   const shopPoints = [
@@ -416,19 +441,22 @@ const Game = () => {
   const handleCutsceneComplete = () => {
     setShowCutscene(false);
     if (!isLoadedGame) {
-      setShowDialog(true);
-      setCurrentDialogueIndex(0);
+      // Use the new dialog system
+      startDialog({
+        characterName: character?.name || 'Character',
+        expression: 'smile',
+        dialogue: monologueScript
+      });
     }
   };
 
   // Handle advancing the monologue
   const handleAdvanceMonologue = () => {
-    if (currentDialogueIndex < monologueScript.length - 1) {
-      setCurrentDialogueIndex(prevIndex => prevIndex + 1);
+    if (dialogIndex < monologueScript.length - 1) {
+      advanceDialog();
     } else {
       // Dialogue ends here
-      setShowDialog(false);
-      setCurrentDialogueIndex(0);
+      endDialog();
       // Add the initial quest after dialogue
       setQuests(prevQuests => [
         ...prevQuests,
@@ -455,8 +483,7 @@ const Game = () => {
 
   // Handle skipping the entire monologue
   const handleSkipMonologue = () => {
-    setShowDialog(false);
-    setCurrentDialogueIndex(0);
+    endDialog();
     // Add the initial quest and trigger popup when skipping
     setQuests(prevQuests => [
       ...prevQuests,
@@ -475,8 +502,8 @@ const Game = () => {
         ]
       }
     ]);
-    setNewQuestTitle("Welcome Home"); // Set the title directly
-    setShowNewQuestPopup(true); // Show the popup directly
+    setNewQuestTitle("Welcome Home");
+    setShowNewQuestPopup(true);
   };
 
   // Add save point coordinates
@@ -491,6 +518,25 @@ const Game = () => {
     return SAVE_POINTS.some(point => 
       point.x === playerGridPos.gridX && point.y === playerGridPos.gridY
     );
+  };
+
+  // Define Elder position (grid coordinates)
+  const ELDER_POSITION_GRID = { x: 15, y: 16 };
+  // Calculate Elder pixel position
+  const ELDER_POSITION_PIXEL = { x: ELDER_POSITION_GRID.x * GRID_SIZE, y: ELDER_POSITION_GRID.y * GRID_SIZE };
+  const ELDER_SIZE = 26; // Assuming similar size to player for positioning
+
+  // Check proximity to Elder
+  const checkElderProximity = (playerX, playerY) => {
+    const playerCenterX = playerX + (PLAYER_SIZE / 2);
+    const playerCenterY = playerY + (PLAYER_SIZE / 2);
+    const elderCenterX = ELDER_POSITION_PIXEL.x + (ELDER_SIZE / 2);
+    const elderCenterY = ELDER_POSITION_PIXEL.y + (ELDER_SIZE / 2);
+    const distance = Math.sqrt(
+      Math.pow(playerCenterX - elderCenterX, 2) + Math.pow(playerCenterY - elderCenterY, 2)
+    );
+    const proximityThreshold = GRID_SIZE / 2; // Half a grid cell away
+    return distance < proximityThreshold;
   };
 
   // Update save game function
@@ -519,7 +565,8 @@ const Game = () => {
           sfxVolume,
           musicEnabled,
           musicVolume
-        }
+        },
+        hasSeenHouseDialog,
       };
 
       const saveData = createSaveFileData(gameState);
@@ -552,25 +599,12 @@ const Game = () => {
           setMusicEnabled(gameState.settings.musicEnabled ?? true);
           setMusicVolume(gameState.settings.musicVolume ?? 0.5);
         }
+        setHasSeenHouseDialog(gameState.hasSeenHouseDialog ?? false);
       }
     } catch (error) {
       console.error('Error loading game:', error);
     }
   };
-
-  const [position, setPosition] = useState({ x: 350, y: 150 });
-  const [facing, setFacing] = useState('stand');
-  const [isInInterior, setIsInInterior] = useState(false);
-  const speed = 20;
-  const scale = 1.2;
-  const GRID_SIZE = 40;
-  const PLAYER_BASE_SIZE = 10;
-  const PLAYER_SCALE = 1.3;
-  const PLAYER_SIZE = PLAYER_BASE_SIZE * PLAYER_SCALE;
-  const MAP_WIDTH = 2400;
-  const MAP_HEIGHT = 1800;
-  const GRID_COLS = Math.floor(MAP_WIDTH / GRID_SIZE);
-  const GRID_ROWS = Math.floor(MAP_HEIGHT / GRID_SIZE);
 
   // Get character-specific sprites
   const getCharacterSprites = () => {
@@ -746,10 +780,10 @@ const Game = () => {
   const handleCloseSettings = () => setShowSettings(false);
   const handleExit = () => navigate('/');
 
-  // Prevent movement and interactions when paused, in dialogue, or in shop
+  // Prevent movement and interactions when paused, in dialogue, in shop, or talking to elder
   useEffect(() => {
     const handleKeyPress = (e) => {
-      if (isSleeping || isPaused || showDialog || showShop) return;
+      if (isSleeping || isPaused || isDialogActive || showShop || showElderTalkPopup) return;
       console.log('Key pressed:', e.key);
       console.log('isInInterior:', isInInterior);
 
@@ -792,6 +826,10 @@ const Game = () => {
             }
             checkTeleport(newX, newY);
             checkShopTrigger(newX, newY);
+            // Check proximity to Elder after movement
+            if (checkElderProximity(newX, newY)) {
+              setShowElderTalkPopup(true);
+            }
           }
           break;
         case 's':
@@ -808,6 +846,10 @@ const Game = () => {
             setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));
             checkTeleport(newX, newY);
             checkShopTrigger(newX, newY);
+            // Check proximity to Elder after movement
+            if (checkElderProximity(newX, newY)) {
+              setShowElderTalkPopup(true);
+            }
           }
           break;
         case 'a':
@@ -824,6 +866,10 @@ const Game = () => {
             setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));
             checkTeleport(newX, newY);
             checkShopTrigger(newX, newY);
+            // Check proximity to Elder after movement
+            if (checkElderProximity(newX, newY)) {
+              setShowElderTalkPopup(true);
+            }
           }
           break;
         case 'd':
@@ -840,13 +886,17 @@ const Game = () => {
             setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));
             checkTeleport(newX, newY);
             checkShopTrigger(newX, newY);
+            // Check proximity to Elder after movement
+            if (checkElderProximity(newX, newY)) {
+              setShowElderTalkPopup(true);
+            }
           }
           break;
         case 'p':
           setIsPaused(true);
           break;
         case 's':
-          if (canSave && !showDialog) {
+          if (canSave && !isDialogActive) {
             saveGame();
           }
           break;
@@ -871,7 +921,7 @@ const Game = () => {
       window.removeEventListener('keydown', handleKeyPress);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [position, isInInterior, speed, MAP_HEIGHT, MAP_WIDTH, PLAYER_SIZE, isSleeping, isPaused, showDialog, showShop, canSave]);
+  }, [position, isInInterior, speed, MAP_HEIGHT, MAP_WIDTH, PLAYER_SIZE, isSleeping, isPaused, isDialogActive, showShop, canSave, showElderTalkPopup]);
 
   const getCameraStyle = () => {
     const viewportCenterX = window.innerWidth / 2;
@@ -925,7 +975,7 @@ const Game = () => {
   }, [shopPointSet]);
 
   const renderSavePrompt = () => {
-    if (!showSavePrompt || !canSave || isPaused || showDialog || showShop) return null;
+    if (!showSavePrompt || !canSave || isPaused || isDialogActive || showShop) return null;
 
     return (
       <div className="fixed bottom-4 right-4 bg-black bg-opacity-75 p-4 rounded-lg text-white z-50">
@@ -1012,6 +1062,11 @@ const Game = () => {
     return () => clearInterval(timeInterval);
   }, []);
 
+  // Add onTimeUpdate function
+  const onTimeUpdate = (newTime) => {
+    setGameTime(newTime);
+  };
+
   // Format time for display
   const formatTime = (time) => {
     let hours = time.hours;
@@ -1066,45 +1121,53 @@ const Game = () => {
 
   if (isInInterior) {
     return (
-      <HouseInterior 
-        position={position} 
-        setPosition={setPosition} 
-        onExit={handleExitInterior} 
-        character={character}
-        health={health}
-        setHealth={setHealth}
-        energy={energy}
-        setEnergy={setEnergy}
-        hunger={hunger}
-        setHunger={setHunger}
-        happiness={happiness}
-        setHappiness={setHappiness}
-        money={money}
-        setMoney={setMoney}
-        isSleeping={isSleeping}
-        setIsSleeping={setIsSleeping}
-        cleanliness={cleanliness}
-        setCleanliness={setCleanliness}
-        inventory={inventory}
-        quests={quests}
-        setQuests={setQuests}
-        onUseItem={handleUseItem}
-        isPaused={isPaused}
-        handlePause={handlePause}
-        handleResume={handleResume}
-        handleSettings={handleSettings}
-        handleCloseSettings={handleCloseSettings}
-        handleExit={handleExit}
-        showSettings={showSettings}
-        gameTime={gameTime}
-      />
+      <DialogProvider>
+        <HouseInterior 
+          position={position} 
+          setPosition={setPosition} 
+          onExit={handleExitInterior} 
+          character={character}
+          health={health}
+          setHealth={setHealth}
+          energy={energy}
+          setEnergy={setEnergy}
+          hunger={hunger}
+          setHunger={setHunger}
+          happiness={happiness}
+          setHappiness={setHappiness}
+          money={money}
+          setMoney={setMoney}
+          isSleeping={isSleeping}
+          setIsSleeping={setIsSleeping}
+          cleanliness={cleanliness}
+          setCleanliness={setCleanliness}
+          inventory={inventory}
+          quests={quests}
+          setQuests={setQuests}
+          onUseItem={handleUseItem}
+          isPaused={isPaused}
+          handlePause={handlePause}
+          handleResume={handleResume}
+          handleSettings={handleSettings}
+          handleCloseSettings={handleCloseSettings}
+          handleExit={handleExit}
+          showSettings={showSettings}
+          gameTime={gameTime}
+          onTimeUpdate={onTimeUpdate}
+          hasSeenHouseDialog={hasSeenHouseDialog}
+          setHasSeenHouseDialog={setHasSeenHouseDialog}
+          saveGame={saveGame}
+          showEatAnimation={showEatAnimation}
+          setShowEatAnimation={setShowEatAnimation}
+        />
+      </DialogProvider>
     );
   }
 
   return (
     <div className="relative w-full h-screen bg-black overflow-hidden">
       {/* Styled Status Bar (HP, Hunger, Hygiene, Happiness) */}
-      {!showDialog && !isLoading && !showCutscene && (
+      {!isDialogActive && !isLoading && !showCutscene && (
         <>
           <div className="absolute top-4 left-4 z-50 text-white flex items-center border-8 border-[#D2B48C]" style={{ backgroundColor: '#8B4513', padding: '10px', borderRadius: '10px' }}>
             {/* Character Portrait */}
@@ -1209,13 +1272,13 @@ const Game = () => {
         )}
       </AnimatePresence>
 
-      {user && !isLoading && !showCutscene && !isPaused && !showDialog && !showShop && renderSavePrompt()}
+      {user && !isLoading && !showCutscene && !isPaused && !isDialogActive && renderSavePrompt()}
 
       {/* Dialog Box */}
-      {showDialog && (
+      {isDialogActive && currentDialog && (
         <>
           <div
-            className="fixed top-8 left-1/2 transform -translate-x-1/2 z-[100] pointer-events-auto"
+            className="fixed top-8 right-8 z-[100] pointer-events-auto"
           >
             <button
               onClick={handleSkipMonologue}
@@ -1231,8 +1294,7 @@ const Game = () => {
           >
             <div className="flex flex-col items-center pointer-events-auto">
               <DialogBox
-                key={currentDialogueIndex}
-                dialogue={monologueScript[currentDialogueIndex]}
+                key={dialogIndex}
                 onAdvance={handleAdvanceMonologue}
               />
             </div>
@@ -1241,7 +1303,7 @@ const Game = () => {
       )}
 
       {/* Pause Button */}
-      {!isPaused && !isLoading && !showCutscene && !showDialog && !showShop && !isInInterior && (
+      {!isPaused && !isLoading && !showCutscene && !isDialogActive && !showShop && !isInInterior && (
         <img
           src={pauseButton}
           alt="Pause"
@@ -1300,7 +1362,7 @@ const Game = () => {
       )}
 
       {/* Add Inventory */}
-      {!showDialog && !isPaused && !isLoading && !showCutscene && (
+      {!isDialogActive && !isPaused && !isLoading && !showCutscene && (
         <Inventory 
           items={inventory} 
           onUseItem={handleUseItem}
@@ -1387,11 +1449,59 @@ const Game = () => {
           handleExit={handleExit}
           showSettings={showSettings}
           gameTime={gameTime}
+          onTimeUpdate={onTimeUpdate}
+          hasSeenHouseDialog={hasSeenHouseDialog}
+          setHasSeenHouseDialog={setHasSeenHouseDialog}
+          saveGame={saveGame}
+          showEatAnimation={showEatAnimation}
+          setShowEatAnimation={setShowEatAnimation}
         />
       ) : (
         <>
           {/* Minimap */}
           <Minimap position={position} shopPoints={shopPoints} />
+
+          {/* Elder NPC Sprite */}
+          {/* Commented out because asset is not ready */}
+          {/*
+          {!isLoading && !showCutscene && (
+            <img
+              src={elderStand}
+              alt="Village Elder"
+              className="absolute pixelated"
+              style={{
+                left: `${ELDER_POSITION_PIXEL.x}px`,
+                top: `${ELDER_POSITION_PIXEL.y}px`,
+                width: `${ELDER_SIZE}px`,
+                height: `${ELDER_SIZE}px`,
+                zIndex: 2, // Ensure elder is above background
+              }}
+            />
+          )}
+          */}
+
+          {/* Elder Talk Confirmation Popup */}
+          {showElderTalkPopup && !isPaused && !isDialogActive && !showShop && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}>
+              <div className="bg-[#8B4513] p-8 rounded-lg max-w-md w-full mx-4 relative border-8 border-[#D2B48C] shadow-lg flex flex-col items-center gap-4">
+                <h2 className="text-2xl font-bold text-center text-[#F5DEB3]">Talk to Elder?</h2>
+                <div className="flex flex-col gap-2">
+                  <button 
+                    className="bg-[#8B4513] text-[#F5DEB3] px-6 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 w-32"
+                    onClick={() => { /* Add talk logic here later */ setShowElderTalkPopup(false); console.log('Talking to Elder...'); }}
+                  >
+                    Yes
+                  </button>
+                  <button 
+                    className="bg-[#8B4513] text-[#F5DEB3] px-6 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 w-32"
+                    onClick={() => setShowElderTalkPopup(false)}
+                  >
+                    No
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Rest of your game content (excluding UI moved to HouseInterior) */}
           {!isLoading && !showCutscene && (

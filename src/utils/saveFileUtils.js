@@ -15,7 +15,8 @@ export const createSaveFileData = (gameState) => {
     inventory: gameState.inventory || [],
     quests: gameState.quests || [],
     stats: gameState.stats || {},
-    settings: gameState.settings || {}
+    settings: gameState.settings || {},
+    hasSeenHouseDialog: gameState.hasSeenHouseDialog ?? false,
   };
 };
 
@@ -32,7 +33,8 @@ export const loadSaveFileData = async (saveId) => {
       inventory: saveData.inventory || [],
       quests: saveData.quests || [],
       stats: saveData.stats || {},
-      settings: saveData.settings || {}
+      settings: saveData.settings || {},
+      hasSeenHouseDialog: saveData.hasSeenHouseDialog ?? false,
     };
   } catch (error) {
     console.error('Error loading save file:', error);

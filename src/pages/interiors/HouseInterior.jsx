@@ -4,6 +4,8 @@ import { useAuth } from '../../context/AuthContext';
 import { saveFileService } from '../../services/saveFileService';
 import { useSound } from '../../context/SoundContext';
 import { useMusic } from '../../context/MusicContext';
+import { useDialog } from '../../context/DialogContext';
+import { AnimatePresence, motion } from 'framer-motion';
 
 // Import components
 import Inventory from '../../components/Inventory';
@@ -38,6 +40,8 @@ import louiseWalkLeft from '../../assets/characters/louise/walk-left.gif';
 import louiseWalkRight from '../../assets/characters/louise/walk-right.gif';
 import eugeneSleep from '../../assets/characters/eugene/sleep.gif';
 import louiseSleep from '../../assets/characters/louise/sleep.gif';
+import eugeneEat from '../../assets/characters/eugene/eat.gif';
+import louiseEat from '../../assets/characters/louise/eat.gif';
 
 // Define collision points for interior
 const INTERIOR_COLLISION_MAP = [
@@ -82,24 +86,29 @@ const HouseInterior = ({
   handleCloseSettings,
   handleExit,
   showSettings,
-  onTimeUpdate
+  onTimeUpdate,
+  hasSeenHouseDialog,
+  setHasSeenHouseDialog,
+  saveGame,
+  showEatAnimation,
+  setShowEatAnimation
 }) => {
   const { user } = useAuth();
   const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume } = useSound();
   const { musicEnabled, setMusicEnabled, musicVolume, setMusicVolume } = useMusic();
+  const { isDialogActive, currentDialog, dialogIndex, startDialog, advanceDialog, endDialog } = useDialog();
   const [facing, setFacing] = useState('stand');
   const [showSleepButton, setShowSleepButton] = useState(false);
   const [showSleepConfirmPopup, setShowSleepConfirmPopup] = useState(false);
   const [isNearSleepArea, setIsNearSleepArea] = useState(false);
   const prevIsNearSleepArea = useRef(false);
   const hasShownSleepPopup = useRef(false);
-  const [showDialog, setShowDialog] = useState(false);
-  const [currentDialogueIndex, setCurrentDialogueIndex] = useState(0);
-  const hasShownHouseDialog = useRef(false);
   const INTERIOR_WIDTH = 800;
   const INTERIOR_HEIGHT = 600;
   const GRID_SIZE = 100;
   const PLAYER_SIZE = 26;
+  const PLAYER_SCALE_INTERIOR = 3.5; // Define the scale used in CSS
+  const PLAYER_SCALED_SIZE = PLAYER_SIZE * PLAYER_SCALE_INTERIOR; // Calculate scaled size
   const GRID_COLS = Math.floor(INTERIOR_WIDTH / GRID_SIZE);
   const GRID_ROWS = Math.floor(INTERIOR_HEIGHT / GRID_SIZE);
 
@@ -107,7 +116,13 @@ const HouseInterior = ({
   const SLEEP_AREA = { x: 2, y: 2 };
   const SLEEP_AREA_PIXEL = { x: SLEEP_AREA.x * GRID_SIZE, y: SLEEP_AREA.y * GRID_SIZE };
 
-  // House entrance monologue
+  // Check if it's sleep time (9 PM to 6 AM) - Moved up
+  const isSleepTime = () => {
+    const hour = gameTime.hours;
+    return hour >= 21 || hour < 6; // 9 PM to 6 AM
+  };
+
+  // Monologue script for house entrance
   const houseEntranceMonologue = [
     "So this is it... Home. Or, at least, it once was.",
     "The walls have held stories—laughter, arguments, quiet moments by the fire. Now, only silence remains.",
@@ -116,58 +131,80 @@ const HouseInterior = ({
     "But before that, the elder waits. If anyone remembers what this place once was, it would be them."
   ];
 
-  // Add effect to show dialog when entering house for the first time
+  // Effect to trigger house entrance dialog on first entry
   useEffect(() => {
-    const hasSeenDialog = localStorage.getItem('hasSeenHouseDialog');
-    if (!hasSeenDialog) {
-      setShowDialog(true);
-      localStorage.setItem('hasSeenHouseDialog', 'true');
+    console.log('HouseInterior useEffect running.'); // Debug log
+    console.log('hasSeenHouseDialog:', hasSeenHouseDialog); // Debug log
+    console.log('isDialogActive:', isDialogActive); // Debug log
+
+    // Trigger dialog only if it hasn't been seen and no other dialog is active
+    if (!hasSeenHouseDialog && !isDialogActive) {
+      console.log("Triggering house entrance dialog."); // Debug log
+      startDialog({
+        characterName: character?.name || 'Character',
+        expression: 'smile',
+        dialogue: houseEntranceMonologue
+      });
+      setHasSeenHouseDialog(true); // Update state via prop
+      console.log("hasSeenHouseDialog set to true."); // Debug log
     }
-  }, []);
+  }, [hasSeenHouseDialog, isDialogActive, startDialog, character, setHasSeenHouseDialog]); // Added setHasSeenHouseDialog to dependencies
 
   // Handle advancing the monologue
   const handleAdvanceMonologue = () => {
-    if (currentDialogueIndex < houseEntranceMonologue.length - 1) {
-      setCurrentDialogueIndex(prevIndex => prevIndex + 1);
-    } else {
-      setShowDialog(false);
-      setCurrentDialogueIndex(0);
-    }
+    console.log('Advancing monologue, current index:', dialogIndex); // Debug log
+    advanceDialog();
   };
 
-  // Check if the player is near the sleep area
+  // Handle skipping the monologue
+  const handleSkipMonologue = () => {
+    console.log('Skipping monologue'); // Debug log
+    endDialog();
+  };
+
+  // Effect to trigger popup when entering sleep area
+  useEffect(() => {
+    console.log('Sleep Popup Effect Triggered:', { isNearSleepArea, isSleepTime: isSleepTime(), isSleeping, showSleepConfirmPopup }); // Debug log
+    // Show popup if player is near the sleep area and not already sleeping
+    if (isNearSleepArea && !isSleeping) {
+      // Only show the popup if it's not already visible. This prevents it from flickering.
+      if (!showSleepConfirmPopup) {
+        console.log('Conditions met, showing sleep confirm popup'); // Debug log
+        setShowSleepConfirmPopup(true);
+      }
+    } else {
+      // Hide the popup if conditions are not met (e.g., moved away or is sleeping)
+      if (showSleepConfirmPopup) {
+         console.log('Conditions not met, hiding sleep confirm popup'); // Debug log
+         setShowSleepConfirmPopup(false);
+      }
+    }
+
+    // The hasShownSleepPopup ref and prevIsNearSleepArea ref logic might need review 
+    // depending on the exact desired behavior (once per session, once per entry, etc.)
+    // For now, simplifying to show each time conditions are met.
+
+  }, [isNearSleepArea, isSleeping, showSleepConfirmPopup]); // Dependencies - Removed gameTime and isSleepTime
+
+  // The checkSleepProximity function should only set isNearSleepArea
+  // The effect above will handle setting showSleepConfirmPopup
   const checkSleepProximity = (x, y) => {
-    const playerCenterX = x + (PLAYER_SIZE / 2);
-    const playerCenterY = y + (PLAYER_SIZE / 2);
+    // Use scaled player size for center calculation
+    const playerCenterX = x + (PLAYER_SCALED_SIZE / 2);
+    const playerCenterY = y + (PLAYER_SCALED_SIZE / 2);
     // Set the sleep center point to be further left
     const sleepCenterX = SLEEP_AREA_PIXEL.x - 50; // Move 50 pixels to the left
     const sleepCenterY = SLEEP_AREA_PIXEL.y + (GRID_SIZE / 2);
     const distance = Math.sqrt(
       Math.pow(playerCenterX - sleepCenterX, 2) + Math.pow(playerCenterY - sleepCenterY, 2)
     );
-    // Update proximity state - only show when very close (within 30 pixels)
-    const isNear = distance < 30;
+    // Update proximity state - Increased threshold
+    const proximityThreshold = 50; // Increased from 30
+    const isNear = distance < proximityThreshold;
+    console.log('Check Sleep Proximity:', { playerX: x, playerY: y, playerCenterX, playerCenterY, sleepCenterX, sleepCenterY, distance, isNear, proximityThreshold }); // Debug log
     setIsNearSleepArea(isNear);
-    setShowSleepButton(isNear);
+    // Removed setShowSleepButton(isNear);
   };
-
-  // Check if it's sleep time (9 PM to 6 AM)
-  const isSleepTime = () => {
-    const hour = gameTime.hours;
-    return hour >= 21 || hour < 6; // 9 PM to 6 AM
-  };
-
-  // Effect to trigger popup when entering sleep area
-  useEffect(() => {
-    // Only show popup if it hasn't been shown before and it's sleep time
-    if (isNearSleepArea && !prevIsNearSleepArea.current && !showSleepConfirmPopup && !isSleeping && !hasShownSleepPopup.current && isSleepTime()) {
-      setShowSleepConfirmPopup(true);
-      setShowSleepButton(false);
-      hasShownSleepPopup.current = true;
-    }
-
-    prevIsNearSleepArea.current = isNearSleepArea;
-  }, [isNearSleepArea, showSleepConfirmPopup, isSleeping, gameTime]);
 
   // Add effect to check quest progress when entering house
   useEffect(() => {
@@ -303,7 +340,8 @@ const HouseInterior = ({
           walkDown: eugeneWalkDown,
           walkLeft: eugeneWalkLeft,
           walkRight: eugeneWalkRight,
-          sleep: eugeneSleep
+          sleep: eugeneSleep,
+          eat: eugeneEat
         };
       case 'louise':
         console.log('Loading Louise sprites in house');
@@ -313,7 +351,8 @@ const HouseInterior = ({
           walkDown: louiseWalkDown,
           walkLeft: louiseWalkLeft,
           walkRight: louiseWalkRight,
-          sleep: louiseSleep
+          sleep: louiseSleep,
+          eat: louiseEat
         };
       default:
         console.log('No valid character selected in house, defaulting to Louise');
@@ -323,7 +362,8 @@ const HouseInterior = ({
           walkDown: louiseWalkDown,
           walkLeft: louiseWalkLeft,
           walkRight: louiseWalkRight,
-          sleep: louiseSleep
+          sleep: louiseSleep,
+          eat: louiseEat
         };
     }
   };
@@ -450,13 +490,26 @@ const HouseInterior = ({
 
   // Handle movement with collision check
   const handleKeyPress = (e) => {
-    if (isSleeping) return;
+    if (isSleeping || isPaused || isDialogActive) return; // Prevent action if sleeping, paused, or dialog is active
 
     let newX = position.x;
     let newY = position.y;
     const speed = 20;
     const energyCost = 0.5;
     const cleanlinessCost = 0.5;
+
+    // Handle number keys for item slots (1-9)
+    if (e.key >= '1' && e.key <= '9') {
+      const slotIndex = parseInt(e.key) - 1;
+      const item = inventory[slotIndex];
+      if (item && onUseItem) {
+        console.log(`Using item from slot ${e.key}:`, item);
+        onUseItem(item);
+        // Prevent default behavior if an item is used
+        e.preventDefault();
+      }
+      return; // Stop processing other keys if a number key was pressed
+    }
 
     switch (e.key.toLowerCase()) {
       case 'w':
@@ -541,16 +594,13 @@ const HouseInterior = ({
   return (
     <div className="interior-container relative">
       {/* Add Dialog Box */}
-      {showDialog && (
+      {isDialogActive && currentDialog && (
         <>
           <div
             className="fixed top-8 right-8 z-[100] pointer-events-auto"
           >
             <button
-              onClick={() => {
-                setShowDialog(false);
-                setCurrentDialogueIndex(0);
-              }}
+              onClick={handleSkipMonologue}
               style={{ backgroundColor: 'rgba(55, 65, 81, 0.85)' }}
               className="px-4 py-2 text-white rounded-lg hover:bg-gray-600 transition-colors shadow-lg"
             >
@@ -563,8 +613,10 @@ const HouseInterior = ({
           >
             <div className="flex flex-col items-center pointer-events-auto">
               <DialogBox
-                key={currentDialogueIndex}
-                dialogue={houseEntranceMonologue[currentDialogueIndex]}
+                key={dialogIndex}
+                characterName={character?.name || 'Character'}
+                expression="smile"
+                dialogue={currentDialog[dialogIndex]}
                 onAdvance={handleAdvanceMonologue}
               />
             </div>
@@ -572,8 +624,27 @@ const HouseInterior = ({
         </>
       )}
 
+      {/* Add Eating Animation */}
+      <AnimatePresence>
+        {showEatAnimation && (
+          <motion.div
+            className="fixed inset-0 z-[120] flex items-center justify-center pointer-events-none"
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.5 }}
+            transition={{ duration: 0.3 }}
+          >
+            <img 
+              src={characterSprites.eat}
+              alt="Eating"
+              className="w-32 h-32 object-contain"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Add UI Elements - Hide during dialog */}
-      {!showDialog && (
+      {!isDialogActive && (
         <>
           <div className="absolute top-4 left-4 z-50 text-white flex items-center border-8 border-[#D2B48C]" style={{ backgroundColor: '#8B4513', padding: '10px', borderRadius: '10px' }}>
             {/* Character Portrait */}
@@ -681,27 +752,33 @@ const HouseInterior = ({
         </>
       )}
 
-      {showSleepButton && !isSleeping && (
+      {showSleepConfirmPopup && !isSleeping && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}>
           <div className="bg-[#8B4513] p-8 rounded-lg max-w-md w-full mx-4 relative border-8 border-[#D2B48C] shadow-lg flex flex-col items-center gap-4">
-            <h2 className="text-2xl font-bold text-center text-[#F5DEB3]">Sleep?</h2>
+            <h2 className="text-2xl font-bold text-center text-[#F5DEB3]">Sleep or Save?</h2>
             {!isSleepTime() && (
               <p className="text-red-400 text-center text-sm">You can only sleep between 9 PM and 6 AM</p>
             )}
-            <p className="text-[#F5DEB3] text-center text-sm">Restore energy and happiness</p>
+            <p className="text-[#F5DEB3] text-center text-sm">Sleep to restore energy and happiness, or just save your progress.</p>
             <div className="flex flex-col gap-2">
               <button 
                 className="bg-[#8B4513] text-[#F5DEB3] px-6 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 w-32"
                 onClick={handleSleep}
                 disabled={!isSleepTime()}
               >
-                Yes
+                Sleep
               </button>
               <button 
                 className="bg-[#8B4513] text-[#F5DEB3] px-6 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 w-32"
-                onClick={() => setShowSleepButton(false)}
+                onClick={() => { saveGame(); setShowSleepConfirmPopup(false); }} // Call save and close popup
               >
-                No
+                Save Game
+              </button>
+              <button 
+                className="bg-[#8B4513] text-[#F5DEB3] px-6 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 w-32"
+                onClick={() => setShowSleepConfirmPopup(false)}
+              >
+                Cancel
               </button>
             </div>
           </div>
@@ -738,6 +815,28 @@ const HouseInterior = ({
       >
         <div className="grid" style={{ position: 'absolute', width: '100%', height: '100%' }}>
           {renderGrid()}
+          {/* Add sleep detection marker */}
+          {/* Recalculate marker position based on SLEEP_AREA_PIXEL and offset */}
+          {(() => {
+            const sleepMarkerX = SLEEP_AREA_PIXEL.x - 50; // Use the same offset as detection
+            const sleepMarkerY = SLEEP_AREA_PIXEL.y + (GRID_SIZE / 2);
+            return (
+              <div
+                key="sleep-marker"
+                style={{
+                  position: 'absolute',
+                  left: sleepMarkerX - 5, // Adjust position to center the 10px marker
+                  top: sleepMarkerY - 5, // Adjust position to center the 10px marker
+                  width: '10px',
+                  height: '10px',
+                  backgroundColor: 'red',
+                  borderRadius: '50%',
+                  border: '2px solid yellow',
+                  zIndex: 10, // High z-index to be visible
+                }}
+              />
+            );
+          })()}
         </div>
         <div
           className="player-interior"
