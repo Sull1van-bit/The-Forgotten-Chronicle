@@ -8,7 +8,6 @@ import Game from './pages/Game';
 import LoginForm from './components/loginForm';
 import SignUpForm from './components/SignUpForm';
 import { DialogProvider } from './context/DialogContext';
-import Minimap from './components/Minimap';
 
 function App() {
   return (
@@ -24,7 +23,6 @@ function App() {
                 <Route path="/signup" element={<SignUpForm />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
-              <Minimap />
             </div>
           </DialogProvider>
         </MusicProvider>

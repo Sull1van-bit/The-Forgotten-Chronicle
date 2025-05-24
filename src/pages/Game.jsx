@@ -9,12 +9,12 @@ import DialogBox from '../components/DialogBox';
 import Settings from '../components/Settings';
 import '../styles/Game.css';
 // Import character sprites
-/*import eugeneStand from '../assets/characters/eugene/stand.gif';
+import eugeneStand from '../assets/characters/eugene/stand.gif';
 import eugeneWalkUp from '../assets/characters/eugene/walk-up.gif';
 import eugeneWalkDown from '../assets/characters/eugene/walk-down.gif';
 import eugeneWalkLeft from '../assets/characters/eugene/walk-left.gif';
 import eugeneWalkRight from '../assets/characters/eugene/walk-right.gif';
-
+/*
 import alexStand from '../assets/characters/alex/stand.gif';
 import alexWalkUp from '../assets/characters/alex/walk-up.gif';
 import alexWalkDown from '../assets/characters/alex/walk-down.gif';
@@ -39,6 +39,8 @@ import { createSaveFileData, loadSaveFileData } from '../utils/saveFileUtils';
 
 import pauseButton from '../assets/menu/pause.png';
 import pauseMenuBg from '../assets/menu/pauseMenu.png';
+
+import Minimap from '../components/Minimap';
 
 // Define collision points using grid coordinates
 const COLLISION_MAP = [
@@ -204,7 +206,14 @@ const Game = () => {
   const [showSavePrompt, setShowSavePrompt] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showShop, setShowShop] = useState(false);
   const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume } = useSound();
+
+  // Define shop trigger points
+  const shopPoints = [
+    { x: 32, y: 30 },
+    { x: 33, y: 30 }
+  ];
 
   // If no character is selected, redirect to main menu
   useEffect(() => {
@@ -508,7 +517,7 @@ const Game = () => {
   // Prevent movement when paused
   useEffect(() => {
     const handleKeyPress = (e) => {
-      if (isPaused) return;
+      if (isPaused || showShop) return; // Prevent movement when paused or shop is open
       console.log('Key pressed:', e.key); // Debug log
       console.log('isInInterior:', isInInterior); // Debug log
       
@@ -524,8 +533,11 @@ const Game = () => {
             if (!hasCollision(newX, newY)) {
               setFacing('up');
               setPosition(prev => {
-                console.log('New position:', { ...prev, y: Math.max(0, newY) }); // Debug log
-                return { ...prev, y: Math.max(0, newY) };
+                const newPos = { ...prev, y: Math.max(0, newY) };
+                // Check for shop trigger after setting position
+                checkShopTrigger(newPos.x, newPos.y);
+                console.log('New position:', newPos); // Debug log
+                return newPos;
               });
               // Check if player is at save point
               if (checkSavePoint(newX, newY)) {
@@ -544,10 +556,13 @@ const Game = () => {
             if (!hasCollision(newX, newY)) {
               setFacing('down');
               setPosition(prev => {
-                console.log('New position:', { ...prev, y: Math.min(MAP_HEIGHT - PLAYER_SIZE, newY) }); // Debug log
-                return { ...prev, y: Math.min(MAP_HEIGHT - PLAYER_SIZE, newY) };
+                const newPos = { ...prev, y: Math.min(MAP_HEIGHT - PLAYER_SIZE, newY) };
+                checkTeleport(newX, newY);
+                // Check for shop trigger after setting position
+                checkShopTrigger(newPos.x, newPos.y);
+                console.log('New position:', newPos); // Debug log
+                return newPos;
               });
-              checkTeleport(newX, newY);
             }
             break;
           case 'a':
@@ -557,10 +572,13 @@ const Game = () => {
             if (!hasCollision(newX, newY)) {
               setFacing('left');
               setPosition(prev => {
-                console.log('New position:', { ...prev, x: Math.max(0, newX) }); // Debug log
-                return { ...prev, x: Math.max(0, newX) };
+                const newPos = { ...prev, x: Math.max(0, newX) };
+                checkTeleport(newX, newY);
+                // Check for shop trigger after setting position
+                checkShopTrigger(newPos.x, newPos.y);
+                console.log('New position:', newPos); // Debug log
+                return newPos;
               });
-              checkTeleport(newX, newY);
             }
             break;
           case 'd':
@@ -570,10 +588,13 @@ const Game = () => {
             if (!hasCollision(newX, newY)) {
               setFacing('right');
               setPosition(prev => {
-                console.log('New position:', { ...prev, x: Math.min(MAP_WIDTH - PLAYER_SIZE, newX) }); // Debug log
-                return { ...prev, x: Math.min(MAP_WIDTH - PLAYER_SIZE, newX) };
+                const newPos = { ...prev, x: Math.min(MAP_WIDTH - PLAYER_SIZE, newX) };
+                checkTeleport(newX, newY);
+                // Check for shop trigger after setting position
+                checkShopTrigger(newPos.x, newPos.y);
+                console.log('New position:', newPos); // Debug log
+                return newPos;
               });
-              checkTeleport(newX, newY);
             }
             break;
           default:
@@ -584,7 +605,7 @@ const Game = () => {
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [position, isInInterior, isPaused]);
+  }, [position, isInInterior, isPaused, showShop]);
 
   // ESC to pause
   useEffect(() => {
@@ -620,13 +641,18 @@ const Game = () => {
       for (let col = 0; col < GRID_COLS; col++) {
         const collisionPoint = COLLISION_MAP.find(point => point.x === col && point.y === row);
         const teleportPoint = TELEPORT_POINTS.find(point => point.x === col && point.y === row);
+        
+        // Check for shop trigger points
+        const isShopPoint = checkShopTrigger({ x: col * GRID_SIZE, y: row * GRID_SIZE }, true); // Pass coordinates and a flag to just check without triggering state change
+
         const cellClass = collisionPoint ? `collision ${collisionPoint.type}` : '';
         const teleportClass = teleportPoint ? 'teleport' : '';
-        
+        const interactiveClass = (teleportPoint || isShopPoint) ? 'interactive-cell' : '';
+
         cells.push(
           <div
             key={`${row}-${col}`}
-            className={`grid-cell ${cellClass} ${teleportClass}`}
+            className={`grid-cell ${cellClass} ${teleportClass} ${interactiveClass}`}
             style={{
               left: col * GRID_SIZE,
               top: row * GRID_SIZE,
@@ -656,6 +682,22 @@ const Game = () => {
         </button>
       </div>
     );
+  };
+
+  // Check if player is at a shop trigger point
+  const checkShopTrigger = (x, y, justCheck = false) => {
+    const playerGridPos = getGridPosition(x, y);
+
+    const isAtShop = shopPoints.some(point =>
+      point.x === playerGridPos.gridX && point.y === playerGridPos.gridY
+    );
+
+    if (isAtShop && !justCheck) {
+      setShowShop(true);
+    } else {
+      // Optionally hide shop if player moves away
+      // setShowShop(false);
+    }
   };
 
   if (isInInterior) {
@@ -757,52 +799,67 @@ const Game = () => {
         />
       )}
 
-      {/* Rest of your game content */}
-      {!isLoading && !showCutscene && !showDialog && (
-        <div className="game-container">
-          <div className="camera">
-            <div className="map" style={getCameraStyle()}>
-              <div 
-                className="map-background"
-                style={{
-                  width: `${MAP_WIDTH}px`,
-                  height: `${MAP_HEIGHT}px`,
-                  backgroundImage: `url(${allMap})`,
-                  backgroundSize: '100% 100%',
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                }}
-              />
-              <div className="grid" style={{ width: `${MAP_WIDTH}px`, height: `${MAP_HEIGHT}px` }}>
-                {renderGrid()}
-              </div>
-              <div
-                className="player"
-                style={{
-                  left: `${position.x}px`,
-                  top: `${position.y}px`,
-                  backgroundImage: `url(${getSprite()})`,
-                  imageRendering: 'pixelated',
-                }}
-              />
-              <div 
-                className="map-foreground"
-                style={{
-                  width: `${MAP_WIDTH}px`,
-                  height: `${MAP_HEIGHT}px`,
-                  backgroundImage: `url(${foregroundMap})`,
-                  backgroundSize: '100% 100%',
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  pointerEvents: 'none',
-                  zIndex: 3,
-                }}
-              />
-            </div>
+      {/* Shop Popup Placeholder */}
+      {showShop && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+          <div className="bg-[#8B4513] p-8 rounded-lg text-white border-8 border-[#D2B48C] shadow-lg">
+            <h2 className="text-2xl mb-4">Shop</h2>
+            <p>This is the shop!</p>
+            {/* Add shop content here */}
+            <button onClick={() => setShowShop(false)} className="mt-4 px-4 py-2 bg-yellow-600 rounded">Close Shop</button>
           </div>
         </div>
+      )}
+
+      {/* Rest of your game content */}
+      {!isLoading && !showCutscene && !showDialog && !isInInterior && (
+        <>
+          <Minimap position={position} shopPoints={shopPoints} />
+          <div className="game-container">
+            <div className="camera">
+              <div className="map" style={getCameraStyle()}>
+                <div 
+                  className="map-background"
+                  style={{
+                    width: `${MAP_WIDTH}px`,
+                    height: `${MAP_HEIGHT}px`,
+                    backgroundImage: `url(${allMap})`,
+                    backgroundSize: '100% 100%',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                  }}
+                />
+                <div className="grid" style={{ width: `${MAP_WIDTH}px`, height: `${MAP_HEIGHT}px` }}>
+                  {renderGrid()}
+                </div>
+                <div
+                  className="player"
+                  style={{
+                    left: `${position.x}px`,
+                    top: `${position.y}px`,
+                    backgroundImage: `url(${getSprite()})`,
+                    imageRendering: 'pixelated',
+                  }}
+                />
+                <div 
+                  className="map-foreground"
+                  style={{
+                    width: `${MAP_WIDTH}px`,
+                    height: `${MAP_HEIGHT}px`,
+                    backgroundImage: `url(${foregroundMap})`,
+                    backgroundSize: '100% 100%',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    pointerEvents: 'none',
+                    zIndex: 3,
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
@@ -812,6 +869,11 @@ export default Game;
 
 <style>
 {`
+.grid-cell.interactive-cell {
+  background-color: rgba(255, 215, 0, 0.6) !important; /* Semi-transparent gold - increased opacity */
+  border: 1px solid rgba(255, 215, 0, 0.9) !important;
+}
+
 .pause-menu-btn {
   background: linear-gradient(180deg, rgba(224,185,125,0.92) 0%, rgba(169,124,80,0.92) 100%);
   color: #3a220a;

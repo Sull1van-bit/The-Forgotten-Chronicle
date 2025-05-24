@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import houseInside from '../../assets/Interior/house-inside.png';
 // Import character sprites
-/*import eugeneStand from '../../assets/characters/eugene/stand.gif';
+import eugeneStand from '../../assets/characters/eugene/stand.gif';
 import eugeneWalkUp from '../../assets/characters/eugene/walk-up.gif';
 import eugeneWalkDown from '../../assets/characters/eugene/walk-down.gif';
 import eugeneWalkLeft from '../../assets/characters/eugene/walk-left.gif';
 import eugeneWalkRight from '../../assets/characters/eugene/walk-right.gif';
-
+/*
 import alexStand from '../../assets/characters/alex/stand.gif';
 import alexWalkUp from '../../assets/characters/alex/walk-up.gif';
 import alexWalkDown from '../../assets/characters/alex/walk-down.gif';
