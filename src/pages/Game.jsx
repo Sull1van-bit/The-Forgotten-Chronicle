@@ -142,7 +142,7 @@ const COLLISION_MAP = [
   ...Array.from({ length: 2 }, (_, i) => ({ x: 52 , y: i+31 , type: 'half-right' })), 
 ];
 
-// Sample monologue script for the dialogue system
+// Add monologue script
 const monologueScript = [
   {
     speaker: 'Louise',
@@ -187,7 +187,7 @@ const Game = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showShop, setShowShop] = useState(false);
 
-  // Status effects states
+  // Add character stats state
   const [health, setHealth] = useState(100);
   const [energy, setEnergy] = useState(100);
   const [hunger, setHunger] = useState(100);
