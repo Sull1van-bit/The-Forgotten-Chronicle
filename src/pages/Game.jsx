@@ -66,117 +66,184 @@ import moneyIcon from '../assets/statbar/money.png';
 
 // Define collision points using grid coordinates
 const COLLISION_MAP = [
-  ...Array.from({ length: 10 }, (_, i) => ({ x: 30, y: i, type: 'full' })),
-  ...Array.from({ length: 8 }, (_, i) => ({ x: 31, y: i, type: 'full' })),
-  ...Array.from({ length: 3 }, (_, i) => ({ x: 32, y: i, type: 'full' })),
-  ...Array.from({ length: 4 }, (_, i) => ({ x: i+1, y: 2, type: 'half-bottom' })),
-  ...Array.from({ length: 4 }, (_, i) => ({ x: i+2, y: 4, type: 'half-bottom' })),
-  ...Array.from({ length: 2 }, (_, i) => ({ x: 6, y: i+3, type: 'half-left' })),
-  {x: 1, y: 3, type: 'full'},
-  {x: 1, y: 4, type: 'full'},
-  ...Array.from({ length: 2 }, (_, i) => ({ x: 32, y: i+8, type: 'full' })),
-  ...Array.from({ length: 2 }, (_, i) => ({ x: 33, y: i+8, type: 'full' })),
-  ...Array.from({ length: 2 }, (_, i) => ({ x: i+32, y: 12, type: 'full' })),
-  ...Array.from({ length: 2 }, (_, i) => ({ x: i+32, y: 13, type: 'half-top' })),
-  ...Array.from({ length: 2 }, (_, i) => ({ x: i+40, y: 19, type: 'half-top' })),
-  ...Array.from({ length: 3 }, (_, i) => ({ x: i+46, y: 20, type: 'half-top' })),
-  ...Array.from({ length: 3 }, (_, i) => ({ x: i+44, y: 26, type: 'half-top' })),
-  ...Array.from({ length: 3 }, (_, i) => ({ x: i+44, y: 25, type: 'half-bottom' })),
-  {x: 46, y: 19, type: 'half-right'},
-  {x: 47, y: 19, type: 'full'},
-  {x: 48, y: 19, type: 'half-left'},
-  {x: 39, y: 24, type: 'full'},
-  {x: 40, y: 24, type: 'half-left'},
-  {x: 38, y: 24, type: 'half-right'},
-  ...Array.from({ length: 2 }, (_, i) => ({ x: i+36, y: 39, type: 'half-bottom' })),
-  ...Array.from({ length: 2 }, (_, i) => ({ x: i+36, y: 40, type: 'half-bottom' })),
-  {x: 43, y: 39, type: 'half-bottom'},
-  {x: 44, y: 39, type: 'half-bottom'},
-  { x: 29, y: 7, type: 'half-right' },   
-  { x: 29, y: 8, type: 'half-right' },   
-  { x: 29, y: 9, type: 'half-right' },   
-  { x: 27, y: 44, type: 'half-left' },
-  { x: 26, y: 43, type: 'half-left' },
-  { x: 14, y: 37, type: 'half-bottom' },
-  { x: 8, y: 35, type: 'half-left' },
-  { x: 35, y: 36, type: 'half-right' },
-  {x: 36, y: 35, type: 'half-right'},
-  {x: 37, y: 35, type: 'full'},
-  {x: 42, y: 34, type: 'half-right'},
-  {x: 43, y: 34, type: 'full'},
-  {x: 44, y: 34, type: 'half-left'},
-  ...Array.from({ length: 2 }, (_, i) => ({ x: i+14 , y: 25, type: 'full' })), 
-  {x: 9, y: 27, type: 'full'},
-  {x: 10, y: 27, type: 'half-left'},
-  {x: 8, y: 27, type: 'half-right'},
-  ...Array.from({ length: 60 }, (_, i) => ({ x: i , y: 0, type: 'half-top' })), // atas
-  ...Array.from({ length: 60 }, (_, i) => ({ x: i , y: 44, type: 'half-bottom' })), // bawah
-  ...Array.from({ length: 60 }, (_, i) => ({ x: 59 , y: i, type: 'half-right' })), // kanan
-  ...Array.from({ length: 60 }, (_, i) => ({ x: 0 , y: i, type: 'half-left' })), // kiri
-  ...Array.from({ length: 3 }, (_, i) => ({ x: 41 , y: i+36, type: 'half-right' })),
-  ...Array.from({ length: 3 }, (_, i) => ({ x: 39 , y: i+36, type: 'half-left' })),
-  ...Array.from({ length: 3 }, (_, i) => ({ x: i+29 , y: 10, type: 'half-top'  })),
-  ...Array.from({ length: 3 }, (_, i) => ({ x: i+29 , y: 11, type: 'half-bottom'  })),
-  {x: 41, y: 22, type: 'half-right'},
-  {x: 44, y: 23, type: 'half-top'},
-  ...Array.from({ length: 2 }, (_, i) => ({ x: 42 , y: i+20, type: 'half-left'  })),
-  ...Array.from({ length: 3 }, (_, i) => ({ x: 44 , y: i+20, type: 'half-right'  })),
-  ...Array.from({ length: 3 }, (_, i) => ({ x: i+36 , y: 36, type: 'full' })),
-  ...Array.from({ length: 8 }, (_, i) => ({ x: i+31 , y: 37, type: 'full' })),
-  ...Array.from({ length: 3 }, (_, i) => ({ x: i +23, y: 42, type: 'half-bottom' })),
-  ...Array.from({ length: 27 }, (_, i) => ({ x: i, y: 44, type: 'full' })),
-  ...Array.from({ length: 26 }, (_, i) => ({ x: i, y: 43, type: 'full' })),
-  ...Array.from({ length: 23 }, (_, i) => ({ x: i, y: 42, type: 'full' })),
-  ...Array.from({ length: 22 }, (_, i) => ({ x: i, y: 41, type: 'full' })),
-  ...Array.from({ length: 21 }, (_, i) => ({ x: i, y: 40, type: 'full' })),
-  ...Array.from({ length: 27 }, (_, i) => ({ x: i, y: 39, type: 'full' })),
-  ...Array.from({ length: 36 }, (_, i) => {
-    if (i === 18 || i === 19) {
-      return { x: i, y: 38, type: 'half-bottom' };
-    } else if (i === 15 || i === 16 || i === 17) {
-      return { x: i, y: 38, type: 'half-top' };
-    }
-    return { x: i, y: 38, type: 'full' };
-  }).filter(Boolean),
-  ...Array.from({ length: 14 }, (_, i) => ({ x: i, y: 37, type: 'full' })), 
-  ...Array.from({ length: 10 }, (_, i) => ({ x: i, y: 36, type: 'full' })), 
-  ...Array.from({ length: 10 }, (_, i) => ({ x: i, y: 36, type: 'full' })), 
-  ...Array.from({ length: 6 }, (_, i) => ({ x: i+2, y: 35, type: 'full' })), 
-  ...Array.from({ length: 6 }, (_, i) => ({ x: i+2, y: 35, type: 'full' })), 
-  ...Array.from({ length: 3 }, (_, i) => ({ x: i+42, y: 37, type: 'half-top' })), 
-  ...Array.from({ length: 7 }, (_, i) => ({ x: i+42, y: 35, type: i >= 3 ? 'full' : 'half-bottom' })), 
-  ...Array.from({ length: 7 }, (_, i) => ({ x: 30, y: i+12, type: (i >= 4 && i <= 6) ? 'half-left' : 'full' })), 
-  ...Array.from({ length: 8 }, (_, i) => ({ x: 31, y: i+12, type: (i >= 4 && i <= 8) ? 'full' : 'half-right' })), 
-  ...Array.from({ length: 5 }, (_, i) => ({ x: 32, y: i+17, type: (i >= 4 && i <= 6) ? 'full' : 'half-right' })), 
-  {x: 32, y: 16, type: 'half-left'},
-  ...Array.from({ length: 4 }, (_, i) => ({ x: 29, y: i+12, type: 'half-right' })), 
-  ...Array.from({ length: 3 }, (_, i) => ({ x: i+39, y: 20, type: 'half-top' })), 
-  ...Array.from({ length: 7 }, (_, i) => ({ x: i+32, y: 20, type: (i >= 4 && i <= 8) ? 'half-top' : 'full' })), 
-  ...Array.from({ length: 9 }, (_, i) => ({ x: i+33, y: 21, type: 'full' })), 
-  ...Array.from({ length: 3 }, (_, i) => ({ x: i+33, y: 19, type: 'full' })), 
-  {x: 45, y: 21, type: 'half-top'},
-  {x: 46, y: 21, type: 'half-top'},
-  {x: 46, y: 23, type: 'half-top'},
-  {x: 45, y: 23, type: 'half-top'},
-  {x: 47, y: 21, type: 'half-bottom'},
-  {x: 51, y: 23, type: 'half-bottom'},
-  {x: 48, y: 24, type: 'half-right'},
-  ...Array.from({ length: 5 }, (_, i) => ({ x: i+45, y: 22, type: 'full' })), 
-  ...Array.from({ length: 4 }, (_, i) => ({ x: i+47, y: 23 , type: 'full' })), 
-  ...Array.from({ length: 4 }, (_, i) => ({ x: i+49, y: 24 , type: 'full' })), 
-  ...Array.from({ length: 4 }, (_, i) => ({ x: 51, y: i+24 , type: 'full' })), 
-  ...Array.from({ length: 6 }, (_, i) => ({ x: 50, y: i+25 , type: (i >= 2 && i <= 6) ? 'half-right' : 'full' })),  
-  ...Array.from({ length: 6 }, (_, i) => ({ x: 49-i, y: 31+i, type: 'half-right' })),
-  ...Array.from({ length: 6 }, (_, i) => ({ x: 50-i, y: 31+i, type: 'full' })),
-  {x: 45, y: 34, type: 'half-bottom'},
-  {x: 47, y: 36, type: 'half-bottom'},
-  {x: 50, y: 34, type: 'half-left'},
-  {x: 51, y: 33, type: 'full'},
-  ...Array.from({ length: 2 }, (_, i) => ({ x: i+45 , y: 36 , type: 'full' })), 
-  ...Array.from({ length: 3 }, (_, i) => ({ x: i+47 , y: 34 , type: 'full' })), 
-  ...Array.from({ length: 5 }, (_, i) => ({ x: 53 , y: i+26 , type: 'half-left' })), 
-  ...Array.from({ length: 2 }, (_, i) => ({ x: 52 , y: i+31 , type: 'half-right' })), 
-];
+    //kali diatas 30s (full collision)
+    ...Array.from({ length: 10 }, (_, i) => ({ x: 30, y: i, type: 'full' })),
+    ...Array.from({ length: 8 }, (_, i) => ({ x: 31, y: i, type: 'full' })),
+    ...Array.from({ length: 3 }, (_, i) => ({ x: 32, y: i, type: 'full' })),
+    
+    // pagar
+    ...Array.from({ length: 4 }, (_, i) => ({ x: i+1, y: 2, type: 'half-bottom' })),
+    ...Array.from({ length: 4 }, (_, i) => ({ x: i+2, y: 4, type: 'half-bottom' })),
+    ...Array.from({ length: 2 }, (_, i) => ({ x: 6, y: i+3, type: 'half-left' })),
+    {x: 1, y: 3, type: 'full'},
+    {x: 1, y: 4, type: 'full'},
+    // end pagar
+    
+    // pillar
+    ...Array.from({ length: 2 }, (_, i) => ({ x: 32, y: i+8, type: 'full' })),
+    ...Array.from({ length: 2 }, (_, i) => ({ x: 33, y: i+8, type: 'full' })),
+    ...Array.from({ length: 2 }, (_, i) => ({ x: i+32, y: 12, type: 'full' })),
+    ...Array.from({ length: 2 }, (_, i) => ({ x: i+32, y: 13, type: 'half-top' })),
+    ...Array.from({ length: 2 }, (_, i) => ({ x: i+40, y: 19, type: 'half-top' })),
+    ...Array.from({ length: 3 }, (_, i) => ({ x: i+46, y: 20, type: 'half-top' })),
+    ...Array.from({ length: 3 }, (_, i) => ({ x: i+44, y: 26, type: 'half-top' })),
+    ...Array.from({ length: 3 }, (_, i) => ({ x: i+44, y: 25, type: 'half-bottom' })),
+    {x: 46, y: 19, type: 'half-right'},
+    {x: 47, y: 19, type: 'full'},
+    {x: 48, y: 19, type: 'half-left'},
+    {x: 39, y: 24, type: 'full'},
+    {x: 40, y: 24, type: 'half-left'},
+    {x: 38, y: 24, type: 'half-right'},
+    
+    ...Array.from({ length: 2 }, (_, i) => ({ x: i+36, y: 39, type: 'half-bottom' })),
+    ...Array.from({ length: 2 }, (_, i) => ({ x: i+36, y: 40, type: 'half-bottom' })),
+    {x: 43, y: 39, type: 'half-bottom'},
+    {x: 44, y: 39, type: 'half-bottom'},
+  
+  
+    { x: 29, y: 7, type: 'half-right' },   
+    { x: 29, y: 8, type: 'half-right' },   
+    { x: 29, y: 9, type: 'half-right' },   
+    { x: 27, y: 44, type: 'half-left' },
+    { x: 26, y: 43, type: 'half-left' },
+    { x: 14, y: 37, type: 'half-bottom' },
+    { x: 8, y: 35, type: 'half-left' },
+    { x: 35, y: 36, type: 'half-right' },
+    {x: 36, y: 35, type: 'half-right'},
+    {x: 37, y: 35, type: 'full'},
+    {x: 42, y: 34, type: 'half-right'},
+    {x: 43, y: 34, type: 'full'},
+    {x: 44, y: 34, type: 'half-left'},
+    ...Array.from({ length: 2 }, (_, i) => ({ x: i+14 , y: 25, type: 'full' })), 
+    {x: 9, y: 27, type: 'full'},
+    {x: 10, y: 27, type: 'half-left'},
+    {x: 8, y: 27, type: 'half-right'},
+  
+  
+    // ujung map
+    ...Array.from({ length: 60 }, (_, i) => ({ x: i , y: 0, type: 'half-top' })), // atas
+    ...Array.from({ length: 60 }, (_, i) => ({ x: i , y: 44, type: 'half-bottom' })), // bawah
+    ...Array.from({ length: 60 }, (_, i) => ({ x: 59 , y: i, type: 'half-right' })), // kanan
+    ...Array.from({ length: 60 }, (_, i) => ({ x: 0 , y: i, type: 'half-left' })), // kiri
+  // end ujung map
+  
+  
+    // jembatan uhuy
+    ...Array.from({ length: 3 }, (_, i) => ({ x: 41 , y: i+36, type: 'half-right' })),
+    ...Array.from({ length: 3 }, (_, i) => ({ x: 39 , y: i+36, type: 'half-left' })),
+    ...Array.from({ length: 3 }, (_, i) => ({ x: i+29 , y: 10, type: 'half-top'  })),
+    ...Array.from({ length: 3 }, (_, i) => ({ x: i+29 , y: 11, type: 'half-bottom'  })),
+    {x: 41, y: 22, type: 'half-right'},
+    {x: 44, y: 23, type: 'half-top'},
+    ...Array.from({ length: 2 }, (_, i) => ({ x: 42 , y: i+20, type: 'half-left'  })),
+    ...Array.from({ length: 3 }, (_, i) => ({ x: 44 , y: i+20, type: 'half-right'  })),
+    // end jembatan uhuy
+    
+    
+    //props
+    // {x: 25, y: 29, type: 'full'},
+    ...Array.from({ length: 3 }, (_, i) => ({ x: 25+i , y: 29, type: 'half-bottom'  })),
+  
+    // buat danau + air (full collision)
+    ...Array.from({ length: 3 }, (_, i) => ({ x: i+36 , y: 36, type: 'full' })),
+    ...Array.from({ length: 8 }, (_, i) => ({ x: i+31 , y: 37, type: 'full' })),
+    ...Array.from({ length: 3 }, (_, i) => ({ x: i +23, y: 42, type: 'half-bottom' })),
+    ...Array.from({ length: 27 }, (_, i) => ({ x: i, y: 44, type: 'full' })),
+    ...Array.from({ length: 26 }, (_, i) => ({ x: i, y: 43, type: 'full' })),
+    ...Array.from({ length: 23 }, (_, i) => ({ x: i, y: 42, type: 'full' })),
+    ...Array.from({ length: 22 }, (_, i) => ({ x: i, y: 41, type: 'full' })),
+    ...Array.from({ length: 21 }, (_, i) => ({ x: i, y: 40, type: 'full' })),
+    ...Array.from({ length: 27 }, (_, i) => ({ x: i, y: 39, type: 'full' })),
+    ...Array.from({ length: 36 }, (_, i) => {
+      if (i === 18 || i === 19) {
+        return { x: i, y: 38, type: 'half-bottom' };
+      }else if (i === 15 || i === 16 || i === 17) {
+        return { x: i, y: 38, type: 'half-top' };
+      }
+      return { x: i, y: 38, type: 'full' };
+    }).filter(Boolean),
+    ...Array.from({ length: 14 }, (_, i) => ({ x: i, y: 37, type: 'full' })), 
+    ...Array.from({ length: 10 }, (_, i) => ({ x: i, y: 36, type: 'full' })), 
+    ...Array.from({ length: 10 }, (_, i) => ({ x: i, y: 36, type: 'full' })), 
+    ...Array.from({ length: 6 }, (_, i) => ({ x: i+2, y: 35, type: 'full' })), 
+    ...Array.from({ length: 6 }, (_, i) => ({ x: i+2, y: 35, type: 'full' })), 
+    ...Array.from({ length: 3 }, (_, i) => ({ x: i+42, y: 37, type: 'half-top' })), 
+    ...Array.from({ length: 7 }, (_, i) => ({ x: i+42, y: 35, type: i >= 3 ? 'full' : 'half-bottom' })), 
+    ...Array.from({ length: 7 }, (_, i) => ({ x: 30, y: i+12, type: (i >= 4 && i <= 6) ? 'half-left' : 'full' })), 
+    ...Array.from({ length: 8 }, (_, i) => ({ x: 31, y: i+12, type: (i >= 4 && i <= 8) ? 'full' : 'half-right' })), 
+    ...Array.from({ length: 5 }, (_, i) => ({ x: 32, y: i+17, type: (i >= 4 && i <= 6) ? 'full' : 'half-right' })), 
+    {x: 32, y: 16, type: 'half-left'},
+    ...Array.from({ length: 4 }, (_, i) => ({ x: 29, y: i+12, type: 'half-right' })), 
+    ...Array.from({ length: 3 }, (_, i) => ({ x: i+39, y: 20, type: 'half-top' })), 
+    ...Array.from({ length: 7 }, (_, i) => ({ x: i+32, y: 20, type: (i >= 4 && i <= 8) ? 'half-top' : 'full' })), 
+    ...Array.from({ length: 9 }, (_, i) => ({ x: i+33, y: 21, type: 'full' })), 
+    ...Array.from({ length: 3 }, (_, i) => ({ x: i+33, y: 19, type: 'full' })), 
+    
+    {x: 45, y: 21, type: 'half-top'},
+    {x: 46, y: 21, type: 'half-top'},
+    {x: 46, y: 23, type: 'half-top'},
+    {x: 45, y: 23, type: 'half-top'},
+    {x: 47, y: 21, type: 'half-bottom'},
+    {x: 51, y: 23, type: 'half-bottom'},
+    {x: 48, y: 24, type: 'half-right'},
+    ...Array.from({ length: 5 }, (_, i) => ({ x: i+45, y: 22, type: 'full' })), 
+    ...Array.from({ length: 4 }, (_, i) => ({ x: i+47, y: 23  , type: 'full' })), 
+    ...Array.from({ length: 4 }, (_, i) => ({ x: i+49, y: 24  , type: 'full' })), 
+    ...Array.from({ length: 4 }, (_, i) => ({ x: 51, y: i+24  , type: 'full' })), 
+    ...Array.from({ length: 6 }, (_, i) => ({ x: 50, y: i+25  , type: (i >= 2 && i <= 6) ? 'half-right' : 'full' })),  
+    ...Array.from({ length: 6 }, (_, i) => ({ x: 49-i, y: 31+i, type: 'half-right' })),
+    ...Array.from({ length: 6 }, (_, i) => ({ x: 50-i, y: 31+i, type: 'full' })),
+    {x: 45, y: 34, type: 'half-bottom'},
+    {x: 47, y: 36, type: 'half-bottom'},
+    {x: 50, y: 34, type: 'half-left'},
+    {x: 51, y: 33, type: 'full'},
+    ...Array.from({ length: 2 }, (_, i) => ({ x: i+45 , y: 36  , type: 'full' })), 
+    ...Array.from({ length: 3 }, (_, i) => ({ x: i+47 , y: 34  , type: 'full' })), 
+    ...Array.from({ length: 5 }, (_, i) => ({ x: 53 , y: i+26  , type: 'half-left' })), 
+    ...Array.from({ length: 2 }, (_, i) => ({ x: 52 , y: i+31  , type: 'half-right' })), 
+    
+    // end buat danau + air
+    
+    // rumah
+    ...Array.from({ length: 2 }, (_, i) => ({ x: i+14 , y: 14  , type: 'full' })), 
+    ...Array.from({ length: 2 }, (_, i) => ({ x: i+14 , y: 15  , type: 'full' })), 
+    ...Array.from({ length: 2 }, (_, i) => ({ x: i+22 , y: 24  , type: 'full' })), 
+    ...Array.from({ length: 2 }, (_, i) => ({ x: i+22 , y: 25  , type: 'full' })), 
+    ...Array.from({ length: 2 }, (_, i) => ({ x: i+26 , y: 27  , type: 'full' })), 
+    ...Array.from({ length: 2 }, (_, i) => ({ x: i+26 , y: 26  , type: 'full' })), 
+    ...Array.from({ length: 2 }, (_, i) => ({ x: i+29 , y: 24  , type: 'full' })), 
+    ...Array.from({ length: 2 }, (_, i) => ({ x: i+29 , y: 23  , type: 'full' })), 
+    ...Array.from({ length: 3 }, (_, i) => ({ x: i+34 , y: 25  , type: 'full' })), 
+    ...Array.from({ length: 3 }, (_, i) => ({ x: i+34 , y: 24  , type: 'full' })), 
+    ...Array.from({ length: 3 }, (_, i) => ({ x: i+33 , y: 27  , type: 'full' })), 
+    ...Array.from({ length: 3 }, (_, i) => ({ x: i+28 , y: 35  , type: 'full' })), 
+    ...Array.from({ length: 2 }, (_, i) => ({ x: i+28 , y: 36  , type: 'half-top' })), 
+    ...Array.from({ length: 3 }, (_, i) => ({ x: i+31 , y: 33  , type: 'half-bottom' })),
+    {x: 35, y: 32, type: 'half-right'},
+    {x: 36, y: 32, type: 'half-left'},
+    {x: 17, y: 26, type: 'half-right'},
+    {x: 18, y: 26, type: 'half-left'},
+    {x: 29, y: 28, type: 'full'},
+    ...Array.from({ length: 2 }, (_, i) => ({ x: i+23 , y: 34  , type: 'half-top' })),
+    ...Array.from({ length: 2 }, (_, i) => ({ x: i+23 , y: 33  , type: 'half-bottom' })),
+    ...Array.from({ length: 2 }, (_, i) => ({ x: i+15 , y: 35  , type: 'half-bottom' })),
+    ...Array.from({ length: 2 }, (_, i) => ({ x: i+15 , y: 34  , type: 'half-bottom' })),
+    // ...Array.from({ length: 2 }, (_, i) => ({ x: 17 , y: i+34  , type: 'half-left' })),
+    {x: 17, y: 35, type: 'half-left'},
+    ...Array.from({ length: 2 }, (_, i) => ({ x: i+9 , y: 30  , type: 'half-bottom' })),
+    ...Array.from({ length: 5 }, (_, i) => ({ x: i+9 , y: 29  , type: 'half-bottom' })),
+    ...Array.from({ length: 3 }, (_, i) => ({ x: i+45 , y: 30  , type: 'half-bottom' })),
+    ...Array.from({ length: 2 }, (_, i) => ({ x: i+45 , y: 31  , type: 'half-top' })),
+    ...Array.from({ length: 17 }, (_, i) => ({ x: i+39 , y: 10  , type: 'half-top' })),
+    ...Array.from({ length: 2 }, (_, i) => ({ x: 55 , y: i+8  , type: 'half-right' })),
+    ...Array.from({ length: 3 }, (_, i) => ({ x: i+56 , y: 8  , type: 'half-bottom' })),
+    ...Array.from({ length: 4 }, (_, i) => ({ x: 39 , y: 6+i  , type: 'half-left' })),
+    ...Array.from({ length: 4 }, (_, i) => ({ x: i+36 , y: 6  , type: 'half-bottom' })),
+    ...Array.from({ length: 4 }, (_, i) => ({ x: 36 , y: 4+i  , type: 'full' })),
+    ...Array.from({ length: 24 }, (_, i) => ({ x: 36+i , y: 4  , type: 'full' })),
+  
+    
+  ];
 
 // Add monologue script
 const monologueScript = [
