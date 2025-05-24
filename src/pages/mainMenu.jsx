@@ -14,6 +14,7 @@ import Settings from '../components/Settings';
 import MusicPrompt from '../components/MusicPrompt';
 import CharacterSelection from '../components/CharacterSelection';
 import LoadingScreen from '../components/LoadingScreen';
+import LoadGame from '../components/LoadGame';
 
 // Wrapper component that uses the music context
 function MainMenuContent() {
@@ -28,6 +29,7 @@ function MainMenuContent() {
   const [showSettings, setShowSettings] = useState(false);
   const [showMusicPrompt, setShowMusicPrompt] = useState(false);
   const [showCharacterSelection, setShowCharacterSelection] = useState(false);
+  const [showLoadGame, setShowLoadGame] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const saveData = location.state?.saveData;
 
@@ -91,7 +93,7 @@ function MainMenuContent() {
 
   const handleLoadGame = () => {
     playClick();
-    navigate('/load-game');
+    setShowLoadGame(true);
   };
 
   const handleSettings = () => {
@@ -171,8 +173,15 @@ function MainMenuContent() {
         </div>
       )}
 
+      {/* Load Game Popup */}
+      {showLoadGame && (
+        <div className="fixed inset-0 z-30 transition-opacity duration-200">
+          <LoadGame onClose={() => setShowLoadGame(false)} />
+        </div>
+      )}
+
       {/* Main Menu */}
-      {user && !showMusicPrompt && !showCharacterSelection && (
+      {user && !showMusicPrompt && !showCharacterSelection && !showLoadGame && (
         <div className="fixed top-0 left-0 bottom-0 z-20 flex flex-col items-start justify-start p-8 w-72" style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)' }}>
           <img src={gameTitleImage} alt="Game Title" className="mb-8 w-full h-auto object-contain" />
           

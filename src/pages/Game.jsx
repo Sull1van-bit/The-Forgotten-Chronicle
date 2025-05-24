@@ -5,6 +5,8 @@ import { useMusic } from '../context/MusicContext';
 import { AnimatePresence } from 'framer-motion';
 import LoadingScreen from '../components/LoadingScreen';
 import Cutscene from '../components/Cutscene';
+import DialogBox from '../components/DialogBox';
+import Settings from '../components/Settings';
 import '../styles/Game.css';
 // Import character sprites
 /*import eugeneStand from '../assets/characters/eugene/stand.gif';
@@ -34,6 +36,9 @@ import HouseInterior from './interiors/HouseInterior';
 import { useAuth } from '../context/AuthContext';
 import { saveFileService } from '../services/saveFileService';
 import { createSaveFileData, loadSaveFileData } from '../utils/saveFileUtils';
+
+import pauseButton from '../assets/menu/pause.png';
+import pauseMenuBg from '../assets/menu/pauseMenu.png';
 
 // Define collision points using grid coordinates
 const COLLISION_MAP = [
@@ -175,6 +180,15 @@ const COLLISION_MAP = [
 
 ];
 
+// Monologue Script
+const monologueScript = [
+  "The air carries the scent of damp earth and firewood, familiar yet distant. This place… it should feel like home. But does it?",
+  "The cottage stands behind me, quiet and worn. My inheritance—though it is more a burden than a gift. Once, hands worked this land, voices filled these walls. Now, only I remain.",
+  "The village elder watches from afar, eyes filled with something unspoken. They remember my family, their deeds, their fall. I have returned, but for what purpose?",
+  "Will I mend what was broken, rebuild what was lost? Or will I carve a new path, unshackled from their legacy?",
+  "The village calls, the fields await, and somewhere, beneath stone and memory, a forgotten truth lingers. Today, my story begins.",
+];
+
 const Game = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -183,9 +197,14 @@ const Game = () => {
   const isLoadedGame = location.state?.isLoadedGame;
   const [isLoading, setIsLoading] = useState(true);
   const [showCutscene, setShowCutscene] = useState(false);
+  const [showDialog, setShowDialog] = useState(false);
+  const [currentDialogueIndex, setCurrentDialogueIndex] = useState(0);
   const [saveFiles, setSaveFiles] = useState([]);
   const [canSave, setCanSave] = useState(false);
   const [showSavePrompt, setShowSavePrompt] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume } = useSound();
 
   // If no character is selected, redirect to main menu
   useEffect(() => {
@@ -225,6 +244,28 @@ const Game = () => {
 
   const handleCutsceneComplete = () => {
     setShowCutscene(false);
+    // Start monologue for new games after cutscene
+    if (!isLoadedGame) {
+      setShowDialog(true);
+      setCurrentDialogueIndex(0);
+    }
+  };
+
+  // Handle advancing the monologue
+  const handleAdvanceMonologue = () => {
+    if (currentDialogueIndex < monologueScript.length - 1) {
+      setCurrentDialogueIndex(prevIndex => prevIndex + 1);
+    } else {
+      // End of monologue
+      setShowDialog(false);
+      setCurrentDialogueIndex(0); // Reset for next time if needed
+    }
+  };
+
+  // Handle skipping the entire monologue
+  const handleSkipMonologue = () => {
+    setShowDialog(false);
+    setCurrentDialogueIndex(0);
   };
 
   // Add save point coordinates
@@ -457,9 +498,17 @@ const Game = () => {
     });
   };
 
-  // Update useEffect for movement
+  // Pause logic
+  const handlePause = () => setIsPaused(true);
+  const handleResume = () => setIsPaused(false);
+  const handleSettings = () => setShowSettings(true);
+  const handleCloseSettings = () => setShowSettings(false);
+  const handleExit = () => navigate('/');
+
+  // Prevent movement when paused
   useEffect(() => {
     const handleKeyPress = (e) => {
+      if (isPaused) return;
       console.log('Key pressed:', e.key); // Debug log
       console.log('isInInterior:', isInInterior); // Debug log
       
@@ -535,7 +584,16 @@ const Game = () => {
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [position, isInInterior]);
+  }, [position, isInInterior, isPaused]);
+
+  // ESC to pause
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') setIsPaused((prev) => !prev);
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, []);
 
   const getCameraStyle = () => {
     // Calculate the center position of the viewport
@@ -627,8 +685,80 @@ const Game = () => {
       {/* Save Game UI */}
       {user && !isLoading && !showCutscene && renderSavePrompt()}
 
+      {/* Dialog Box */}
+      {showDialog && (
+        <>
+          {/* Skip button at the top center, always clickable */}
+          <div
+            className="fixed top-8 left-1/2 transform -translate-x-1/2 z-[100] pointer-events-auto"
+          >
+            <button
+              onClick={handleSkipMonologue}
+              style={{ backgroundColor: 'rgba(55, 65, 81, 0.85)' }}
+              className="px-4 py-2 text-white rounded-lg hover:bg-gray-600 transition-colors shadow-lg"
+            >
+              Skip
+            </button>
+          </div>
+          {/* Overlay that allows click anywhere to advance monologue */}
+          <div
+            className="fixed inset-0 z-50 flex items-end justify-center p-4 pointer-events-auto"
+            onClick={handleAdvanceMonologue}
+          >
+            <div
+              className="flex flex-col items-center pointer-events-auto"
+            >
+              <DialogBox
+                key={currentDialogueIndex}
+                dialogue={monologueScript[currentDialogueIndex]}
+                onAdvance={handleAdvanceMonologue}
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Pause Button */}
+      {!isPaused && !isLoading && !showCutscene && !showDialog && (
+        <img
+          src={pauseButton}
+          alt="Pause"
+          onClick={handlePause}
+          className="fixed top-4 right-4 z-50 cursor-pointer"
+          style={{ width: 64, height: 64, objectFit: 'contain' }}
+        />
+      )}
+
+      {/* Pause Menu Popup */}
+      {isPaused && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}
+        >
+          <div className="bg-[#8B4513] p-8 rounded-lg max-w-md w-full mx-4 relative border-8 border-[#D2B48C] shadow-lg flex flex-col items-center gap-8">
+            <h2 className="text-2xl font-bold mb-2 text-center text-[#F5DEB3] tracking-widest">PAUSED</h2>
+            <div className="flex flex-col items-center gap-6 w-full">
+              <button className="pause-menu-btn w-56" onClick={handleResume}>Resume</button>
+              <button className="pause-menu-btn w-56" onClick={handleSettings}>Settings</button>
+              <button className="pause-menu-btn w-56" onClick={handleExit}>Exit</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Settings Popup (from pause menu or elsewhere) */}
+      {showSettings && (
+        <Settings
+          onClose={handleCloseSettings}
+          soundEnabled={soundEnabled}
+          setSoundEnabled={setSoundEnabled}
+          sfxVolume={sfxVolume}
+          setSfxVolume={setSfxVolume}
+        />
+      )}
+
       {/* Rest of your game content */}
-      {!isLoading && !showCutscene && (
+      {!isLoading && !showCutscene && !showDialog && (
         <div className="game-container">
           <div className="camera">
             <div className="map" style={getCameraStyle()}>
@@ -678,4 +808,31 @@ const Game = () => {
   );
 };
 
-export default Game; 
+export default Game;
+
+<style>
+{`
+.pause-menu-btn {
+  background: linear-gradient(180deg, rgba(224,185,125,0.92) 0%, rgba(169,124,80,0.92) 100%);
+  color: #3a220a;
+  font-size: 1.25rem;
+  font-weight: bold;
+  border: 2.5px solid #7c4f21;
+  border-radius: 18px;
+  box-shadow: 0 4px 12px rgba(60, 40, 10, 0.18);
+  padding: 0.75rem 0;
+  margin: 0.5rem 0;
+  transition: background 0.2s, color 0.2s, transform 0.1s;
+  opacity: 0.96;
+  width: 100%;
+  max-width: 260px;
+  letter-spacing: 1px;
+}
+.pause-menu-btn:hover {
+  background: linear-gradient(180deg, rgba(245,215,161,0.98) 0%, rgba(196,154,108,0.98) 100%);
+  color: #a97c50;
+  transform: translateY(-2px) scale(1.04);
+  opacity: 1;
+}
+`}
+</style> 
