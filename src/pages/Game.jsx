@@ -53,13 +53,17 @@ import ActiveQuestFolderUI from '../components/ActiveQuestFolderUI';
 
 // Import item images
 import seedsIcon from '../assets/items/seeds.png';
-import wheatIcon from '../assets/items/wheat.png';
 import breadIcon from '../assets/items/bread.png';
 import stewIcon from '../assets/items/stew.png';
 import ledgerIcon from '../assets/items/ledger.png';
 import royalDocumentIcon from '../assets/items/royal-document.png';
 import meatIcon from '../assets/items/meat.png';
 import mushroomIcon from '../assets/items/mushroom.png';
+import potatoIcon from '../assets/items/potato.png'
+import potato1 from '../assets/crops/potato1.png';
+import potato2 from '../assets/crops/potato2.png';
+import potato3 from '../assets/crops/potato3.png';
+import hoeIcon from '../assets/items/hoe.png';
 
 // Import UI icons
 import heartIcon from '../assets/statbar/heart.png';
@@ -250,6 +254,24 @@ const COLLISION_MAP = [
     
   ];
 
+// Define plantable points using grid coordinates
+const PLANTABLE_SPOTS = [
+  { x: 2, y: 3 },
+  { x: 3, y: 3 },
+  { x: 4, y: 3 },
+];
+
+// Define crop growth stages and their corresponding images
+const CROP_STAGES = {
+  potato: [
+    null, // Stage 0: No plant visible (empty spot)
+    potato1, // Stage 1: Seedling
+    potato2, // Stage 2: Growing
+    potato3 // Stage 3: Mature
+  ]
+  // Add other crops here as needed
+};
+
 // Add monologue script
 const monologueScript = [
   "The air carries the scent of damp earth and firewood, familiar yet distant. This place… it should feel like home. But does it?",
@@ -266,14 +288,18 @@ const ITEMS = {
     name: 'Seeds',
     icon: seedsIcon,
     type: 'material',
-    description: 'Plant these to grow crops'
+    description: 'Plant these to grow crops',
+    price: 10, // Buy price
+    sellPrice: 5 // Placeholder sell price
   },
-  wheat: {
+  potato: {
     id: 2,
-    name: 'Wheat',
-    icon: wheatIcon,
+    name: 'Potato',
+    icon: potatoIcon,
     type: 'material',
-    description: 'Raw wheat, can be used to make bread'
+    description: 'Raw potato, can be eaten or sell it to get money',
+    price: 1, // Buy price
+    sellPrice: 13 // Increased sell price
   },
   bread: {
     id: 3,
@@ -281,43 +307,72 @@ const ITEMS = {
     icon: breadIcon,
     type: 'consumable',
     description: 'Freshly baked bread',
-    effect: { hunger: 30, energy: 10 }
+    effect: { hunger: 30, energy: 10 },
+    price: 15, // Buy price
+    sellPrice: 7 // Placeholder sell price
   },
   stew: {
     id: 4,
     name: 'Stew',
     icon: stewIcon,
     type: 'quest',
-    description: 'A special stew that holds significance in the village\'s history'
+    description: 'A special stew that holds significance in the village\'s history',
+    // price: -1, // Not buyable - removed
+    // sellPrice: -1 // Not sellable - removed
   },
   ledger: {
     id: 5,
     name: 'Ledger',
     icon: ledgerIcon,
     type: 'quest',
-    description: 'An old ledger containing important information'
+    description: 'An old ledger containing important information',
+    // price: -1, // Not buyable - removed
+    // sellPrice: -1 // Not sellable - removed
   },
   royalDocument: {
     id: 6,
     name: 'Royal Document',
     icon: royalDocumentIcon,
     type: 'quest',
-    description: 'An official document from the royal family'
+    description: 'An official document from the royal family',
+    // price: -1, // Not buyable - removed
+    // sellPrice: -1 // Not sellable - removed
   },
   meat: {
     id: 7,
     name: 'Meat',
     icon: meatIcon,
     type: 'material',
-    description: 'Raw meat, can be cooked'
+    description: 'Raw meat, can be cooked',
+    // price: 20, // Placeholder buy price - removed
+    sellPrice: 10 // Placeholder sell price
   },
   mushroom: {
     id: 8,
     name: 'Mushroom',
     icon: mushroomIcon,
     type: 'material',
-    description: 'A wild mushroom, can be used in cooking'
+    description: 'A wild mushroom, can be used in cooking',
+    // price: 12, // Placeholder buy price - removed
+    sellPrice: 6 // Placeholder sell price
   }
+};
+
+// Helper function to get item details by ID
+const getItemById = (id) => {
+  const itemKeys = Object.keys(ITEMS);
+  for (let i = 0; i < itemKeys.length; i++) {
+    const item = ITEMS[itemKeys[i]];
+    if (item.id === id) {
+      return item;
+    }
+  }
+  return undefined; // Return undefined if item not found
+};
+
+// Helper function to check if a grid position is a plantable spot
+const isPlantableSpot = (gridX, gridY) => {
+  return PLANTABLE_SPOTS.some(point => point.x === gridX && point.y === gridY);
 };
 
 const Game = () => {
@@ -338,6 +393,7 @@ const Game = () => {
   const [isPaused, setIsPaused] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showShop, setShowShop] = useState(false);
+  const [showShopConfirm, setShowShopConfirm] = useState(false);
 
   // State for new quest pop-up - MOVED HERE
   const [showNewQuestPopup, setShowNewQuestPopup] = useState(false);
@@ -361,6 +417,9 @@ const Game = () => {
 
   // Add state for elder talk popup
   const [showElderTalkPopup, setShowElderTalkPopup] = useState(false);
+
+  // Add state for shop confirmation and mode
+  const [shopMode, setShopMode] = useState('buy'); // 'buy' or 'sell'
 
   // Define basic game constants and initial player state - Moved up
   const [position, setPosition] = useState({ x: 350, y: 150 });
@@ -387,6 +446,11 @@ const Game = () => {
   const [inventory, setInventory] = useState([
     { ...ITEMS.bread, quantity: 2 }
   ]);
+
+  // Log inventory state whenever it changes
+  useEffect(() => {
+    console.log('Inventory state updated:', inventory);
+  }, [inventory]);
 
   // Add quest state
   const [quests, setQuests] = useState([]);
@@ -420,6 +484,8 @@ const Game = () => {
       setIsLoading(false);
       if (character && !isLoadedGame) {
         setShowCutscene(true);
+        // Give player money to buy 5 breads (5 * 15 = 75)
+        setMoney(75);
       }
     }, 2000);
 
@@ -457,8 +523,56 @@ const Game = () => {
     } else {
       // Dialogue ends here
       endDialog();
-      // Add the initial quest after dialogue
-      setQuests(prevQuests => [
+      // Add the initial quest after dialogue only if it doesn't exist
+      setQuests(prevQuests => {
+        // Check if Welcome Home quest already exists
+        const welcomeHomeExists = prevQuests.some(quest => quest.title === "Welcome Home");
+        if (welcomeHomeExists) {
+          return prevQuests;
+        }
+        // Add the quest if it doesn't exist
+        return [
+          ...prevQuests,
+          {
+            title: "Welcome Home",
+            description: "Get settled in your new home and explore the village.",
+            objectives: [
+              {
+                description: "Enter your house",
+                completed: false
+              },
+              {
+                description: "Meet the village elder",
+                completed: false
+              }
+            ]
+          }
+        ];
+      });
+      // Only show popup if we added the quest
+      setQuests(prevQuests => {
+        const welcomeHomeExists = prevQuests.some(quest => quest.title === "Welcome Home");
+        if (!welcomeHomeExists) {
+          setNewQuestTitle("Welcome Home");
+          setShowNewQuestPopup(true);
+        }
+        return prevQuests;
+      });
+    }
+  };
+
+  // Handle skipping the entire monologue
+  const handleSkipMonologue = () => {
+    endDialog();
+    // Add the initial quest and trigger popup when skipping only if it doesn't exist
+    setQuests(prevQuests => {
+      // Check if Welcome Home quest already exists
+      const welcomeHomeExists = prevQuests.some(quest => quest.title === "Welcome Home");
+      if (welcomeHomeExists) {
+        return prevQuests;
+      }
+      // Add the quest if it doesn't exist
+      return [
         ...prevQuests,
         {
           title: "Welcome Home",
@@ -474,36 +588,17 @@ const Game = () => {
             }
           ]
         }
-      ]);
-      // Directly trigger the popup after adding the quest
-      setNewQuestTitle("Welcome Home"); // Set the title directly
-      setShowNewQuestPopup(true); // Show the popup directly
-    }
-  };
-
-  // Handle skipping the entire monologue
-  const handleSkipMonologue = () => {
-    endDialog();
-    // Add the initial quest and trigger popup when skipping
-    setQuests(prevQuests => [
-      ...prevQuests,
-      {
-        title: "Welcome Home",
-        description: "Get settled in your new home and explore the village.",
-        objectives: [
-          {
-            description: "Enter your house",
-            completed: false
-          },
-          {
-            description: "Meet the village elder",
-            completed: false
-          }
-        ]
+      ];
+    });
+    // Only show popup if we added the quest
+    setQuests(prevQuests => {
+      const welcomeHomeExists = prevQuests.some(quest => quest.title === "Welcome Home");
+      if (!welcomeHomeExists) {
+        setNewQuestTitle("Welcome Home");
+        setShowNewQuestPopup(true);
       }
-    ]);
-    setNewQuestTitle("Welcome Home");
-    setShowNewQuestPopup(true);
+      return prevQuests;
+    });
   };
 
   // Add save point coordinates
@@ -758,11 +853,11 @@ const Game = () => {
       point.x === playerGridPos.gridX && point.y === playerGridPos.gridY
     );
 
-    if (!justCheck) {
-      setShowShop(isAtShop);
+    if (!justCheck && isAtShop) {
+      setShowShopConfirm(true);
     }
     return isAtShop;
-  }, [shopPoints, setShowShop, getGridPosition]);
+  }, [shopPoints, getGridPosition]);
 
   // Handle exit from interior
   const handleExitInterior = (spawnPoint) => {
@@ -892,8 +987,38 @@ const Game = () => {
             }
           }
           break;
-        case 'p':
-          setIsPaused(true);
+        case 'p': // Handle planting
+          const playerGridPos = getGridPosition(position.x, position.y);
+          if (isPlantableSpot(playerGridPos.gridX, playerGridPos.gridY)) {
+            // Check if player has seeds
+            const seedItem = inventory.find(item => item.name === 'Seeds');
+            if (seedItem && seedItem.quantity > 0) {
+              // Check if a crop is already planted here
+              const existingCrop = plantedCrops.find(crop => crop.x === playerGridPos.gridX && crop.y === playerGridPos.gridY);
+              if (!existingCrop) {
+                // Consume one seed
+                setInventory(prev => prev.map(item => 
+                  item.name === 'Seeds' ? { ...item, quantity: item.quantity - 1 } : item
+                ).filter(item => item.quantity > 0));
+
+                // Add new planted crop (start at stage 1)
+                setPlantedCrops(prev => [...prev, {
+                  x: playerGridPos.gridX,
+                  y: playerGridPos.gridY,
+                  type: 'potato',
+                  stage: 1,
+                  plantTime: Date.now() // Track planting time for growth
+                }]);
+                console.log(`Planted potato at ${playerGridPos.gridX}, ${playerGridPos.gridY}`);
+              } else {
+                console.log('There is already a crop planted here.');
+              }
+            } else {
+              console.log('You need seeds to plant!');
+            }
+          } else {
+            console.log('You can only plant on designated spots.');
+          }
           break;
         case 's':
           if (canSave && !isDialogActive) {
@@ -1028,17 +1153,36 @@ const Game = () => {
   // Function to add item to inventory
   const addItemToInventory = (itemId, quantity = 1) => {
     setInventory(prev => {
-      const existingItem = prev.find(item => item.id === itemId);
-      if (existingItem) {
+      const existingItemIndex = prev.findIndex(item => item.id === itemId);
+
+      if (existingItemIndex > -1) {
         // Update quantity if item exists
-        return prev.map(item => 
-          item.id === itemId 
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
-        );
+        const newInventory = [...prev];
+        newInventory[existingItemIndex] = {
+          ...newInventory[existingItemIndex],
+          quantity: newInventory[existingItemIndex].quantity + quantity
+        };
+        return newInventory;
       } else {
-        // Add new item
-        return [...prev, { ...ITEMS[itemId], quantity }];
+        // Add new item if it doesn't exist
+        const itemDetails = getItemById(itemId);
+        if (itemDetails) {
+          // Ensure icon and other necessary properties are included
+          return [...prev, { 
+            id: itemDetails.id,
+            name: itemDetails.name,
+            icon: itemDetails.icon, // Explicitly include the icon
+            type: itemDetails.type,
+            description: itemDetails.description,
+            quantity: quantity,
+            // Include price/sellPrice if needed for inventory display later
+            price: itemDetails.price,
+            sellPrice: itemDetails.sellPrice
+           }];
+        } else {
+          console.error(`Attempted to add unknown item with ID: ${itemId}`);
+          return prev; // Return previous state if item ID is invalid
+        }
       }
     });
   };
@@ -1167,7 +1311,7 @@ const Game = () => {
   return (
     <div className="relative w-full h-screen bg-black overflow-hidden">
       {/* Styled Status Bar (HP, Hunger, Hygiene, Happiness) */}
-      {!isDialogActive && !isLoading && !showCutscene && (
+      {!isDialogActive && !isLoading && !showCutscene && !showShop && (
         <>
           <div className="absolute top-4 left-4 z-50 text-white flex items-center border-8 border-[#D2B48C]" style={{ backgroundColor: '#8B4513', padding: '10px', borderRadius: '10px' }}>
             {/* Character Portrait */}
@@ -1250,9 +1394,14 @@ const Game = () => {
 
           {/* Wrap ActiveQuestFolderUI for positioning */}
           <div className="fixed right-8 top-[25%] transform -translate-y-1/2 z-[90] scale-125">
-            <ActiveQuestFolderUI quests={quests} />
+            {!isDialogActive && !isLoading && !showCutscene && !showShop && <ActiveQuestFolderUI quests={quests} />}
           </div>
-          <QuestFolder quests={quests} />
+          {!isDialogActive && !isLoading && !showCutscene && !showShop && <QuestFolder quests={quests} />}
+
+          {/* Minimap */}
+          {!isLoading && !showCutscene && !showShop && (
+            <Minimap position={position} shopPoints={shopPoints} />
+          )}
         </>
       )}
 
@@ -1347,22 +1496,119 @@ const Game = () => {
 
       {/* Shop Popup */}
       {showShop && !isInInterior && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
-          <div className="bg-[#8B4513] p-8 rounded-lg text-white border-8 border-[#D2B48C] shadow-lg">
-            <h2 className="text-2xl mb-4">Shop</h2>
-            <p>Welcome to the shop! (Placeholder)</p>
-            <button
-              onClick={() => setShowShop(false)}
-              className="mt-4 px-4 py-2 bg-yellow-600 rounded hover:bg-yellow-700"
-            >
-              Close Shop
-            </button>
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-60 flex items-center justify-center">
+          <div className="bg-[#8B4513] p-3 rounded-lg text-white border-3 border-[#D2B48C] shadow-lg w-[280px] h-fit">
+            <div className="flex justify-between items-center mb-1">
+              <h2 className="text-base font-bold text-[#F5DEB3]">Shop ({shopMode === 'buy' ? 'Buying' : 'Selling'})</h2>
+              <button
+                onClick={() => setShowShop(false)}
+                className="bg-red-500 text-white px-1 py-[2px] rounded hover:bg-red-600 transition-colors text-xs"
+              >
+                Close
+              </button>
+            </div>
+
+            {/* Shop Content - Conditional Rendering based on shopMode */}
+            {shopMode === 'buy' && (
+              <div className="flex flex-col gap-2 mb-2 max-h-[150px] overflow-y-auto">
+                {/* Container for items */}
+                <div className="flex flex-col gap-2">
+                  {/* Seeds */}
+                  <div 
+                    className="bg-[#A0522D] p-2 rounded border border-[#D2B48C] hover:border-[#F5DEB3] transition-colors cursor-pointer flex items-center gap-2"
+                    onClick={() => {
+                      const seedItem = getItemById(1); // Use getItemById with ID 1 for Seeds
+                      if (seedItem && money >= seedItem.price) {
+                        setMoney(prevMoney => prevMoney - seedItem.price);
+                        addItemToInventory(seedItem.id, 1);
+                        console.log('Bought Seeds!'); // Placeholder feedback
+
+                        // Update quest objective: Buy seeds from the shop
+                        setQuests(prevQuests => {
+                          const updatedQuests = prevQuests.map(quest => {
+                            if (quest.title === "The First Harvest") {
+                              return {
+                                ...quest,
+                                objectives: quest.objectives.map(objective => {
+                                  if (objective.description === "Buy seeds from the shop") {
+                                    return { ...objective, completed: true };
+                                  }
+                                  return objective;
+                                })
+                              };
+                            }
+                            return quest;
+                          });
+                          return updatedQuests;
+                        });
+
+                      } else if (seedItem) {
+                        console.log('Not enough money for Seeds!'); // Placeholder feedback
+                      } else {
+                        console.error('Seeds item details not found!');
+                      }
+                    }}
+                  >
+                    <img src={seedsIcon} alt="Seeds" className="w-8 h-8 object-contain" />
+                    <div className="flex-grow">
+                      <p className="text-sm font-bold text-[#F5DEB3]">Seeds</p>
+                      <p className="text-xs">Price: {ITEMS.seeds.price}</p>
+                    </div>
+                  </div>
+
+                  {/* Bread */}
+                  <div className="bg-[#A0522D] p-2 rounded border border-[#D2B48C] hover:border-[#F5DEB3] transition-colors cursor-pointer flex items-center gap-2">
+                    <img src={breadIcon} alt="Bread" className="w-8 h-8 object-contain" />
+                    <div className="flex-grow">
+                      <p className="text-sm font-bold text-[#F5DEB3]">Bread</p>
+                      <p className="text-xs">Price: 15</p>
+                    </div>
+                  </div>
+
+                  {/* Empty slots for aesthetic */}
+                  {[...Array(4)].map((_, i) => (
+                    <div key={`empty-${i}`} className="bg-[#A0522D] p-2 rounded border border-[#D2B48C] opacity-50" style={{ height: '64px' }}>{/* Added height for consistency */}</div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {shopMode === 'sell' && (
+              <div className="flex flex-col gap-2 mb-2 max-h-[150px] overflow-y-auto">
+                {/* Inventory items to sell */}
+                {inventory.length > 0 ? (
+                  inventory.map((item, index) => (
+                    <div 
+                      key={index} 
+                      className="bg-[#A0522D] p-2 rounded border border-[#D2B48C] hover:border-[#F5DEB3] transition-colors cursor-pointer flex items-center gap-2"
+                      onClick={() => console.log('Sell item:', item.name)} // Placeholder sell logic
+                    >
+                      <img src={item.icon} alt={item.name} className="w-8 h-8 object-contain" />
+                      <div className="flex-grow">
+                        <p className="text-sm font-bold text-[#F5DEB3]">{item.name} (x{item.quantity})</p>
+                        {item.sellPrice !== -1 && (
+                          <p className="text-xs">Sell Price: {item.sellPrice}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center text-[#F5DEB3] opacity-75">Your inventory is empty.</div>
+                )}
+              </div>
+            )}
+
+            {/* Player's Money */}
+            <div className="flex items-center gap-1 bg-[#A0522D] p-1 rounded border border-[#D2B48C]">
+              <img src={moneyIcon} alt="Money" className="w-3 h-3" />
+              <span className="text-xs text-[#F5DEB3] font-bold">{money}</span>
+            </div>
           </div>
         </div>
       )}
 
       {/* Add Inventory */}
-      {!isDialogActive && !isPaused && !isLoading && !showCutscene && (
+      {!isDialogActive && !isPaused && !isLoading && !showCutscene && !showShop && (
         <Inventory 
           items={inventory} 
           onUseItem={handleUseItem}
@@ -1458,9 +1704,6 @@ const Game = () => {
         />
       ) : (
         <>
-          {/* Minimap */}
-          <Minimap position={position} shopPoints={shopPoints} />
-
           {/* Elder NPC Sprite */}
           {/* Commented out because asset is not ready */}
           {/*
@@ -1488,7 +1731,72 @@ const Game = () => {
                 <div className="flex flex-col gap-2">
                   <button 
                     className="bg-[#8B4513] text-[#F5DEB3] px-6 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 w-32"
-                    onClick={() => { /* Add talk logic here later */ setShowElderTalkPopup(false); console.log('Talking to Elder...'); }}
+                    onClick={() => {
+                      // Start elder dialog
+                      startDialog({
+                        characterName: "Village Elder",
+                        expression: "neutral",
+                        dialogue: [
+                          "Ah… so you have returned.",
+                          "Your family's cottage still stands, though time has not been kind to it. Much like the land… and its people.",
+                          "The village remembers your name, but memories fade. If you wish to stay, you must build more than a home—you must build trust.",
+                          "The fields need tending. The forge waits for skillful hands. And somewhere in the shadows of this land, echoes of your past linger still.",
+                          "Will you work the soil, forge your own tools, or seek the knowledge buried beneath stone and dust?"
+                        ],
+                        onComplete: () => {
+                          // Add new quest after dialogue ends
+                          setQuests(prevQuests => {
+                            // First update the Welcome Home quest
+                            const updatedQuests = prevQuests.map(quest => {
+                              if (quest.title === "Welcome Home") {
+                                return {
+                                  ...quest,
+                                  objectives: quest.objectives.map(objective => {
+                                    if (objective.description === "Meet the village elder") {
+                                      return { ...objective, completed: true };
+                                    }
+                                    return objective;
+                                  })
+                                };
+                              }
+                              return quest;
+                            });
+                            
+                            // Then add the new quest
+                            const firstHarvestQuestExists = updatedQuests.some(quest => quest.title === "The First Harvest");
+
+                            if (!firstHarvestQuestExists) {
+                              return [
+                                ...updatedQuests,
+                                {
+                                  title: "The First Harvest",
+                                  description: "Begin your farming journey by purchasing seeds from the shop.",
+                                  objectives: [
+                                    {
+                                      description: "Buy seeds from the shop",
+                                      completed: false
+                                    },
+                                    {
+                                      description: "Plant the seed",
+                                      completed: false
+                                    }
+                                  ]
+                                }
+                              ];
+                            } else {
+                              // If quest already exists, just return updated quests (Welcome Home)
+                              return updatedQuests;
+                            }
+                          });
+                          
+                          // Show new quest popup
+                          setNewQuestTitle("The First Harvest");
+                          setShowNewQuestPopup(true);
+                        }
+                      });
+                      
+                      setShowElderTalkPopup(false);
+                    }}
                   >
                     Yes
                   </button>
@@ -1554,6 +1862,43 @@ const Game = () => {
             </div>
           )}
         </>
+      )}
+
+      {/* Shop Confirmation Popup */}
+      {showShopConfirm && !isPaused && !isDialogActive && !showShop && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}>
+          <div className="bg-[#8B4513] p-8 rounded-lg max-w-md w-full mx-4 relative border-8 border-[#D2B48C] shadow-lg flex flex-col items-center gap-4">
+            <h2 className="text-2xl font-bold text-center text-[#F5DEB3]">Shop</h2>
+            <div className="flex flex-col gap-2">
+              <button 
+                className="bg-[#8B4513] text-[#F5DEB3] px-6 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 w-32"
+                onClick={() => {
+                  setShopMode('buy');
+                  setShowShop(true);
+                  setShowShopConfirm(false);
+                }}
+              >
+                Buy
+              </button>
+              <button 
+                className="bg-[#8B4513] text-[#F5DEB3] px-6 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 w-32"
+                onClick={() => {
+                  setShopMode('sell');
+                  setShowShop(true);
+                  setShowShopConfirm(false);
+                }}
+              >
+                Sell
+              </button>
+              <button 
+                className="bg-[#8B4513] text-[#F5DEB3] px-6 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 w-32"
+                onClick={() => setShowShopConfirm(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

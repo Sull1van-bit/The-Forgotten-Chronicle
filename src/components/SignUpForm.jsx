@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth } from '../config/firebase';
@@ -7,13 +6,38 @@ import { auth } from '../config/firebase';
 const SignUpForm = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
+    username: '',
     password: '',
     confirmPassword: ''
   });
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+
+  const validatePassword = (password) => {
+    const minLength = 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumbers = /\d/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+    if (password.length < minLength) {
+      return 'Password must be at least 8 characters long';
+    }
+    if (!hasUpperCase) {
+      return 'Password must contain at least one uppercase letter';
+    }
+    if (!hasLowerCase) {
+      return 'Password must contain at least one lowercase letter';
+    }
+    if (!hasNumbers) {
+      return 'Password must contain at least one number';
+    }
+    if (!hasSpecialChar) {
+      return 'Password must contain at least one special character';
+    }
+    return '';
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -21,253 +45,198 @@ const SignUpForm = () => {
       ...prev,
       [name]: value
     }));
+    setError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
+
+    if (!acceptedTerms) {
+      setError('Please accept the Terms and Conditions');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!formData.username.trim()) {
+      setError('Please enter a username');
+      setIsLoading(false);
+      return;
+    }
+
+    const passwordError = validatePassword(formData.password);
+    if (passwordError) {
+      setError(passwordError);
+      setIsLoading(false);
+      return;
+    }
 
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
+      setIsLoading(false);
       return;
     }
 
     try {
+      // Create user with email (using username as email for now)
+      const email = `${formData.username}@example.com`; // You might want to add email field later
       const userCredential = await createUserWithEmailAndPassword(
         auth,
-        formData.email,
+        email,
         formData.password
       );
 
       // Update the user's display name
       await updateProfile(userCredential.user, {
-        displayName: `${formData.firstName} ${formData.lastName}`
+        displayName: formData.username
       });
 
       // Navigate to main menu after successful registration
       navigate('/');
     } catch (error) {
-      setError(error.message);
+      let errorMessage = 'An error occurred during sign up';
+      switch (error.code) {
+        case 'auth/email-already-in-use':
+          errorMessage = 'This username is already taken';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'Please enter a valid username';
+          break;
+        case 'auth/weak-password':
+          errorMessage = 'Password is too weak';
+          break;
+        default:
+          errorMessage = error.message;
+      }
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <StyledWrapper>
-      <form className="form" onSubmit={handleSubmit}>
-        <p className="title">Register</p>
-        <p className="message">Signup now and get full access to our app.</p>
-        {error && <p className="error">{error}</p>}
-        <div className="flex">
-          <label>
-            <input
-              className="input"
-              type="text"
-              name="firstName"
-              value={formData.firstName}
-              onChange={handleChange}
-              required
-            />
-            <span>Firstname</span>
-          </label>
-          <label>
-            <input
-              className="input"
-              type="text"
-              name="lastName"
-              value={formData.lastName}
-              onChange={handleChange}
-              required
-            />
-            <span>Lastname</span>
-          </label>
-        </div>  
-        <label>
-          <input
-            className="input"
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-          />
-          <span>Email</span>
-        </label> 
-        <label>
-          <input
-            className="input"
-            type="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            required
-          />
-          <span>Password</span>
-        </label>
-        <label>
-          <input
-            className="input"
-            type="password"
-            name="confirmPassword"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            required
-          />
-          <span>Confirm password</span>
-        </label>
-        <button className="submit" type="submit">Submit</button>
-        <p className="signin">Already have an account? <a href="#" onClick={() => navigate('/')}>Signin</a></p>
-      </form>
-    </StyledWrapper>
+    <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto lg:py-0">
+      <div className="w-full bg-white rounded-lg shadow border md:mt-0 sm:max-w-md xl:p-0">
+        <div className="p-6 space-y-4 md:space-y-6 sm:p-8">
+          <p className="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl">
+            Create an account
+          </p>
+
+          {error && (
+            <div className="p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg" role="alert">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
+            <div>
+              <label className="block mb-2 text-sm font-medium text-gray-900">
+                Your username
+              </label>
+              <input
+                className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg block w-full p-2.5 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="JohnDoe"
+                id="username"
+                name="username"
+                type="text"
+                value={formData.username}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block mb-2 text-sm font-medium text-gray-900">
+                Password
+              </label>
+              <input
+                className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg block w-full p-2.5 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="••••••••"
+                id="password"
+                name="password"
+                type="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block mb-2 text-sm font-medium text-gray-900">
+                Confirm password
+              </label>
+              <input
+                className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg block w-full p-2.5 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="••••••••"
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div className="flex items-start">
+              <div className="flex items-center h-5">
+                <input
+                  className="w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-blue-300"
+                  type="checkbox"
+                  id="terms"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  required
+                />
+              </div>
+              <div className="ml-3 text-sm">
+                <label className="font-light text-gray-500">
+                  I accept the{' '}
+                  <a href="#" className="font-medium text-blue-600 hover:underline">
+                    Terms and Conditions
+                  </a>
+                </label>
+              </div>
+            </div>
+
+            <button
+              className={`w-full bg-blue-500 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center text-white ${
+                isLoading ? 'opacity-75 cursor-not-allowed' : ''
+              }`}
+              type="submit"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <div className="flex items-center justify-center">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Creating account...
+                </div>
+              ) : (
+                'Create an account'
+              )}
+            </button>
+
+            <p className="text-sm font-light text-gray-500">
+              Already have an account?{' '}
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate('/');
+                }}
+                className="font-medium text-blue-600 hover:underline"
+              >
+                Sign in
+              </a>
+            </p>
+          </form>
+        </div>
+      </div>
+    </div>
   );
 };
-
-const StyledWrapper = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  background-color: #f0f2f5; /* Optional: Add a background color to the centering container */
-
-  .form {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    max-width: 350px;
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 20px;
-    position: relative;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Optional: Add a subtle shadow */
-  }
-
-  .title {
-    font-size: 28px;
-    color: royalblue;
-    font-weight: 600;
-    letter-spacing: -1px;
-    position: relative;
-    display: flex;
-    align-items: center;
-    padding-left: 30px;
-  }
-
-  .title::before,.title::after {
-    position: absolute;
-    content: "";
-    height: 16px;
-    width: 16px;
-    border-radius: 50%;
-    left: 0px;
-    background-color: royalblue;
-  }
-
-  .title::before {
-    width: 18px;
-    height: 18px;
-    background-color: royalblue;
-  }
-
-  .title::after {
-    width: 18px;
-    height: 18px;
-    animation: pulse 1s linear infinite;
-  }
-
-  .message, .signin {
-    color: rgba(88, 87, 87, 0.822);
-    font-size: 14px;
-  }
-
-  .error {
-    color: red;
-    font-size: 14px;
-    text-align: center;
-  }
-
-  .signin {
-    text-align: center;
-  }
-
-  .signin a {
-    color: royalblue;
-    text-decoration: none;
-  }
-
-  .signin a:hover {
-    text-decoration: underline royalblue;
-  }
-
-  .flex {
-    display: flex;
-    width: 100%;
-    gap: 6px;
-  }
-
-  .form label {
-    position: relative;
-  }
-
-  .form label .input {
-    width: 100%;
-    padding: 10px 10px 20px 10px;
-    outline: 0;
-    border: 1px solid rgba(105, 105, 105, 0.397);
-    border-radius: 10px;
-    color: #000000; /* Set input text color to black */
-  }
-
-  .form label .input + span {
-    position: absolute;
-    left: 10px;
-    top: 15px;
-    color: grey;
-    font-size: 0.9em;
-    cursor: text;
-    transition: 0.3s ease;
-  }
-
-  .form label .input:placeholder-shown + span {
-    top: 15px;
-    font-size: 0.9em;
-  }
-
-  .form label .input:focus + span,.form label .input:valid + span {
-    top: 0px;
-    font-size: 0.7em;
-    font-weight: 600;
-  }
-
-  .form label .input:valid + span {
-    color: green;
-  }
-
-  .submit {
-    border: none;
-    outline: none;
-    background-color: royalblue;
-    padding: 10px;
-    border-radius: 10px;
-    color: #fff;
-    font-size: 16px;
-    transform: .3s ease;
-  }
-
-  .submit:hover {
-    background-color: rgb(56, 90, 194);
-    cursor: pointer;
-  }
-
-  @keyframes pulse {
-    from {
-      transform: scale(0.9);
-      opacity: 1;
-    }
-
-    to {
-      transform: scale(1.8);
-      opacity: 0;
-    }
-  }
-`;
 
 export default SignUpForm; 

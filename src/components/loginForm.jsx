@@ -9,6 +9,7 @@ const LoginForm = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
   const { signIn, signUp, signInWithGoogle } = useAuth();
 
   const handleSubmit = async (e) => {
@@ -17,25 +18,17 @@ const LoginForm = () => {
     setIsLoading(true);
 
     try {
-      await signIn(email, password);
+      if (isSignUp) {
+        await signUp(email, password);
+        // After successful sign up, automatically sign in
+        await signIn(email, password);
+      } else {
+        await signIn(email, password);
+      }
       navigate('/');
     } catch (error) {
-      setError('Failed to sign in. Please check your credentials.');
-      console.error('Sign in error:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSignUp = async () => {
-    setError('');
-    setIsLoading(true);
-
-    try {
-      await signUp(email, password);
-    } catch (error) {
-      setError('Failed to create an account. Please try again.');
-      console.error('Sign up error:', error);
+      setError(error.message || 'Failed to authenticate. Please try again.');
+      console.error('Authentication error:', error);
     } finally {
       setIsLoading(false);
     }
@@ -67,6 +60,7 @@ const LoginForm = () => {
   return (
     <StyledWrapper>
       <form className="form" onSubmit={handleSubmit}>
+        <h2 className="form-title">{isSignUp ? 'Create Account' : 'Welcome Back'}</h2>
         {error && <div className="error-message">{error}</div>}
         <div className="flex-column">
           <label>Email</label>
@@ -115,12 +109,16 @@ const LoginForm = () => {
           type="submit"
           disabled={isLoading}
         >
-          {isLoading ? 'Loading...' : 'Sign In'}
+          {isLoading ? 'Loading...' : (isSignUp ? 'Sign Up' : 'Sign In')}
         </button>
         <p className="p">
-          Don't have an account?{' '}
-          <span className="span" onClick={() => navigate('/signup')} style={{ cursor: 'pointer' }}>
-            Sign Up
+          {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
+          <span 
+            className="span" 
+            onClick={() => setIsSignUp(!isSignUp)} 
+            style={{ cursor: 'pointer' }}
+          >
+            {isSignUp ? 'Sign In' : 'Sign Up'}
           </span>
         </p>
         <p className="p line">Or With</p>
@@ -131,21 +129,13 @@ const LoginForm = () => {
             onClick={handleGoogleSignIn}
             disabled={isLoading}
           >
-            <svg version="1.1" width={20} id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 512 512" style={{enableBackground: 'new 0 0 512 512'}} xmlSpace="preserve">
-              <path style={{fill: '#FBBB00'}} d="M113.47,309.408L95.648,375.94l-65.139,1.378C11.042,341.211,0,299.9,0,256
-                c0-42.451,10.324-82.483,28.624-117.732h0.014l57.992,10.632l25.404,57.644c-5.317,15.501-8.215,32.141-8.215,49.456
-                C103.821,274.792,107.225,292.797,113.47,309.408z" />
-              <path style={{fill: '#518EF8'}} d="M507.527,208.176C510.467,223.662,512,239.655,512,256c0,18.328-1.927,36.206-5.598,53.451
-                c-12.462,58.683-45.025,109.925-90.134,146.187l-0.014-0.014l-73.044-3.727l-10.338-64.535
-                c29.932-17.554,53.324-45.025,65.646-77.911h-136.89V208.176h138.887L507.527,208.176L507.527,208.176z" />
-              <path style={{fill: '#28B446'}} d="M416.253,455.624l0.014,0.014C372.396,490.901,316.666,512,256,512
-                c-97.491,0-182.252-54.491-225.491-134.681l82.961-67.91c21.619,57.698,77.278,98.771,142.53,98.771
-                c28.047,0,54.323-7.582,76.87-20.818L416.253,455.624z" />
-              <path style={{fill: '#F14336'}} d="M419.404,58.936l-82.933,67.896c-23.335-14.586-50.919-23.012-80.471-23.012
-                c-66.729,0-123.429,42.957-143.965,102.724l-83.397-68.276h0.014C71.23,56.123,157.06,0,256,0
-                C318.115,0,375.068,22.126,419.404,58.936z" />
+            <svg version="1.1" width={20} height={20} viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+              <path fill="#FBBB00" d="M113.47,309.408L95.648,375.94l-65.139,1.378C11.042,341.211,0,299.9,0,256c0-42.451,10.324-82.483,28.624-117.732h0.014l57.992,10.632l25.404,57.644c-5.317,15.501-8.215,32.141-8.215,49.456C103.821,274.792,107.225,292.797,113.47,309.408z"/>
+              <path fill="#518EF8" d="M507.527,208.176C510.467,223.662,512,239.655,512,256c0,18.328-1.927,36.206-5.598,53.451c-12.462,58.683-45.025,109.925-90.134,146.187l-0.014-0.014l-73.044-3.727l-10.338-64.535c29.932-17.554,53.324-45.025,65.646-77.911h-136.89V208.176h138.887L507.527,208.176L507.527,208.176z"/>
+              <path fill="#28B446" d="M416.253,455.624l0.014,0.014C372.396,490.901,316.666,512,256,512c-97.491,0-182.252-54.491-225.491-134.681l82.961-67.91c21.619,57.698,77.278,98.771,142.53,98.771c28.047,0,54.323-7.582,76.87-20.818L416.253,455.624z"/>
+              <path fill="#F14336" d="M419.404,58.936l-82.933,67.896c-23.335-14.586-50.919-23.012-80.471-23.012c-66.729,0-123.429,42.957-143.965,102.724l-83.397-68.276h0.014C71.23,56.123,157.06,0,256,0C318.115,0,375.068,22.126,419.404,58.936z"/>
             </svg>
-            Google
+            Continue with Google
           </button>
         </div>
       </form>
@@ -163,12 +153,25 @@ const StyledWrapper = styled.div`
     width: 450px;
     border-radius: 20px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  .form-title {
+    text-align: center;
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    color: #151717;
   }
 
   .error-message {
     color: #dc2626;
     font-size: 14px;
     margin-bottom: 10px;
+    padding: 8px;
+    background-color: #fee2e2;
+    border-radius: 6px;
+    border: 1px solid #fecaca;
   }
 
   ::placeholder {
@@ -244,6 +247,7 @@ const StyledWrapper = styled.div`
     height: 50px;
     width: 100%;
     cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
   }
 
   .button-submit:hover {
@@ -262,6 +266,29 @@ const StyledWrapper = styled.div`
     margin: 5px 0;
   }
 
+  .line {
+    position: relative;
+    margin: 20px 0;
+  }
+
+  .line::before,
+  .line::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 45%;
+    height: 1px;
+    background-color: #ecedec;
+  }
+
+  .line::before {
+    left: 0;
+  }
+
+  .line::after {
+    right: 0;
+  }
+
   .btn {
     margin-top: 10px;
     width: 100%;
@@ -275,16 +302,25 @@ const StyledWrapper = styled.div`
     border: 1px solid #ededef;
     background-color: white;
     cursor: pointer;
-    transition: 0.2s ease-in-out;
+    transition: all 0.2s ease-in-out;
   }
 
   .btn:hover {
     border: 1px solid #2d79f3;
+    background-color: #f8f9fa;
   }
 
   .btn:disabled {
     opacity: 0.7;
     cursor: not-allowed;
+  }
+
+  .google {
+    color: #757575;
+  }
+
+  .google:hover {
+    color: #2d79f3;
   }
 `;
 

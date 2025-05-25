@@ -17,6 +17,7 @@ import eugeneVeryHappy from '../assets/characters/eugene/veryHappy.png';
 // Import general character portraits for neutral expression
 import louisePortrait from '../assets/characters/louise/character.png';
 import eugenePortrait from '../assets/characters/eugene/character.png';
+import elderPortrait from '../assets/npc/elder/character.png';
 
 // Map character names and expressions to portrait images
 const portraits = {
@@ -43,6 +44,10 @@ const portraits = {
      // Default portrait if expression is not found
     default: eugenePortrait,
   },
+  'village elder': {
+    neutral: elderPortrait,
+    default: elderPortrait,
+  },
 };
 
 const DialogBox = ({ onAdvance }) => {
@@ -65,60 +70,55 @@ const DialogBox = ({ onAdvance }) => {
   // Effect for typing animation and dialog progression
   useEffect(() => {
     console.log('DialogBox useEffect triggered.', { currentDialog, dialogIndex, isDialogActive }); // Debug log
-    // More robust check for currentDialog and its dialogue property
-    if (isDialogActive && currentDialog && currentDialog.dialogue && Array.isArray(currentDialog.dialogue) && currentDialog.dialogue.length > dialogIndex) {
+    
+    // Reset states when dialog changes
+    setDisplayText('');
+    setIsTyping(false);
+    setShowAdvanceButton(false);
+    
+    // Clear any existing intervals/timeouts
+    if (typingIntervalRef.current) {
+      clearInterval(typingIntervalRef.current);
+      typingIntervalRef.current = null;
+    }
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+
+    // Only start typing if we have valid dialog content
+    if (isDialogActive && currentDialog?.dialogue?.[dialogIndex]) {
       const fullText = currentDialog.dialogue[dialogIndex];
       console.log('Starting typing for line:', dialogIndex, 'Text:', fullText); // Debug log
-      setDisplayText('');
-      setIsTyping(true);
-      setShowAdvanceButton(false); // Hide advance button while typing
-
-      // Clear previous timeout and interval if they exist
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-      if (typingIntervalRef.current) {
-        clearInterval(typingIntervalRef.current);
-      }
-
+      
       let index = 0;
       const timer = setInterval(() => {
         if (index < fullText.length) {
-          setDisplayText(fullText.substring(0, index + 1));
+          setDisplayText(prev => fullText.substring(0, index + 1));
           index++;
         } else {
           clearInterval(timer);
-          typingIntervalRef.current = null; // Clear interval ref
+          typingIntervalRef.current = null;
           setIsTyping(false);
           setShowAdvanceButton(true);
         }
       }, typingSpeed);
-      typingIntervalRef.current = timer; // Store interval ID in ref
+      
+      typingIntervalRef.current = timer;
+    }
 
-      // Cleanup function to clear the timeout and interval on unmount or dependencies change
-      return () => {
-        if (typingTimeoutRef.current) {
-          clearTimeout(typingTimeoutRef.current);
-        }
-        if (typingIntervalRef.current) {
-          clearInterval(typingIntervalRef.current);
-        }
-      };
-    } else if (!isDialogActive) {
-      // If dialog is no longer active, clear the display text and reset states
-      setDisplayText('');
-      setIsTyping(false);
-      setShowAdvanceButton(false);
-      // Clear any active timeout or interval
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
+    // Cleanup function
+    return () => {
       if (typingIntervalRef.current) {
         clearInterval(typingIntervalRef.current);
         typingIntervalRef.current = null;
       }
-    }
-  }, [currentDialog, dialogIndex, isDialogActive, advanceDialog, endDialog, typingSpeed]); // Added typingSpeed to dependencies
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+    };
+  }, [currentDialog, dialogIndex, isDialogActive, typingSpeed]);
 
   const handleClick = () => {
     console.log('DialogBox clicked.', { isTyping, showAdvanceButton, dialogIndex }); // Debug log

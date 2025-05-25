@@ -7,6 +7,14 @@ const ActiveQuestFolderUI = ({ quests = [] }) => {
     setIsVisible(!isVisible);
   };
 
+  // Filter out completed quests and get first incomplete objective
+  const incompleteQuests = quests.filter(quest => 
+    quest.objectives.some(objective => !objective.completed)
+  ).map(quest => ({
+    ...quest,
+    currentObjective: quest.objectives.find(objective => !objective.completed)
+  }));
+
   // Estimate button height for positioning the dropdown below
   // Based on py-2 and text-sm, let's estimate height around 30-40px.
   const buttonHeight = 35; 
@@ -34,19 +42,14 @@ const ActiveQuestFolderUI = ({ quests = [] }) => {
       >
         <ul className="p-4 space-y-1">
           {/* Map over quests and display details here */}
-          {quests.map((quest, index) => (
+          {incompleteQuests.map((quest, index) => (
             <li key={index} className="py-1">
               <h3 className="font-semibold text-[#F5DEB3]">{quest.title}</h3>
-              {quest.objectives && quest.objectives.length > 0 && (
+              {quest.currentObjective && (
                 <ul className="list-none p-0 m-0 space-y-1 text-sm mt-1">
-                  {quest.objectives.map((objective, objIndex) => (
-                    <li 
-                      key={objIndex}
-                      className={`flex items-center gap-1 ${objective.completed ? 'text-gray-400 line-through' : 'text-white'}`}
-                    >
-                      {objective.description}
-                    </li>
-                  ))}
+                  <li className="flex items-center gap-1 text-white">
+                    {quest.currentObjective.description}
+                  </li>
                 </ul>
               )}
             </li>

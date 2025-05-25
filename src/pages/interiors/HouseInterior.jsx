@@ -140,15 +140,20 @@ const HouseInterior = ({
     // Trigger dialog only if it hasn't been seen and no other dialog is active
     if (!hasSeenHouseDialog && !isDialogActive) {
       console.log("Triggering house entrance dialog."); // Debug log
+      // Start the dialog first
       startDialog({
         characterName: character?.name || 'Character',
         expression: 'smile',
         dialogue: houseEntranceMonologue
       });
-      setHasSeenHouseDialog(true); // Update state via prop
-      console.log("hasSeenHouseDialog set to true."); // Debug log
+      
+      // Use a small delay to ensure the dialog starts before marking it as seen
+      setTimeout(() => {
+        setHasSeenHouseDialog(true);
+        console.log("hasSeenHouseDialog set to true."); // Debug log
+      }, 100);
     }
-  }, [hasSeenHouseDialog, isDialogActive, startDialog, character, setHasSeenHouseDialog]); // Added setHasSeenHouseDialog to dependencies
+  }, [hasSeenHouseDialog, isDialogActive, startDialog, character]); // Removed setHasSeenHouseDialog from dependencies
 
   // Handle advancing the monologue
   const handleAdvanceMonologue = () => {
@@ -558,14 +563,24 @@ const HouseInterior = ({
     }
   };
 
+  // Update the useEffect for keyboard events
   useEffect(() => {
-    window.addEventListener('keydown', handleKeyPress);
-    window.addEventListener('keyup', handleKeyUp);
-    return () => {
-      window.removeEventListener('keydown', handleKeyPress);
-      window.removeEventListener('keyup', handleKeyUp);
+    const handleKeyDown = (e) => {
+      handleKeyPress(e);
     };
-  }, [position, energy, cleanliness, isSleeping]);
+
+    const handleKeyUpEvent = (e) => {
+      handleKeyUp(e);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUpEvent);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUpEvent);
+    };
+  }, [position, energy, cleanliness, isSleeping, isPaused, isDialogActive, inventory, onUseItem]); // Add all dependencies
 
   // Add getCharacterPortrait function
   const getCharacterPortrait = () => {

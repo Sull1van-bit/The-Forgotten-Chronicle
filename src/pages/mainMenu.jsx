@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useSound } from '../context/SoundContext';
 import { MusicProvider, useMusic } from '../context/MusicContext';
 import { AnimatePresence } from 'framer-motion';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, AuthProvider } from '../context/AuthContext';
 import { saveFileService } from '../services/saveFileService';
 import backgroundVideo from '../assets/menu/background.mp4';
 import gameTitleImage from '../assets/menu/title.png';
@@ -278,5 +278,9 @@ function MainMenuContent() {
 
 // Main component
 export default function MainMenu() {
-  return <MainMenuContent />;
+  return (
+    <AuthProvider>
+      <MainMenuContent />
+    </AuthProvider>
+  );
 }

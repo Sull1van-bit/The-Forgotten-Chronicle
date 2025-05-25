@@ -15,7 +15,7 @@ import louiseCharacter from '../assets/characters/louise/character.png';
 // import { useAuth } from '../context/AuthContext';
 
 export default function CharacterSelection({ onSelect, onClose }) {
-  const { playExit, playHover } = useSound();
+  const { playExit, playHover, playClick } = useSound();
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [characterToConfirm, setCharacterToConfirm] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -73,6 +73,7 @@ export default function CharacterSelection({ onSelect, onClose }) {
 
   const handleCharacterSelect = (character) => {
     if (!character) return;
+    playClick();
     setCharacterToConfirm(character);
     setShowConfirmation(true);
   };
@@ -83,12 +84,14 @@ export default function CharacterSelection({ onSelect, onClose }) {
   };
 
   const handleConfirmSelection = () => {
+    playClick();
     onSelect(characterToConfirm);
     setShowConfirmation(false);
     setCharacterToConfirm(null);
   };
 
   const handleCancelConfirmation = () => {
+    playClick();
     setShowConfirmation(false);
     setCharacterToConfirm(null);
   };
