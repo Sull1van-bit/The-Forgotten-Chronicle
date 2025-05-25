@@ -91,7 +91,9 @@ const HouseInterior = ({
   setHasSeenHouseDialog,
   saveGame,
   showEatAnimation,
-  setShowEatAnimation
+  setShowEatAnimation,
+  currentDay,
+  setCurrentDay
 }) => {
   const { user } = useAuth();
   const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume } = useSound();
@@ -272,9 +274,11 @@ const HouseInterior = ({
     const currentHour = gameTime.hours;
     const currentMinute = gameTime.minutes;
     let hoursUntilWake = 0;
+    let shouldAdvanceDay = false;
     
-    if (currentHour >= 21) { // If sleeping after 9 PM
+    if (currentHour >= 19) { // If sleeping after 7 PM
       hoursUntilWake = 24 - currentHour + 6; // Hours until 6 AM next day
+      shouldAdvanceDay = true;
     } else { // If sleeping before 6 AM
       hoursUntilWake = 6 - currentHour;
     }
@@ -308,6 +312,12 @@ const HouseInterior = ({
       const wakeTime = { hours: 6, minutes: 0 };
       if (typeof onTimeUpdate === 'function') {
         onTimeUpdate(wakeTime);
+      }
+
+      // Advance day if sleeping after 7 PM
+      if (shouldAdvanceDay && typeof setCurrentDay === 'function') {
+        setCurrentDay(prevDay => prevDay + 1);
+        console.log('Day advanced to:', currentDay + 1); // Debug log
       }
 
       // Update quest progress after sleeping
@@ -600,10 +610,11 @@ const HouseInterior = ({
     const minutes = time.minutes.toString().padStart(2, '0');
     const ampm = hours >= 12 ? 'PM' : 'AM';
     
+    // Convert to 12-hour format
     hours = hours % 12;
-    hours = hours ? hours : 12;
+    hours = hours ? hours : 12; // Convert 0 to 12
     
-    return `${hours}:${minutes} ${ampm}`;
+    return `Day ${currentDay} - ${hours}:${minutes} ${ampm}`;
   };
 
   return (
@@ -659,7 +670,7 @@ const HouseInterior = ({
       </AnimatePresence>
 
       {/* Add UI Elements - Hide during dialog */}
-      {!isDialogActive && (
+      {!isDialogActive && !isSleeping && (
         <>
           <div className="absolute top-4 left-4 z-50 text-white flex items-center border-8 border-[#D2B48C]" style={{ backgroundColor: '#8B4513', padding: '10px', borderRadius: '10px' }}>
             {/* Character Portrait */}
@@ -755,7 +766,7 @@ const HouseInterior = ({
           </div>
 
           {/* Add Pause Button */}
-          {!isPaused && !isSleeping && (
+          {!isPaused && (
             <img
               src={pauseButton}
               alt="Pause"
@@ -800,21 +811,37 @@ const HouseInterior = ({
         </div>
       )}
 
-      {isSleeping && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)' }}
-        >
-          <div className="text-[#F5DEB3] text-2xl font-bold flex flex-col items-center gap-4">
+      {/* Sleep Overlay */}
+      <AnimatePresence>
+        {isSleeping && (
+          <motion.div
+            className="fixed inset-0 bg-black z-[100]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.8 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }} // Reduced from 1 to 0.5 seconds
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Sleep Animation */}
+      <AnimatePresence>
+        {isSleeping && (
+          <motion.div
+            className="fixed inset-0 z-[110] flex items-center justify-center pointer-events-none"
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.5 }}
+            transition={{ duration: 0.5 }} // Reduced from 1 to 0.5 seconds
+          >
             <img 
               src={characterSprites.sleep}
-              alt="Sleeping"
+              alt="Sleeping" 
               className="w-32 h-32 object-contain"
             />
-            <span>Sleeping...</span>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div 
         className="interior"
@@ -870,6 +897,7 @@ const HouseInterior = ({
             imageRendering: 'pixelated',
             transition: 'all 0.1s linear',
             transformOrigin: 'center',
+            display: isSleeping ? 'none' : 'block'
           }}
         />
       </div>

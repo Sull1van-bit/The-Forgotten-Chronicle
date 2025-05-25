@@ -64,6 +64,8 @@ import potato1 from '../assets/crops/potato1.png';
 import potato2 from '../assets/crops/potato2.png';
 import potato3 from '../assets/crops/potato3.png';
 import hoeIcon from '../assets/items/hoe.png';
+import wateringCanIcon from '../assets/items/WateringCan.png'; // Import watering can icon
+import sickleIcon from '../assets/items/sickle.png'; // Import sickle icon
 
 // Import UI icons
 import heartIcon from '../assets/statbar/heart.png';
@@ -72,6 +74,9 @@ import hygieneIcon from '../assets/statbar/hygiene.png';
 import happinessIcon from '../assets/statbar/happiness.png';
 import energyIcon from '../assets/statbar/energy.png';
 import moneyIcon from '../assets/statbar/money.png';
+
+// Import Counter component
+import Counter from '../components/Counter';
 
 // Define collision points using grid coordinates
 const COLLISION_MAP = [
@@ -375,6 +380,14 @@ const isPlantableSpot = (gridX, gridY) => {
   return PLANTABLE_SPOTS.some(point => point.x === gridX && point.y === gridY);
 };
 
+// Define time constants for day/night cycle
+const sunriseStart = 5 * 60; // 5:00 AM
+const sunriseEnd = 7 * 60;   // 7:00 AM
+const sunsetStart = 17 * 60; // 5:00 PM
+const sunsetEnd = 19 * 60;   // 7:00 PM
+const nightStart = 20 * 60;  // 8:00 PM
+const nightEnd = 4 * 60;     // 4:00 AM
+
 const Game = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -394,11 +407,19 @@ const Game = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showShop, setShowShop] = useState(false);
   const [showShopConfirm, setShowShopConfirm] = useState(false);
+  const [showTimeSkipPopup, setShowTimeSkipPopup] = useState(false);
+  const [timeSkipHours, setTimeSkipHours] = useState('');
 
   // State for new quest pop-up - MOVED HERE
   const [showNewQuestPopup, setShowNewQuestPopup] = useState(false);
   const [newQuestTitle, setNewQuestTitle] = useState('');
   const [showEatAnimation, setShowEatAnimation] = useState(false);
+
+  // Add plantedCrops state
+  const [plantedCrops, setPlantedCrops] = useState([]);
+
+  // Add state to control visibility of interactive icons on plantable spots (hoe or watering can)
+  const [interactiveIcons, setInteractiveIcons] = useState({});
 
   // Ref to store previous quests state for comparison - MOVED HERE
   const prevQuestsRef = useRef([]);
@@ -411,6 +432,10 @@ const Game = () => {
   const [money, setMoney] = useState(0);
   const [cleanliness, setCleanliness] = useState(100);
   const [gameTime, setGameTime] = useState({ hours: 6, minutes: 0 }); // Start at 6:00 AM
+  const [currentDay, setCurrentDay] = useState(1); // Add day counter
+
+  // Add state to control visibility of hoe icons on plantable spots
+  const [showHoeIcon, setShowHoeIcon] = useState({});
 
   // Add state for house dialog
   const [hasSeenHouseDialog, setHasSeenHouseDialog] = useState(false);
@@ -900,6 +925,11 @@ const Game = () => {
       }
 
       switch (e.key.toLowerCase()) {
+        case 't': // Time skip
+          if (!isDialogActive && !isPaused && !showShop) {
+            setShowTimeSkipPopup(true);
+          }
+          break;
         case 'w':
         case 'arrowup':
           console.log('Moving up');
@@ -1187,7 +1217,77 @@ const Game = () => {
     });
   };
 
-  // Add time system effect
+  // Add a function to check proximity to plantable spots and update showHoeIcon state
+  const checkPlantableProximity = useMemo(() => (playerX, playerY) => {
+    const playerGridPos = getGridPosition(playerX, playerY);
+    const proximityThreshold = 1.5; // Show icon when player is within 1.5 grid cells
+
+    const spotsToShowIcon = {};
+    PLANTABLE_SPOTS.forEach(spot => {
+      const distance = Math.sqrt(
+        Math.pow(playerGridPos.gridX - spot.x, 2) + Math.pow(playerGridPos.gridY - spot.y, 2)
+      );
+      // Check proximity and if the spot is not already planted
+      const isPlanted = plantedCrops.some(crop => crop.x === spot.x && crop.y === spot.y);
+      if (distance < proximityThreshold && !isPlanted) {
+        spotsToShowIcon[`${spot.x},${spot.y}`] = true;
+      }
+    });
+    setShowHoeIcon(spotsToShowIcon);
+  }, [PLANTABLE_SPOTS, plantedCrops, getGridPosition]); // Dependencies for useMemo
+
+  // Effect to update hoe icon visibility when player position or plantedCrops changes
+  useEffect(() => {
+    checkPlantableProximity(position.x, position.y);
+  }, [position, plantedCrops, checkPlantableProximity]);
+
+  // Add a function to check proximity to plantable spots and update interactiveIcons state
+  const checkInteractiveIcons = useMemo(() => (playerX, playerY) => {
+    const playerGridPos = getGridPosition(playerX, playerY);
+    const proximityThreshold = 1.5; // Show icon when player is within 1.5 grid cells
+
+    const iconsToShow = {};
+    PLANTABLE_SPOTS.forEach(spot => {
+      const distance = Math.sqrt(
+        Math.pow(playerGridPos.gridX - spot.x, 2) + Math.pow(playerGridPos.gridY - spot.y, 2)
+      );
+      const isPlanted = plantedCrops.find(crop => crop.x === spot.x && crop.y === spot.y);
+
+      if (distance < proximityThreshold) {
+        if (!isPlanted) {
+          // Show hoe icon if spot is empty and near
+          iconsToShow[`${spot.x},${spot.y}`] = 'hoe';
+        } else if (isPlanted.stage === 3) {
+          // Show sickle icon if crop is mature (stage 3)
+          iconsToShow[`${spot.x},${spot.y}`] = 'sickle';
+        } else if (isPlanted.needsWatering) {
+          // Show watering can icon if spot has a crop that needs watering and is near
+          iconsToShow[`${spot.x},${spot.y}`] = 'wateringCan';
+        }
+      }
+    });
+    setInteractiveIcons(iconsToShow);
+  }, [PLANTABLE_SPOTS, plantedCrops, getGridPosition]); // Dependencies for useMemo
+
+  // Effect to update interactive icon visibility when player position or plantedCrops changes
+  useEffect(() => {
+    checkInteractiveIcons(position.x, position.y);
+  }, [position, plantedCrops, checkInteractiveIcons]);
+
+  // Refs to hold the latest state for the time interval
+  const plantedCropsRef = useRef(plantedCrops);
+  const currentDayRef = useRef(currentDay);
+
+  // Update refs whenever state changes
+  useEffect(() => {
+    plantedCropsRef.current = plantedCrops;
+  }, [plantedCrops]);
+
+  useEffect(() => {
+    currentDayRef.current = currentDay;
+  }, [currentDay]);
+
+  // Update time system effect to handle days and watering reset
   useEffect(() => {
     const timeInterval = setInterval(() => {
       setGameTime(prevTime => {
@@ -1197,6 +1297,38 @@ const Game = () => {
         if (newMinutes >= 60) {
           newMinutes = 0;
           newHours = (newHours + 1) % 24;
+
+          // Check if day has changed
+          if (newHours === 0) {
+            console.log(`--- Start of Day ${currentDayRef.current + 1} ---`); // Log start of new day using ref
+            setCurrentDay(prevDay => {
+              const newDay = prevDay + 1;
+
+              // Update crop state based on watering and day progression
+              setPlantedCrops(prevCrops => prevCrops.map(crop => {
+                console.log(`Day ${newDay}: Processing crop at (${crop.x}, ${crop.y}), Stage: ${crop.stage}, Needs Watering (before): ${crop.needsWatering}`); // Log crop state before update
+                // Only process non-mature crops
+                if (crop.stage < 3) {
+                  // Check if the crop was watered on the previous day
+                  const grewToday = !crop.needsWatering;
+
+                  // Advance stage if it grew today, otherwise keep current stage
+                  const nextStage = grewToday ? Math.min(3, crop.stage + 1) : crop.stage;
+
+                  // All non-mature crops need watering at the start of a new simulated day
+                  const needsWateringForNewDay = nextStage < 3; // Needs watering only if not mature after growth
+
+                  console.log(`Day ${newDay}: Crop at (${crop.x}, ${crop.y}), Grew Today: ${grewToday}, Next Stage: ${nextStage}, Needs Watering (after): ${needsWateringForNewDay}`); // Log crop state after calculating
+                  return { ...crop, stage: nextStage, needsWatering: needsWateringForNewDay };
+                }
+                // Mature crops (stage 3) don't need watering and are ready for harvest
+                console.log(`Day ${newDay}: Mature crop at (${crop.x}, ${crop.y}), Stage: 3, Needs Watering (after): ${crop.needsWatering}`); // Log mature crop state
+                return crop; // Keep mature crops as they are, waiting for harvest
+              }));
+
+              return newDay;
+            });
+          }
         }
 
         return { hours: newHours, minutes: newMinutes };
@@ -1204,7 +1336,7 @@ const Game = () => {
     }, 1000); // Update every second
 
     return () => clearInterval(timeInterval);
-  }, []);
+  }, []); // Empty dependency array as interval logic reads from refs
 
   // Add onTimeUpdate function
   const onTimeUpdate = (newTime) => {
@@ -1221,7 +1353,7 @@ const Game = () => {
     hours = hours % 12;
     hours = hours ? hours : 12; // Convert 0 to 12
     
-    return `${hours}:${minutes} ${ampm}`;
+    return `Day ${currentDay} - ${hours}:${minutes} ${ampm}`;
   };
 
   // Calculate darkness level based on time
@@ -1261,6 +1393,75 @@ const Game = () => {
       // Day time - no darkness
       return 0;
     }
+  };
+
+  // Add this before the return statement
+  const handleTimeSkip = (hours) => {
+    const hoursToSkip = parseInt(hours);
+    console.log(`handleTimeSkip called with hours: ${hoursToSkip}`); // Log hours requested to skip
+    if (isNaN(hoursToSkip) || hoursToSkip <= 0) {
+      alert('Please enter a valid number of hours');
+      return;
+    }
+
+    const totalMinutesToSkip = hoursToSkip * 60;
+    let remainingMinutesToSkip = totalMinutesToSkip;
+
+    setGameTime(prevTime => {
+      let currentTotalMinutes = prevTime.hours * 60 + prevTime.minutes;
+      let newTotalMinutes = currentTotalMinutes + totalMinutesToSkip;
+
+      console.log(`Current total minutes: ${currentTotalMinutes}`); // Log current time in minutes
+      console.log(`New total minutes (before rollover): ${newTotalMinutes}`); // Log new time before rollover
+
+      let daysToAdd = Math.floor(newTotalMinutes / (24 * 60)) - Math.floor(currentTotalMinutes / (24 * 60));
+      console.log(`Calculated days to add: ${daysToAdd}`); // Log calculated days to add
+
+      // Only update day and simulate crop growth if at least one full day has passed
+      if (daysToAdd > 0) {
+        setCurrentDay(prevDay => {
+          const newDay = prevDay + daysToAdd;
+          console.log(`Setting new day to: ${newDay}`); // Log the new day being set
+
+          // Simulate daily growth and watering needs for each skipped day
+          setPlantedCrops(prevCrops => {
+            let updatedCrops = [...prevCrops];
+            console.log(`Simulating crop growth for ${daysToAdd} skipped days...`); // Log start of simulation
+            for (let i = 0; i < daysToAdd; i++) {
+              console.log(`Simulating Day ${currentDay + i + 1}...`); // Log current simulated day
+              updatedCrops = updatedCrops.map(crop => {
+                if (crop.stage < 3) {
+                  const grewToday = !crop.needsWatering;
+                  const nextStage = grewToday ? Math.min(3, crop.stage + 1) : crop.stage;
+                  const needsWateringForNewDay = nextStage < 3;
+                  // No need for console logs inside this inner loop for now, relies on the time effect logs
+                  return { ...crop, stage: nextStage, needsWatering: needsWateringForNewDay };
+                }
+                return crop;
+              });
+            }
+            console.log(`Simulation complete.`); // Log end of simulation
+            return updatedCrops;
+          });
+
+          return newDay;
+        });
+      } else {
+          console.log('Not enough time skipped for a full day change.'); // Log if not enough time for day change
+      }
+
+      // Calculate the final time within the day
+      newTotalMinutes = newTotalMinutes % (24 * 60);
+      const finalHours = Math.floor(newTotalMinutes / 60);
+      const finalMinutes = newTotalMinutes % 60;
+
+      console.log(`Final time set to: ${finalHours}:${finalMinutes}`); // Log final time set
+
+      return { hours: finalHours, minutes: finalMinutes };
+    });
+
+    setTimeSkipHours('');
+    setShowTimeSkipPopup(false);
   };
 
   if (isInInterior) {
@@ -1303,6 +1504,8 @@ const Game = () => {
           saveGame={saveGame}
           showEatAnimation={showEatAnimation}
           setShowEatAnimation={setShowEatAnimation}
+          currentDay={currentDay}
+          setCurrentDay={setCurrentDay}
         />
       </DialogProvider>
     );
@@ -1311,7 +1514,7 @@ const Game = () => {
   return (
     <div className="relative w-full h-screen bg-black overflow-hidden">
       {/* Styled Status Bar (HP, Hunger, Hygiene, Happiness) */}
-      {!isDialogActive && !isLoading && !showCutscene && !showShop && (
+      {!isDialogActive && !isLoading && !showCutscene && !showShop && !isSleeping && (
         <>
           <div className="absolute top-4 left-4 z-50 text-white flex items-center border-8 border-[#D2B48C]" style={{ backgroundColor: '#8B4513', padding: '10px', borderRadius: '10px' }}>
             {/* Character Portrait */}
@@ -1394,13 +1597,15 @@ const Game = () => {
 
           {/* Wrap ActiveQuestFolderUI for positioning */}
           <div className="fixed right-8 top-[25%] transform -translate-y-1/2 z-[90] scale-125">
-            {!isDialogActive && !isLoading && !showCutscene && !showShop && <ActiveQuestFolderUI quests={quests} />}
+            {!isDialogActive && !isLoading && !showCutscene && !showShop && !isSleeping && <ActiveQuestFolderUI quests={quests} />}
           </div>
-          {!isDialogActive && !isLoading && !showCutscene && !showShop && <QuestFolder quests={quests} />}
+          {!isDialogActive && !isLoading && !showCutscene && !showShop && !isSleeping && <QuestFolder quests={quests} />}
 
           {/* Minimap */}
-          {!isLoading && !showCutscene && !showShop && (
-            <Minimap position={position} shopPoints={shopPoints} />
+          {!isLoading && !showCutscene && !showShop && !isSleeping && (
+            <div className="z-[50]"> {/* Added wrapper with higher z-index */}
+              <Minimap position={position} shopPoints={shopPoints} />
+            </div>
           )}
         </>
       )}
@@ -1608,7 +1813,7 @@ const Game = () => {
       )}
 
       {/* Add Inventory */}
-      {!isDialogActive && !isPaused && !isLoading && !showCutscene && !showShop && (
+      {!isDialogActive && !isPaused && !isLoading && !showCutscene && !showShop && !isSleeping && (
         <Inventory 
           items={inventory} 
           onUseItem={handleUseItem}
@@ -1653,55 +1858,64 @@ const Game = () => {
       </AnimatePresence>
 
       {/* Day/Night Cycle Overlay */}
-      <div 
-        className="fixed inset-0 z-[40] pointer-events-none"
-        style={{
-          backgroundColor: 'black',
-          opacity: getDarknessLevel(gameTime),
-          transition: 'opacity 2s cubic-bezier(0.4, 0, 0.2, 1)'
-        }}
-      />
+      {(() => {
+        const totalMinutes = gameTime.hours * 60 + gameTime.minutes;
+        return (
+          <div 
+            className={`fixed inset-0 pointer-events-none z-[45] transition-colors duration-1000 ${
+              totalMinutes >= nightStart || totalMinutes < sunriseStart ? 'bg-black/50' :
+              totalMinutes >= sunsetEnd && totalMinutes < nightStart ? 'bg-black/30' :
+              totalMinutes >= sunriseStart && totalMinutes < sunriseEnd ? 'bg-black/20' :
+              'bg-transparent'
+            }`}
+          />
+        );
+      })()}
 
       {/* Render HouseInterior or Main Game */}
       {isInInterior ? (
-        <HouseInterior 
-          position={position} 
-          setPosition={setPosition} 
-          onExit={handleExitInterior} 
-          character={character}
-          health={health}
-          setHealth={setHealth}
-          energy={energy}
-          setEnergy={setEnergy}
-          hunger={hunger}
-          setHunger={setHunger}
-          happiness={happiness}
-          setHappiness={setHappiness}
-          money={money}
-          setMoney={setMoney}
-          isSleeping={isSleeping}
-          setIsSleeping={setIsSleeping}
-          cleanliness={cleanliness}
-          setCleanliness={setCleanliness}
-          inventory={inventory}
-          quests={quests}
-          setQuests={setQuests}
-          onUseItem={handleUseItem}
-          isPaused={isPaused}
-          handlePause={handlePause}
-          handleResume={handleResume}
-          handleSettings={handleSettings}
-          handleCloseSettings={handleCloseSettings}
-          handleExit={handleExit}
-          showSettings={showSettings}
-          gameTime={gameTime}
-          onTimeUpdate={onTimeUpdate}
-          hasSeenHouseDialog={hasSeenHouseDialog}
-          setHasSeenHouseDialog={setHasSeenHouseDialog}
-          saveGame={saveGame}
-          showEatAnimation={showEatAnimation}
-          setShowEatAnimation={setShowEatAnimation}
-        />
+        <DialogProvider>
+          <HouseInterior 
+            position={position} 
+            setPosition={setPosition} 
+            onExit={handleExitInterior} 
+            character={character}
+            health={health}
+            setHealth={setHealth}
+            energy={energy}
+            setEnergy={setEnergy}
+            hunger={hunger}
+            setHunger={setHunger}
+            happiness={happiness}
+            setHappiness={setHappiness}
+            money={money}
+            setMoney={setMoney}
+            isSleeping={isSleeping}
+            setIsSleeping={setIsSleeping}
+            cleanliness={cleanliness}
+            setCleanliness={setCleanliness}
+            inventory={inventory}
+            quests={quests}
+            setQuests={setQuests}
+            onUseItem={handleUseItem}
+            isPaused={isPaused}
+            handlePause={handlePause}
+            handleResume={handleResume}
+            handleSettings={handleSettings}
+            handleCloseSettings={handleCloseSettings}
+            handleExit={handleExit}
+            showSettings={showSettings}
+            gameTime={gameTime}
+            onTimeUpdate={onTimeUpdate}
+            hasSeenHouseDialog={hasSeenHouseDialog}
+            setHasSeenHouseDialog={setHasSeenHouseDialog}
+            saveGame={saveGame}
+            showEatAnimation={showEatAnimation}
+            setShowEatAnimation={setShowEatAnimation}
+            currentDay={currentDay}
+            setCurrentDay={setCurrentDay}
+          />
+        </DialogProvider>
       ) : (
         <>
           {/* Elder NPC Sprite */}
@@ -1834,15 +2048,132 @@ const Game = () => {
                   <div className="grid" style={{ width: `${MAP_WIDTH}px`, height: `${MAP_HEIGHT}px` }}>
                     {renderGrid}
                   </div>
-                  <div
-                    className="player"
-                    style={{
-                      left: `${position.x}px`,
-                      top: `${position.y}px`,
-                      backgroundImage: `url(${getSprite()})`,
-                      imageRendering: 'pixelated',
-                    }}
-                  />
+                  {/* Render planted crops */}
+                  {plantedCrops.map((crop, index) => (
+                    <div
+                      key={`crop-${index}`}
+                      className="crop"
+                      style={{
+                        position: 'absolute',
+                        left: `${crop.x * GRID_SIZE}px`,
+                        top: `${crop.y * GRID_SIZE + 12}px`,
+                        width: `${GRID_SIZE * 0.8}px`,
+                        height: `${GRID_SIZE * 0.8}px`,
+                        backgroundImage: `url(${CROP_STAGES[crop.type][crop.stage]})`,
+                        backgroundSize: 'contain',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'center',
+                        zIndex: 2
+                      }}
+                    />
+                  ))}
+                  {/* Render hoe icons on plantable spots */}
+                  {PLANTABLE_SPOTS.map(spot => {
+                    const spotKey = `${spot.x},${spot.y}`;
+                    const iconType = interactiveIcons[spotKey];
+
+                    if (iconType) {
+                      const iconSrc = iconType === 'hoe' ? hoeIcon : wateringCanIcon;
+                      const altText = iconType === 'hoe' ? 'Plant' : 'Water';
+
+                      return (
+                        <img
+                          key={`${iconType}-${spotKey}`}
+                          src={iconSrc}
+                          alt={altText}
+                          className="absolute pixelated z-50 hover:scale-110 transition-transform duration-100"
+                          style={{
+                            left: `${spot.x * GRID_SIZE + GRID_SIZE / 4}px`,
+                            top: `${spot.y * GRID_SIZE + GRID_SIZE / 4}px`,
+                            width: `${GRID_SIZE / 2}px`,
+                            height: `${GRID_SIZE / 2}px`,
+                            cursor: 'pointer',
+                          }}
+                          onClick={() => {
+                            const playerGridPos = getGridPosition(position.x, position.y);
+                            const isCurrentlyPlanted = plantedCrops.find(crop => crop.x === spot.x && crop.y === spot.y);
+
+                            if (iconType === 'hoe') {
+                              // Planting logic
+                              const isCurrentlyPlantable = PLANTABLE_SPOTS.some(p => p.x === playerGridPos.gridX && p.y === playerGridPos.gridY);
+
+                              if (isCurrentlyPlantable && !isCurrentlyPlanted) {
+                                const seedItem = inventory.find(item => item.name === 'Seeds');
+                                if (seedItem && seedItem.quantity > 0) {
+                                  setInventory(prev => prev.map(item => 
+                                    item.name === 'Seeds' ? { ...item, quantity: item.quantity - 1 } : item
+                                  ).filter(item => item.quantity > 0));
+
+                                  setPlantedCrops(prev => [...prev, {
+                                    x: spot.x,
+                                    y: spot.y,
+                                    type: 'potato',
+                                    stage: 1,
+                                    plantTime: Date.now(), // Not strictly needed for day-based growth, but good to keep
+                                    plantDay: currentDay, // Record the day it was planted
+                                    needsWatering: true, // Needs watering immediately on day 1
+                                  }]);
+                                  console.log(`Planted potato at ${spot.x}, ${spot.y} on Day ${currentDay}`);
+
+                                  // Update quest objective: Plant the seed (assuming this quest exists and objective matches)
+                                  setQuests(prevQuests => {
+                                    const updatedQuests = prevQuests.map(quest => {
+                                      if (quest.title === "The First Harvest") { // Adjust quest title if needed
+                                        return {
+                                          ...quest,
+                                          objectives: quest.objectives.map(objective => {
+                                            if (objective.description === "Plant the seed") { // Adjust objective description if needed
+                                              return { ...objective, completed: true };
+                                            }
+                                            return objective;
+                                          })
+                                        };
+                                      }
+                                      return quest;
+                                    });
+                                    return updatedQuests;
+                                  });
+
+                                } else {
+                                  console.log('You need seeds to plant!');
+                                }
+                              } else {
+                                console.log('Cannot plant here right now.');
+                              }
+                            } else if (iconType === 'wateringCan' && isCurrentlyPlanted && isCurrentlyPlanted.needsWatering) {
+                              // Watering logic
+                              setPlantedCrops(prevCrops => prevCrops.map(crop => {
+                                if (crop.x === spot.x && crop.y === spot.y) {
+                                  return { ...crop, needsWatering: false }; // Mark as watered for the current day
+                                }
+                                return crop;
+                              }));
+                              console.log(`Watered crop at ${spot.x}, ${spot.y} on Day ${currentDay}`);
+                            } else if (iconType === 'sickle' && isCurrentlyPlanted && isCurrentlyPlanted.stage === 3) {
+                              // Harvest logic
+                              console.log(`Harvesting crop at ${spot.x}, ${spot.y} on Day ${currentDay}`);
+                              // Add harvested item (Potato) to inventory
+                              addItemToInventory(2); // Assuming Potato has ID 2 based on ITEMS definition
+                              // Remove the crop from plantedCrops
+                              setPlantedCrops(prevCrops => prevCrops.filter(crop => !(crop.x === spot.x && crop.y === spot.y)));
+                            }
+                          }}
+                        />
+                      );
+                    }
+                    return null;
+                  })}
+                  {!isSleeping && (
+                    <div
+                      className="player"
+                      style={{
+                        left: `${position.x}px`,
+                        top: `${position.y}px`,
+                        backgroundImage: `url(${getSprite()})`,
+                        imageRendering: 'pixelated',
+                      }}
+                    />
+                  )}
                   <div 
                     className="map-foreground"
                     style={{
@@ -1896,6 +2227,63 @@ const Game = () => {
               >
                 Cancel
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Time Skip Popup */}
+      {showTimeSkipPopup && !isDialogActive && !isPaused && !showShop && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}>
+          <div className="bg-[#8B4513] p-8 rounded-lg max-w-md w-full mx-4 relative border-8 border-[#D2B48C] shadow-lg flex flex-col items-center gap-4">
+            <h2 className="text-2xl font-bold text-center text-[#F5DEB3]">Skip Time</h2>
+            <div className="flex flex-col gap-2 w-full">
+              <div className="flex flex-col items-center gap-4">
+                <div className="flex items-center gap-4">
+                  <button 
+                    className="bg-[#8B4513] text-[#F5DEB3] w-12 h-12 rounded-full border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 flex items-center justify-center text-2xl"
+                    onClick={() => setTimeSkipHours(prev => Math.max(0, (parseInt(prev) || 0) - 1).toString())}
+                  >
+                    -
+                  </button>
+                  <div className="bg-[#A0522D] p-4 rounded-lg border-4 border-[#D2B48C]">
+                    <Counter
+                      value={parseInt(timeSkipHours) || 0}
+                      fontSize={48}
+                      textColor="#F5DEB3"
+                      places={[100, 10, 1]}
+                      containerStyle={{ width: '100%' }}
+                      counterStyle={{ justifyContent: 'center' }}
+                      gradientFrom="#A0522D"
+                      gradientTo="transparent"
+                    />
+                  </div>
+                  <button 
+                    className="bg-[#8B4513] text-[#F5DEB3] w-12 h-12 rounded-full border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 flex items-center justify-center text-2xl"
+                    onClick={() => setTimeSkipHours(prev => ((parseInt(prev) || 0) + 1).toString())}
+                  >
+                    +
+                  </button>
+                </div>
+                <div className="text-[#F5DEB3] text-lg">Hours</div>
+              </div>
+              <div className="flex flex-col gap-2 mt-4">
+                <button 
+                  className="bg-[#8B4513] text-[#F5DEB3] px-6 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 w-full"
+                  onClick={() => handleTimeSkip(timeSkipHours)}
+                >
+                  Skip Time
+                </button>
+                <button 
+                  className="bg-[#8B4513] text-[#F5DEB3] px-6 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 w-full"
+                  onClick={() => {
+                    setShowTimeSkipPopup(false);
+                    setTimeSkipHours('');
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>

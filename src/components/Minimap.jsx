@@ -60,7 +60,7 @@ const Minimap = ({ position, shopPoints }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed bottom-4 left-4 z-40"
+          className="fixed bottom-4 left-4 z-[60]"
         >
           <div className="bg-[#8B4513] p-2 rounded-lg border-4 border-[#D2B48C] shadow-lg">
             <div className="w-64 h-48 bg-[#DEB887] rounded relative overflow-hidden" ref={minimapRef}>
