@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
+import { useSound } from '../context/SoundContext';
 
 const ActiveQuestFolderUI = ({ quests = [] }) => {
   const [isVisible, setIsVisible] = useState(false); // Start hidden
+  const { playClick, playHover } = useSound();
 
   const toggleVisibility = () => {
+    playClick();
     setIsVisible(!isVisible);
   };
 
@@ -25,7 +28,8 @@ const ActiveQuestFolderUI = ({ quests = [] }) => {
       {/* Visible button/icon */}
       <div
         className="bg-[#8B4513] py-2 rounded-md shadow-lg hover:bg-[#A0522D] cursor-pointer flex justify-center items-center gap-2 px-3 border border-[#D2B48C]"
-        onClick={toggleVisibility} // Add click handler
+        onClick={toggleVisibility}
+        onMouseEnter={playHover}
       >
         {/* Text label */}
         <p className="text-sm font-semibold text-[#F5DEB3]">Quest</p>

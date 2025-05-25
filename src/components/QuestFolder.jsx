@@ -1,20 +1,24 @@
 import React, { useState } from 'react';
 import Folder from './Folder';
 import PixelCard from './PixelCard';
+import { useSound } from '../context/SoundContext';
 
 const QuestFolder = ({ quests = [] }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showQuestCard, setShowQuestCard] = useState(false);
   const [selectedQuestIndex, setSelectedQuestIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  const { playClick, playHover } = useSound();
 
   const handleFolderClick = () => {
+    playClick();
     setIsOpen(!isOpen);
   };
 
   const handlePaperClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    playClick();
     if (quests && quests.length > 0) {
       // Start with the latest quest
       setSelectedQuestIndex(quests.length - 1);
@@ -25,6 +29,7 @@ const QuestFolder = ({ quests = [] }) => {
   const handleCloseQuestCard = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    playClick();
     setShowQuestCard(false);
   };
 
@@ -33,6 +38,7 @@ const QuestFolder = ({ quests = [] }) => {
     e.stopPropagation();
     if (isAnimating) return;
     
+    playClick();
     setIsAnimating(true);
     setSelectedQuestIndex((prev) => (prev + 1) % quests.length);
     setTimeout(() => setIsAnimating(false), 300);
@@ -43,6 +49,7 @@ const QuestFolder = ({ quests = [] }) => {
     e.stopPropagation();
     if (isAnimating) return;
     
+    playClick();
     setIsAnimating(true);
     setSelectedQuestIndex((prev) => (prev - 1 + quests.length) % quests.length);
     setTimeout(() => setIsAnimating(false), 300);
@@ -55,6 +62,7 @@ const QuestFolder = ({ quests = [] }) => {
       key="quest" 
       className="p-2 cursor-pointer hover:bg-yellow-100 transition-colors w-full h-full"
       onClick={handlePaperClick}
+      onMouseEnter={playHover}
       style={{ zIndex: 2 }}
     ></div>,
     <div key="empty2" className="p-2 opacity-50"></div>
@@ -69,6 +77,7 @@ const QuestFolder = ({ quests = [] }) => {
           items={questItems}
           className="cursor-pointer"
           onClick={handleFolderClick}
+          onMouseEnter={playHover}
         />
       </div>
 
@@ -86,6 +95,7 @@ const QuestFolder = ({ quests = [] }) => {
           >
             <button 
               onClick={handleCloseQuestCard}
+              onMouseEnter={playHover}
               className="absolute -top-3 -right-3 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center hover:bg-red-600 transition-colors z-[201] text-sm shadow-lg"
             >
               ✕
@@ -96,12 +106,14 @@ const QuestFolder = ({ quests = [] }) => {
               <>
                 <button 
                   onClick={handlePrevQuest}
+                  onMouseEnter={playHover}
                   className="absolute -left-12 top-1/2 -translate-y-1/2 bg-[#8B4513] text-[#F5DEB3] w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#A0522D] transition-colors z-[201] text-sm shadow-lg border-2 border-[#D2B48C]"
                 >
                   ←
                 </button>
                 <button 
                   onClick={handleNextQuest}
+                  onMouseEnter={playHover}
                   className="absolute -right-12 top-1/2 -translate-y-1/2 bg-[#8B4513] text-[#F5DEB3] w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#A0522D] transition-colors z-[201] text-sm shadow-lg border-2 border-[#D2B48C]"
                 >
                   →

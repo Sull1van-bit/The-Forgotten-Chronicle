@@ -392,8 +392,8 @@ const Game = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume } = useSound();
-  const { musicEnabled, setMusicEnabled, musicVolume, setMusicVolume } = useMusic();
+  const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume, playClick, playHover, playCash } = useSound();
+  const { musicEnabled, setMusicEnabled, musicVolume, setMusicVolume, startMusicPlayback } = useMusic();
   const { startDialog, advanceDialog, endDialog, isDialogActive, currentDialog, dialogIndex } = useDialog();
   const character = location.state?.character;
   const isLoadedGame = location.state?.isLoadedGame;
@@ -898,7 +898,11 @@ const Game = () => {
   const handleResume = () => setIsPaused(false);
   const handleSettings = () => setShowSettings(true);
   const handleCloseSettings = () => setShowSettings(false);
-  const handleExit = () => navigate('/');
+  const handleExit = () => {
+    console.log('Exit button clicked');
+    // Force a page reload when navigating to main menu
+    window.location.href = '/';
+  };
 
   // Prevent movement and interactions when paused, in dialogue, in shop, or talking to elder
   useEffect(() => {
@@ -1464,6 +1468,23 @@ const Game = () => {
     setShowTimeSkipPopup(false);
   };
 
+  // Add effect to handle music transition
+  useEffect(() => {
+    // Stop current music
+    setMusicEnabled(false);
+    
+    // Start game music after a short delay
+    const timer = setTimeout(() => {
+      if (musicEnabled) {
+        startMusicPlayback();
+      }
+    }, 100);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, []); // Empty dependency array means this runs once when component mounts
+
   if (isInInterior) {
     return (
       <DialogProvider>
@@ -1635,7 +1656,11 @@ const Game = () => {
             className="fixed top-8 right-8 z-[100] pointer-events-auto"
           >
             <button
-              onClick={handleSkipMonologue}
+              onClick={() => {
+                playClick();
+                handleSkipMonologue();
+              }}
+              onMouseEnter={playHover}
               style={{ backgroundColor: 'rgba(55, 65, 81, 0.85)' }}
               className="px-4 py-2 text-white rounded-lg hover:bg-gray-600 transition-colors shadow-lg"
             >
@@ -1644,7 +1669,10 @@ const Game = () => {
           </div>
           <div
             className="fixed inset-0 z-50 flex items-end justify-center p-4 pointer-events-auto"
-            onClick={handleAdvanceMonologue}
+            onClick={() => {
+              playClick();
+              handleAdvanceMonologue();
+            }}
           >
             <div className="flex flex-col items-center pointer-events-auto">
               <DialogBox
@@ -1661,8 +1689,12 @@ const Game = () => {
         <img
           src={pauseButton}
           alt="Pause"
-          onClick={handlePause}
-          className="fixed top-4 right-4 z-50 cursor-pointer"
+          onClick={() => {
+            playClick();
+            handlePause();
+          }}
+          onMouseEnter={playHover}
+          className="fixed top-4 right-4 z-50 cursor-pointer hover:scale-110 transition-transform duration-200"
           style={{ width: 96, height: 96, objectFit: 'contain' }}
         />
       )}
@@ -1676,9 +1708,36 @@ const Game = () => {
           <div className="bg-[#8B4513] p-8 rounded-lg max-w-md w-full mx-4 relative border-8 border-[#D2B48C] shadow-lg flex flex-col items-center gap-8">
             <h2 className="text-2xl font-bold mb-2 text-center text-[#F5DEB3] tracking-widest">PAUSED</h2>
             <div className="flex flex-col items-center gap-6 w-full">
-              <button className="pause-menu-btn w-56" onClick={handleResume}>Resume</button>
-              <button className="pause-menu-btn w-56" onClick={handleSettings}>Settings</button>
-              <button className="pause-menu-btn w-56" onClick={handleExit}>Exit</button>
+              <button 
+                className="pause-menu-btn w-56" 
+                onClick={() => {
+                  playClick();
+                  handleResume();
+                }}
+                onMouseEnter={playHover}
+              >
+                Resume
+              </button>
+              <button 
+                className="pause-menu-btn w-56" 
+                onClick={() => {
+                  playClick();
+                  handleSettings();
+                }}
+                onMouseEnter={playHover}
+              >
+                Settings
+              </button>
+              <button 
+                className="pause-menu-btn w-56" 
+                onClick={() => {
+                  playClick();
+                  handleExit();
+                }}
+                onMouseEnter={playHover}
+              >
+                Exit
+              </button>
             </div>
           </div>
         </div>
@@ -1724,6 +1783,7 @@ const Game = () => {
                     onClick={() => {
                       const seedItem = getItemById(1); // Use getItemById with ID 1 for Seeds
                       if (seedItem && money >= seedItem.price) {
+                        playCash();
                         setMoney(prevMoney => prevMoney - seedItem.price);
                         addItemToInventory(seedItem.id, 1);
                         console.log('Bought Seeds!'); // Placeholder feedback
@@ -1762,7 +1822,22 @@ const Game = () => {
                   </div>
 
                   {/* Bread */}
-                  <div className="bg-[#A0522D] p-2 rounded border border-[#D2B48C] hover:border-[#F5DEB3] transition-colors cursor-pointer flex items-center gap-2">
+                  <div 
+                    className="bg-[#A0522D] p-2 rounded border border-[#D2B48C] hover:border-[#F5DEB3] transition-colors cursor-pointer flex items-center gap-2"
+                    onClick={() => {
+                      const breadItem = getItemById(3); // Use getItemById with ID 3 for Bread
+                      if (breadItem && money >= breadItem.price) {
+                        playCash();
+                        setMoney(prevMoney => prevMoney - breadItem.price);
+                        addItemToInventory(breadItem.id, 1);
+                        console.log('Bought Bread!'); // Placeholder feedback
+                      } else if (breadItem) {
+                        console.log('Not enough money for Bread!'); // Placeholder feedback
+                      } else {
+                        console.error('Bread item details not found!');
+                      }
+                    }}
+                  >
                     <img src={breadIcon} alt="Bread" className="w-8 h-8 object-contain" />
                     <div className="flex-grow">
                       <p className="text-sm font-bold text-[#F5DEB3]">Bread</p>
@@ -1786,7 +1861,25 @@ const Game = () => {
                     <div 
                       key={index} 
                       className="bg-[#A0522D] p-2 rounded border border-[#D2B48C] hover:border-[#F5DEB3] transition-colors cursor-pointer flex items-center gap-2"
-                      onClick={() => console.log('Sell item:', item.name)} // Placeholder sell logic
+                      onClick={() => {
+                        if (item.sellPrice !== -1) {
+                          playCash();
+                          setMoney(prevMoney => prevMoney + item.sellPrice);
+                          setInventory(prevInventory => {
+                            const newInventory = [...prevInventory];
+                            if (newInventory[index].quantity > 1) {
+                              newInventory[index] = {
+                                ...newInventory[index],
+                                quantity: newInventory[index].quantity - 1
+                              };
+                            } else {
+                              newInventory.splice(index, 1);
+                            }
+                            return newInventory;
+                          });
+                          console.log(`Sold ${item.name}!`); // Placeholder feedback
+                        }
+                      }}
                     >
                       <img src={item.icon} alt={item.name} className="w-8 h-8 object-contain" />
                       <div className="flex-grow">
@@ -2204,26 +2297,34 @@ const Game = () => {
               <button 
                 className="bg-[#8B4513] text-[#F5DEB3] px-6 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 w-32"
                 onClick={() => {
+                  playClick();
                   setShopMode('buy');
                   setShowShop(true);
                   setShowShopConfirm(false);
                 }}
+                onMouseEnter={playHover}
               >
                 Buy
               </button>
               <button 
                 className="bg-[#8B4513] text-[#F5DEB3] px-6 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 w-32"
                 onClick={() => {
+                  playClick();
                   setShopMode('sell');
                   setShowShop(true);
                   setShowShopConfirm(false);
                 }}
+                onMouseEnter={playHover}
               >
                 Sell
               </button>
               <button 
                 className="bg-[#8B4513] text-[#F5DEB3] px-6 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 w-32"
-                onClick={() => setShowShopConfirm(false)}
+                onClick={() => {
+                  playClick();
+                  setShowShopConfirm(false);
+                }}
+                onMouseEnter={playHover}
               >
                 Cancel
               </button>
@@ -2242,7 +2343,11 @@ const Game = () => {
                 <div className="flex items-center gap-4">
                   <button 
                     className="bg-[#8B4513] text-[#F5DEB3] w-12 h-12 rounded-full border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 flex items-center justify-center text-2xl"
-                    onClick={() => setTimeSkipHours(prev => Math.max(0, (parseInt(prev) || 0) - 1).toString())}
+                    onClick={() => {
+                      playClick();
+                      setTimeSkipHours(prev => Math.max(0, (parseInt(prev) || 0) - 1).toString());
+                    }}
+                    onMouseEnter={playHover}
                   >
                     -
                   </button>
@@ -2260,7 +2365,11 @@ const Game = () => {
                   </div>
                   <button 
                     className="bg-[#8B4513] text-[#F5DEB3] w-12 h-12 rounded-full border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 flex items-center justify-center text-2xl"
-                    onClick={() => setTimeSkipHours(prev => ((parseInt(prev) || 0) + 1).toString())}
+                    onClick={() => {
+                      playClick();
+                      setTimeSkipHours(prev => ((parseInt(prev) || 0) + 1).toString());
+                    }}
+                    onMouseEnter={playHover}
                   >
                     +
                   </button>
@@ -2270,16 +2379,22 @@ const Game = () => {
               <div className="flex flex-col gap-2 mt-4">
                 <button 
                   className="bg-[#8B4513] text-[#F5DEB3] px-6 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 w-full"
-                  onClick={() => handleTimeSkip(timeSkipHours)}
+                  onClick={() => {
+                    playClick();
+                    handleTimeSkip(timeSkipHours);
+                  }}
+                  onMouseEnter={playHover}
                 >
                   Skip Time
                 </button>
                 <button 
                   className="bg-[#8B4513] text-[#F5DEB3] px-6 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 w-full"
                   onClick={() => {
+                    playClick();
                     setShowTimeSkipPopup(false);
                     setTimeSkipHours('');
                   }}
+                  onMouseEnter={playHover}
                 >
                   Cancel
                 </button>

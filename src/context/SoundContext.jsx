@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useRef } from 'react';
 import clickSound from '../assets/sfx/click.wav';
 import hoverSound from '../assets/sfx/hover.wav';
 import exitSound from '../assets/sfx/exit.wav';
+import cashSound from '../assets/sfx/cash.wav';
+import dialogSound from '../assets/sfx/dialog.wav';
 
 const SoundContext = createContext();
 
@@ -12,6 +14,8 @@ export function SoundProvider({ children }) {
   const clickAudioRef = useRef(new Audio(clickSound));
   const hoverAudioRef = useRef(new Audio(hoverSound));
   const exitAudioRef = useRef(new Audio(exitSound));
+  const cashAudioRef = useRef(new Audio(cashSound));
+  const dialogAudioRef = useRef(new Audio(dialogSound));
 
   const playClick = () => {
     if (soundEnabled) {
@@ -46,6 +50,28 @@ export function SoundProvider({ children }) {
     }
   };
 
+  const playCash = () => {
+    if (soundEnabled) {
+      const audio = cashAudioRef.current;
+      audio.volume = sfxVolume / 100;
+      audio.currentTime = 0;
+      audio.play().catch(error => {
+        console.error('Error playing cash sound:', error);
+      });
+    }
+  };
+
+  const playDialog = () => {
+    if (soundEnabled) {
+      const audio = dialogAudioRef.current;
+      audio.volume = sfxVolume / 100;
+      audio.currentTime = 0;
+      audio.play().catch(error => {
+        console.error('Error playing dialog sound:', error);
+      });
+    }
+  };
+
   return (
     <SoundContext.Provider value={{
       soundEnabled,
@@ -54,7 +80,9 @@ export function SoundProvider({ children }) {
       setSfxVolume,
       playClick,
       playHover,
-      playExit
+      playExit,
+      playCash,
+      playDialog
     }}>
       {children}
     </SoundContext.Provider>

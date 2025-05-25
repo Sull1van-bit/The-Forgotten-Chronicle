@@ -96,7 +96,7 @@ const HouseInterior = ({
   setCurrentDay
 }) => {
   const { user } = useAuth();
-  const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume } = useSound();
+  const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume, playClick, playHover } = useSound();
   const { musicEnabled, setMusicEnabled, musicVolume, setMusicVolume } = useMusic();
   const { isDialogActive, currentDialog, dialogIndex, startDialog, advanceDialog, endDialog } = useDialog();
   const [facing, setFacing] = useState('stand');
@@ -160,12 +160,14 @@ const HouseInterior = ({
   // Handle advancing the monologue
   const handleAdvanceMonologue = () => {
     console.log('Advancing monologue, current index:', dialogIndex); // Debug log
+    playClick();
     advanceDialog();
   };
 
   // Handle skipping the monologue
   const handleSkipMonologue = () => {
     console.log('Skipping monologue'); // Debug log
+    playClick();
     endDialog();
   };
 
@@ -627,6 +629,7 @@ const HouseInterior = ({
           >
             <button
               onClick={handleSkipMonologue}
+              onMouseEnter={playHover}
               style={{ backgroundColor: 'rgba(55, 65, 81, 0.85)' }}
               className="px-4 py-2 text-white rounded-lg hover:bg-gray-600 transition-colors shadow-lg"
             >
@@ -635,7 +638,10 @@ const HouseInterior = ({
           </div>
           <div
             className="fixed inset-0 z-50 flex items-end justify-center p-4 pointer-events-auto"
-            onClick={handleAdvanceMonologue}
+            onClick={() => {
+              playClick();
+              handleAdvanceMonologue();
+            }}
           >
             <div className="flex flex-col items-center pointer-events-auto">
               <DialogBox

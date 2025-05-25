@@ -51,7 +51,7 @@ const portraits = {
 };
 
 const DialogBox = ({ onAdvance }) => {
-  const { playExit } = useSound();
+  const { playExit, playDialog } = useSound();
   const { currentDialog, dialogIndex, advanceDialog, endDialog, isDialogActive } = useDialog();
   const characterName = currentDialog?.characterName; // Get from context
   const expression = currentDialog?.expression; // Get from context
@@ -91,6 +91,9 @@ const DialogBox = ({ onAdvance }) => {
       const fullText = currentDialog.dialogue[dialogIndex];
       console.log('Starting typing for line:', dialogIndex, 'Text:', fullText); // Debug log
       
+      // Play dialog sound when dialog appears
+      playDialog();
+      
       let index = 0;
       const timer = setInterval(() => {
         if (index < fullText.length) {
@@ -118,7 +121,7 @@ const DialogBox = ({ onAdvance }) => {
         typingTimeoutRef.current = null;
       }
     };
-  }, [currentDialog, dialogIndex, isDialogActive, typingSpeed]);
+  }, [currentDialog, dialogIndex, isDialogActive, typingSpeed, playDialog]);
 
   const handleClick = () => {
     console.log('DialogBox clicked.', { isTyping, showAdvanceButton, dialogIndex }); // Debug log

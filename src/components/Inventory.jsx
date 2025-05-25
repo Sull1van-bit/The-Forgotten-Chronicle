@@ -13,6 +13,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useSound } from '../context/SoundContext';
 
 function DockItem({
   children,
@@ -26,6 +27,7 @@ function DockItem({
 }) {
   const ref = useRef(null);
   const isHovered = useMotionValue(0);
+  const { playHover, playClick } = useSound();
 
   const mouseDistance = useTransform(mouseX, (val) => {
     const rect = ref.current?.getBoundingClientRect() ?? {
@@ -42,6 +44,11 @@ function DockItem({
   );
   const size = useSpring(targetSize, spring);
 
+  const handleClick = () => {
+    playClick();
+    onClick?.();
+  };
+
   return (
     <motion.div
       ref={ref}
@@ -49,11 +56,17 @@ function DockItem({
         width: size,
         height: size,
       }}
-      onHoverStart={() => isHovered.set(1)}
+      onHoverStart={() => {
+        isHovered.set(1);
+        playHover();
+      }}
       onHoverEnd={() => isHovered.set(0)}
-      onFocus={() => isHovered.set(1)}
+      onFocus={() => {
+        isHovered.set(1);
+        playHover();
+      }}
       onBlur={() => isHovered.set(0)}
-      onClick={onClick}
+      onClick={handleClick}
       className={`relative inline-flex items-center justify-center rounded-lg bg-[#8B4513] border-4 border-[#D2B48C] shadow-md cursor-pointer ${className}`}
       tabIndex={0}
       role="button"
