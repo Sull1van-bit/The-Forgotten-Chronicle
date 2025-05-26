@@ -55,7 +55,7 @@ import ActiveQuestFolderUI from '../components/ActiveQuestFolderUI';
 import seedsIcon from '../assets/items/seeds.png';
 import breadIcon from '../assets/items/bread.png';
 import stewIcon from '../assets/items/stew.png';
-import ledgerIcon from '../assets/items/ledger.png';
+import ledgerIcon from '../assets/items/royal-document.png';
 import royalDocumentIcon from '../assets/items/royal-document.png';
 import meatIcon from '../assets/items/meat.png';
 import mushroomIcon from '../assets/items/mushroom.png';
@@ -1454,6 +1454,38 @@ const Game = () => {
     };
   }, []); // Empty dependency array means this runs once when component mounts
 
+  // Bath tile coordinates
+const BATH_TILES = [
+  { x: 10, y: 36 },
+  { x: 11, y: 36 },
+  { x: 12, y: 36 },
+  { x: 13, y: 36 },
+];
+
+// Check if player is on a bath tile
+const isOnBathTile = () => {
+  const playerGridPos = getGridPosition(position.x, position.y);
+  return BATH_TILES.some(tile => tile.x === playerGridPos.gridX && tile.y === playerGridPos.gridY);
+};
+
+const [showBathPopup, setShowBathPopup] = useState(false);
+
+// Show/hide bath popup based on player position
+useEffect(() => {
+  if (!isPaused && !isDialogActive && !showShop && !isSleeping && isOnBathTile()) {
+    setShowBathPopup(true);
+  } else {
+    setShowBathPopup(false);
+  }
+}, [position, isPaused, isDialogActive, showShop, isSleeping]);
+
+// Bath action handler
+const handleBath = () => {
+  playClick();
+  setCleanliness(prev => Math.min(100, prev + 40)); // Increase cleanliness
+  setShowBathPopup(false);
+};
+
   if (isInInterior) {
     return (
       <DialogProvider>
@@ -1880,6 +1912,29 @@ const Game = () => {
           items={inventory} 
           onUseItem={handleUseItem}
         />
+      )}
+
+      {/* Bath Popup Button */}
+      {showBathPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.15)' }}>
+          <div className="bg-[#8B4513] p-6 rounded-lg border-8 border-[#D2B48C] shadow-lg flex flex-col items-center gap-4">
+            <h2 className="text-xl font-bold text-[#F5DEB3]">Take a Bath?</h2>
+            <button
+              className="bg-[#8B4513] text-[#F5DEB3] px-8 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 text-lg font-bold"
+              onClick={handleBath}
+              onMouseEnter={playHover}
+            >
+              Bath
+            </button>
+            <button
+              className="bg-[#8B4513] text-[#F5DEB3] px-8 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 text-lg"
+              onClick={() => setShowBathPopup(false)}
+              onMouseEnter={playHover}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       )}
 
       {/* New Quest Pop-up */}
