@@ -127,7 +127,7 @@ const VARIANTS = {
 };
 
 export default function PixelCard({
-  variant = "default",
+  variant = "blue",
   gap,
   speed,
   colors,

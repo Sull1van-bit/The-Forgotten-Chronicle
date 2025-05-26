@@ -15,6 +15,7 @@ import MusicPrompt from '../components/MusicPrompt';
 import CharacterSelection from '../components/CharacterSelection';
 import LoadingScreen from '../components/LoadingScreen';
 import LoadGame from '../components/LoadGame';
+import IntroAnimation from '../components/IntroAnimation';
 
 // Wrapper component that uses the music context
 function MainMenuContent() {
@@ -28,6 +29,7 @@ function MainMenuContent() {
   const [showCredits, setShowCredits] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showMusicPrompt, setShowMusicPrompt] = useState(false);
+  const [showIntroAnimation, setShowIntroAnimation] = useState(false);
   const [showCharacterSelection, setShowCharacterSelection] = useState(false);
   const [showLoadGame, setShowLoadGame] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -63,15 +65,20 @@ function MainMenuContent() {
       setShowMusicPrompt(true);
     }
   }, [user]);
-
   const handleMusicAccept = () => {
     startMusicPlayback();
     setShowMusicPrompt(false);
+    setShowIntroAnimation(true);
   };
 
   const handleMusicDecline = () => {
     setMusicEnabled(false);
     setShowMusicPrompt(false);
+    setShowIntroAnimation(true);
+  };
+
+  const handleIntroComplete = () => {
+    setShowIntroAnimation(false);
   };
 
   const handleNewGame = () => {
@@ -144,14 +151,17 @@ function MainMenuContent() {
         <div className="fixed inset-0 z-20 flex flex-col items-center justify-center bg-black bg-opacity-50 px-6 text-center animate-slide-down">
           <LoginForm />
         </div>
-      )}
-
-      {/* Music Prompt */}
+      )}      {/* Music Prompt */}
       {user && showMusicPrompt && (
         <MusicPrompt
           onAccept={handleMusicAccept}
           onDecline={handleMusicDecline}
         />
+      )}
+
+      {/* Intro Animation */}
+      {user && showIntroAnimation && (
+        <IntroAnimation onComplete={handleIntroComplete} />
       )}
 
       {/* Loading Screen - Only show during character selection transition */}
@@ -178,10 +188,8 @@ function MainMenuContent() {
         <div className="fixed inset-0 z-30 transition-opacity duration-200">
           <LoadGame onClose={() => setShowLoadGame(false)} />
         </div>
-      )}
-
-      {/* Main Menu */}
-      {user && !showMusicPrompt && !showCharacterSelection && !showLoadGame && (
+      )}      {/* Main Menu */}
+      {user && !showMusicPrompt && !showIntroAnimation && !showCharacterSelection && !showLoadGame && (
         <div className="fixed top-0 left-0 bottom-0 z-20 flex flex-col items-start justify-start p-8 w-72" style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)' }}>
           <img src={gameTitleImage} alt="Game Title" className="mb-8 w-full h-auto object-contain" />
           

@@ -20,7 +20,7 @@
   width: 100%;
   height: 100%;
   will-change: transform;
-  transition: transform 0.1s ease-out;
+  transition: transform 0.05s ease-out;
 }
 
 .map-background {
@@ -115,9 +115,9 @@
   background-position: center;
   z-index: 2;
   image-rendering: pixelated;
-  transition: all 0.1s linear;
+  transition: left 0.02s ease-out, top 0.02s ease-out;
   transform-origin: center;
-  will-change: transform, left, top;
+  will-change: left, top;
 }
 .player-interior {
   position: absolute;
@@ -129,9 +129,9 @@
   background-position: center;
   z-index: 2;
   image-rendering: pixelated;
-  transition: all 0.1s linear;
+  transition: left 0.02s ease-out, top 0.02s ease-out;
   transform-origin: center;
-  will-change: transform, left, top;
+  will-change: left, top;
 }
 
 .interior-container {

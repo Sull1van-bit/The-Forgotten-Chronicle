@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useSound } from '../context/SoundContext';
 import { useMusic } from '../context/MusicContext';
@@ -27,8 +27,8 @@ import eugeneWalkLeft from '../assets/characters/eugene/walk-left.gif';
 import eugeneWalkRight from '../assets/characters/eugene/walk-right.gif';
 import eugeneEat from '../assets/characters/eugene/eat.gif';
 
-// Import elder assets (assuming these paths exist)
-// import elderStand from '../assets/characters/elder/stand.gif'; // Commented out
+// Import elder assets
+import elderStand from '../assets/npc/elder/stand.gif';
 import elderPortrait from '../assets/npc/elder/character.png';
 
 // Import character portraits
@@ -135,10 +135,6 @@ const COLLISION_MAP = [
   
   
     // ujung map
-    ...Array.from({ length: 60 }, (_, i) => ({ x: i , y: 0, type: 'half-top' })), // atas
-    ...Array.from({ length: 60 }, (_, i) => ({ x: i , y: 44, type: 'half-bottom' })), // bawah
-    ...Array.from({ length: 60 }, (_, i) => ({ x: 59 , y: i, type: 'half-right' })), // kanan
-    ...Array.from({ length: 60 }, (_, i) => ({ x: 0 , y: i, type: 'half-left' })), // kiri
   // end ujung map
   
   
@@ -192,6 +188,7 @@ const COLLISION_MAP = [
     ...Array.from({ length: 7 }, (_, i) => ({ x: i+32, y: 20, type: (i >= 4 && i <= 8) ? 'half-top' : 'full' })), 
     ...Array.from({ length: 9 }, (_, i) => ({ x: i+33, y: 21, type: 'full' })), 
     ...Array.from({ length: 3 }, (_, i) => ({ x: i+33, y: 19, type: 'full' })), 
+
     
     {x: 45, y: 21, type: 'half-top'},
     {x: 46, y: 21, type: 'half-top'},
@@ -215,6 +212,18 @@ const COLLISION_MAP = [
     ...Array.from({ length: 3 }, (_, i) => ({ x: i+47 , y: 34  , type: 'full' })), 
     ...Array.from({ length: 5 }, (_, i) => ({ x: 53 , y: i+26  , type: 'half-left' })), 
     ...Array.from({ length: 2 }, (_, i) => ({ x: 52 , y: i+31  , type: 'half-right' })), 
+    ...Array.from({ length: 13 }, (_, i) => ({ x: i + 16 , y: 12 , type: 'half-bottom' })), 
+    ...Array.from({ length: 13 }, (_, i) => ({ x: i + 18 , y: 12 , type: 'half-top' })), 
+    ...Array.from({ length: 1 }, (_, i) => ({ x: i + 17 , y: 11 , type: 'half-bottom' })), 
+    ...Array.from({ length: 17 }, (_, i) => ({ x: i + 12 , y: 9 , type: 'half-bottom' })), 
+    ...Array.from({ length: 1 }, (_, i) => ({ x: i + 11 , y: 9 , type: 'half-right' })), 
+    ...Array.from({ length: 7 }, (_, i) => ({ x:10 , y: i , type: 'half-left' })), 
+    ...Array.from({ length: 1 }, (_, i) => ({ x:2 , y: i+2 , type: 'half-right' })), 
+    ...Array.from({ length: 3 }, (_, i) => ({ x:i+3 , y: 1 , type: 'half-bottom' })), 
+    ...Array.from({ length: 3 }, (_, i) => ({ x:i+7 , y: 1 , type: 'half-top' })), 
+    ...Array.from({ length: 29 }, (_, i) => ({ x:5 , y: i+6 , type: 'half-right' })),
+    ...Array.from({ length: 1 }, (_, i) => ({ x:6 , y: i+17 , type: 'half-top' })),
+     
     
     // end buat danau + air
     
@@ -255,7 +264,18 @@ const COLLISION_MAP = [
     ...Array.from({ length: 4 }, (_, i) => ({ x: i+36 , y: 6  , type: 'half-bottom' })),
     ...Array.from({ length: 4 }, (_, i) => ({ x: 36 , y: 4+i  , type: 'full' })),
     ...Array.from({ length: 24 }, (_, i) => ({ x: 36+i , y: 4  , type: 'full' })),
-  
+    ...Array.from({ length: 24 }, (_, i) => ({ x: 36+i , y: 4  , type: 'full' })),
+    ...Array.from({ length: 1 }, (_, i) => ({ x: 4+i , y: 5  , type: 'full' })),
+    ...Array.from({ length: 3 }, (_, i) => ({ x: i+10 , y: 6  , type: 'full' })),
+    ...Array.from({ length: 3 }, (_, i) => ({ x: 11 , y: 7+i  , type: 'half-right' })),
+    ...Array.from({ length: 1 }, (_, i) => ({ x: 16 , y: 16  , type: 'full' })),
+    ...Array.from({ length: 2 }, (_, i) => ({ x: i+14 , y: 17  , type: 'full' })),
+    ...Array.from({ length: 1 }, (_, i) => ({ x: i+6 , y: 16  , type: 'full' })),
+    ...Array.from({ length: 7 }, (_, i) => ({ x: 13 , y: i+18  , type: 'full' })),
+    ...Array.from({ length: 6 }, (_, i) => ({ x: 12 , y: i+18  , type: 'half-right' })),
+    ...Array.from({ length: 1 }, (_, i) => ({ x: 16 , y: 13  , type: 'half-left' })),
+    ...Array.from({ length: 1 }, (_, i) => ({ x: 16 , y: 13  , type: 'half-left' })),
+    ...Array.from({ length: 1 }, (_, i) => ({ x: 8 , y: 17  , type: 'half-bottom' })),
     
   ];
 
@@ -471,10 +491,8 @@ const Game = () => {
   const [inventory, setInventory] = useState([
     { ...ITEMS.bread, quantity: 2 }
   ]);
-
   // Log inventory state whenever it changes
   useEffect(() => {
-    console.log('Inventory state updated:', inventory);
   }, [inventory]);
 
   // Add quest state
@@ -493,9 +511,7 @@ const Game = () => {
       if (user) {
         try {
           const files = await saveFileService.getUserSaveFiles(user.uid);
-          setSaveFiles(files);
-        } catch (error) {
-          console.error('Error loading save files:', error);
+          setSaveFiles(files);        } catch (error) {
         }
       }
     };
@@ -623,31 +639,35 @@ const Game = () => {
         setShowNewQuestPopup(true);
       }
       return prevQuests;
-    });
-  };
+    });  };
+
+  // Convert pixel position to grid coordinates
+  const getGridPosition = useCallback((x, y) => ({
+    gridX: Math.floor(x / GRID_SIZE),
+    gridY: Math.floor(y / GRID_SIZE)
+  }), [GRID_SIZE]);
 
   // Add save point coordinates
   const SAVE_POINTS = [
     { x: 0, y: 2 },
     { x: 0, y: 1 }
   ];
-
   // Check if player is at a save point
-  const checkSavePoint = (x, y) => {
+  const checkSavePoint = useCallback((x, y) => {
     const playerGridPos = getGridPosition(x, y);
     return SAVE_POINTS.some(point => 
       point.x === playerGridPos.gridX && point.y === playerGridPos.gridY
     );
-  };
+  }, [getGridPosition]);
 
   // Define Elder position (grid coordinates)
   const ELDER_POSITION_GRID = { x: 15, y: 16 };
   // Calculate Elder pixel position
   const ELDER_POSITION_PIXEL = { x: ELDER_POSITION_GRID.x * GRID_SIZE, y: ELDER_POSITION_GRID.y * GRID_SIZE };
-  const ELDER_SIZE = 26; // Assuming similar size to player for positioning
+  const ELDER_SIZE = 32; // Assuming similar size to player for positioning
 
   // Check proximity to Elder
-  const checkElderProximity = (playerX, playerY) => {
+  const checkElderProximity = useCallback((playerX, playerY) => {
     const playerCenterX = playerX + (PLAYER_SIZE / 2);
     const playerCenterY = playerY + (PLAYER_SIZE / 2);
     const elderCenterX = ELDER_POSITION_PIXEL.x + (ELDER_SIZE / 2);
@@ -657,7 +677,7 @@ const Game = () => {
     );
     const proximityThreshold = GRID_SIZE / 2; // Half a grid cell away
     return distance < proximityThreshold;
-  };
+  }, [ELDER_POSITION_PIXEL.x, ELDER_POSITION_PIXEL.y, ELDER_SIZE, PLAYER_SIZE, GRID_SIZE]);
 
   // Update save game function
   const saveGame = async () => {
@@ -694,9 +714,7 @@ const Game = () => {
       
       const files = await saveFileService.getUserSaveFiles(user.uid);
       setSaveFiles(files);
-      setShowSavePrompt(false);
-    } catch (error) {
-      console.error('Error saving game:', error);
+      setShowSavePrompt(false);    } catch (error) {
     }
   };
 
@@ -719,24 +737,17 @@ const Game = () => {
           setMusicEnabled(gameState.settings.musicEnabled ?? true);
           setMusicVolume(gameState.settings.musicVolume ?? 0.5);
         }
-        setHasSeenHouseDialog(gameState.hasSeenHouseDialog ?? false);
-      }
+        setHasSeenHouseDialog(gameState.hasSeenHouseDialog ?? false);      }
     } catch (error) {
-      console.error('Error loading game:', error);
     }
   };
 
   // Get character-specific sprites
   const getCharacterSprites = () => {
-    console.log('Selected character:', character); // Debug log to see what we're receiving
     
     // Handle case where character might be an object with a name property
-    const characterName = typeof character === 'object' && character !== null ? character.name : character;
-    console.log('Character name:', characterName);
-
-    switch (String(characterName).toLowerCase()) {
+    const characterName = typeof character === 'object' && character !== null ? character.name : character;    switch (String(characterName).toLowerCase()) {
       case 'eugene':
-        console.log('Loading Eugene sprites');
         return {
           stand: eugeneStand,
           walkUp: eugeneWalkUp,
@@ -746,17 +757,14 @@ const Game = () => {
           eat: eugeneEat
         };
       case 'louise':
-        console.log('Loading Louise sprites');
         return {
           stand: louiseStand,
           walkUp: louiseWalkUp,
           walkDown: louiseWalkDown,
           walkLeft: louiseWalkLeft,
           walkRight: louiseWalkRight,
-          eat: louiseEat
-        };
+          eat: louiseEat        };
       default:
-        console.log('No valid character selected, defaulting to Louise');
         return {
           stand: louiseStand,
           walkUp: louiseWalkUp,
@@ -769,7 +777,6 @@ const Game = () => {
   };
 
   const characterSprites = getCharacterSprites();
-  console.log('Current sprites:', characterSprites); // Debug log
 
   // Get character-specific portrait
   const getCharacterPortrait = () => {
@@ -782,19 +789,9 @@ const Game = () => {
         return louisePortrait; // Default to louise
     }
   };
-
   const getSprite = () => {
     const sprite = characterSprites[facing === 'stand' ? 'stand' : `walk${facing.charAt(0).toUpperCase() + facing.slice(1)}`];
-    console.log('Current facing:', facing, 'Using sprite:', sprite); // Debug log
-    return sprite;
-  };
-
-  // Convert pixel position to grid coordinates
-  const getGridPosition = (x, y) => ({
-    gridX: Math.floor(x / GRID_SIZE),
-    gridY: Math.floor(y / GRID_SIZE)
-  });
-
+    return sprite;  };
   // Check collision based on type
   const checkCollision = (playerX, playerY, collisionPoint) => {
     const gridX = collisionPoint.x * GRID_SIZE;
@@ -857,9 +854,8 @@ const Game = () => {
       spawnPoint: { x: 700, y: 300 }  
     }
   ];
-
   // Check if player is on teleport point
-  const checkTeleport = (x, y) => {
+  const checkTeleport = useCallback((x, y) => {
     const playerGridPos = getGridPosition(x, y);
     const teleportPoint = TELEPORT_POINTS.find(
       point => point.x === playerGridPos.gridX && point.y === playerGridPos.gridY
@@ -869,7 +865,7 @@ const Game = () => {
       setIsInInterior(true);
       setPosition(teleportPoint.spawnPoint);
     }
-  };
+  }, [getGridPosition]);
 
   // Check if player is at a shop trigger point
   const checkShopTrigger = useMemo(() => (x, y, justCheck = false) => {
@@ -897,19 +893,51 @@ const Game = () => {
   const handlePause = () => setIsPaused(true);
   const handleResume = () => setIsPaused(false);
   const handleSettings = () => setShowSettings(true);
-  const handleCloseSettings = () => setShowSettings(false);
-  const handleExit = () => {
-    console.log('Exit button clicked');
+  const handleCloseSettings = () => setShowSettings(false);  const handleExit = () => {
     // Force a page reload when navigating to main menu
     window.location.href = '/';
   };
+
+  // Handle item usage
+  const handleUseItem = useCallback((item) => {
+    if (item.type === 'consumable') {
+      // Show eating animation
+      setShowEatAnimation(true);
+      setTimeout(() => setShowEatAnimation(false), 1000); // Hide after 1 second
+
+      // Apply item effects
+      if (item.effect.health) {
+        setHealth(prev => Math.min(100, prev + item.effect.health));
+      }
+      if (item.effect.energy) {
+        setEnergy(prev => Math.min(100, prev + item.effect.energy));
+      }
+      if (item.effect.hunger) {
+        setHunger(prev => Math.min(100, prev + item.effect.hunger));
+      }
+      
+      // Update item quantity or remove if last one
+      setInventory(prev => {
+        const newInventory = prev.map(invItem => {
+          if (invItem.id === item.id) {
+            return {
+              ...invItem,
+              quantity: invItem.quantity - 1
+            };
+          }
+          return invItem;
+        });
+        
+        // Remove items with quantity 0
+        return newInventory.filter(invItem => invItem.quantity > 0);
+      });
+    }
+  }, []);
 
   // Prevent movement and interactions when paused, in dialogue, in shop, or talking to elder
   useEffect(() => {
     const handleKeyPress = (e) => {
       if (isSleeping || isPaused || isDialogActive || showShop || showElderTalkPopup) return;
-      console.log('Key pressed:', e.key);
-      console.log('isInInterior:', isInInterior);
 
       if (isInInterior) return;
 
@@ -936,7 +964,6 @@ const Game = () => {
           break;
         case 'w':
         case 'arrowup':
-          console.log('Moving up');
           newY = position.y - speed;
           if (!hasCollision(newX, newY)) {
             setFacing('up');
@@ -944,17 +971,18 @@ const Game = () => {
               ...prev,
               y: Math.max(0, newY),
             }));
+            // Batch state updates to reduce re-renders
             setEnergy((prev) => Math.max(0, prev - energyCost));
             setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));
-            if (checkSavePoint(newX, newY)) {
-              setCanSave(true);
-              setShowSavePrompt(true);
-            } else {
-              setCanSave(false);
-              setShowSavePrompt(false);
-            }
+            
+            // Check save point and update save state
+            const isAtSavePoint = checkSavePoint(newX, newY);
+            setCanSave(isAtSavePoint);
+            setShowSavePrompt(isAtSavePoint);
+            
             checkTeleport(newX, newY);
             checkShopTrigger(newX, newY);
+            
             // Check proximity to Elder after movement
             if (checkElderProximity(newX, newY)) {
               setShowElderTalkPopup(true);
@@ -963,7 +991,6 @@ const Game = () => {
           break;
         case 's':
         case 'arrowdown':
-          console.log('Moving down');
           newY = position.y + speed;
           if (!hasCollision(newX, newY)) {
             setFacing('down');
@@ -983,7 +1010,6 @@ const Game = () => {
           break;
         case 'a':
         case 'arrowleft':
-          console.log('Moving left');
           newX = position.x - speed;
           if (!hasCollision(newX, newY)) {
             setFacing('left');
@@ -1003,7 +1029,6 @@ const Game = () => {
           break;
         case 'd':
         case 'arrowright':
-          console.log('Moving right');
           newX = position.x + speed;
           if (!hasCollision(newX, newY)) {
             setFacing('right');
@@ -1043,15 +1068,8 @@ const Game = () => {
                   stage: 1,
                   plantTime: Date.now() // Track planting time for growth
                 }]);
-                console.log(`Planted potato at ${playerGridPos.gridX}, ${playerGridPos.gridY}`);
-              } else {
-                console.log('There is already a crop planted here.');
               }
-            } else {
-              console.log('You need seeds to plant!');
             }
-          } else {
-            console.log('You can only plant on designated spots.');
           }
           break;
         case 's':
@@ -1080,7 +1098,24 @@ const Game = () => {
       window.removeEventListener('keydown', handleKeyPress);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [position, isInInterior, speed, MAP_HEIGHT, MAP_WIDTH, PLAYER_SIZE, isSleeping, isPaused, isDialogActive, showShop, canSave, showElderTalkPopup]);
+  }, [
+    position, 
+    isInInterior, 
+    isSleeping, 
+    isPaused, 
+    isDialogActive, 
+    showShop, 
+    showElderTalkPopup, 
+    canSave,
+    inventory,
+    plantedCrops,
+    checkSavePoint,
+    checkTeleport,
+    checkShopTrigger,
+    checkElderProximity,
+    getGridPosition,
+    handleUseItem
+  ]); // Reduced and memoized dependencies
 
   const getCameraStyle = () => {
     const viewportCenterX = window.innerWidth / 2;
@@ -1146,43 +1181,7 @@ const Game = () => {
           Save Game
         </button>
       </div>
-    );
-  };
-
-  const handleUseItem = (item) => {
-    if (item.type === 'consumable') {
-      // Show eating animation
-      setShowEatAnimation(true);
-      setTimeout(() => setShowEatAnimation(false), 1000); // Hide after 1 second
-
-      // Apply item effects
-      if (item.effect.health) {
-        setHealth(prev => Math.min(100, prev + item.effect.health));
-      }
-      if (item.effect.energy) {
-        setEnergy(prev => Math.min(100, prev + item.effect.energy));
-      }
-      if (item.effect.hunger) {
-        setHunger(prev => Math.min(100, prev + item.effect.hunger));
-      }
-      
-      // Update item quantity or remove if last one
-      setInventory(prev => {
-        const newInventory = prev.map(invItem => {
-          if (invItem.id === item.id) {
-            return {
-              ...invItem,
-              quantity: invItem.quantity - 1
-            };
-          }
-          return invItem;
-        });
-        
-        // Remove items with quantity 0
-        return newInventory.filter(invItem => invItem.quantity > 0);
-      });
-    }
-  };
+    );  };
 
   // Function to add item to inventory
   const addItemToInventory = (itemId, quantity = 1) => {
@@ -1211,10 +1210,8 @@ const Game = () => {
             quantity: quantity,
             // Include price/sellPrice if needed for inventory display later
             price: itemDetails.price,
-            sellPrice: itemDetails.sellPrice
-           }];
+            sellPrice: itemDetails.sellPrice           }];
         } else {
-          console.error(`Attempted to add unknown item with ID: ${itemId}`);
           return prev; // Return previous state if item ID is invalid
         }
       }
@@ -1299,34 +1296,27 @@ const Game = () => {
         let newHours = prevTime.hours;
 
         if (newMinutes >= 60) {
-          newMinutes = 0;
-          newHours = (newHours + 1) % 24;
+          newMinutes = 0;          newHours = (newHours + 1) % 24;
 
           // Check if day has changed
           if (newHours === 0) {
-            console.log(`--- Start of Day ${currentDayRef.current + 1} ---`); // Log start of new day using ref
             setCurrentDay(prevDay => {
               const newDay = prevDay + 1;
 
               // Update crop state based on watering and day progression
               setPlantedCrops(prevCrops => prevCrops.map(crop => {
-                console.log(`Day ${newDay}: Processing crop at (${crop.x}, ${crop.y}), Stage: ${crop.stage}, Needs Watering (before): ${crop.needsWatering}`); // Log crop state before update
                 // Only process non-mature crops
                 if (crop.stage < 3) {
                   // Check if the crop was watered on the previous day
                   const grewToday = !crop.needsWatering;
 
                   // Advance stage if it grew today, otherwise keep current stage
-                  const nextStage = grewToday ? Math.min(3, crop.stage + 1) : crop.stage;
-
-                  // All non-mature crops need watering at the start of a new simulated day
+                  const nextStage = grewToday ? Math.min(3, crop.stage + 1) : crop.stage;                  // All non-mature crops need watering at the start of a new simulated day
                   const needsWateringForNewDay = nextStage < 3; // Needs watering only if not mature after growth
 
-                  console.log(`Day ${newDay}: Crop at (${crop.x}, ${crop.y}), Grew Today: ${grewToday}, Next Stage: ${nextStage}, Needs Watering (after): ${needsWateringForNewDay}`); // Log crop state after calculating
                   return { ...crop, stage: nextStage, needsWatering: needsWateringForNewDay };
                 }
                 // Mature crops (stage 3) don't need watering and are ready for harvest
-                console.log(`Day ${newDay}: Mature crop at (${crop.x}, ${crop.y}), Stage: 3, Needs Watering (after): ${crop.needsWatering}`); // Log mature crop state
                 return crop; // Keep mature crops as they are, waiting for harvest
               }));
 
@@ -1392,8 +1382,7 @@ const Game = () => {
       return 0.8 - (easedProgress * 0.4);
     } else if (totalMinutes >= sunsetEnd && totalMinutes < nightStart) {
       // Dusk - moderately dark
-      return 0.4;
-    } else {
+      return 0.4;    } else {
       // Day time - no darkness
       return 0;
     }
@@ -1402,64 +1391,44 @@ const Game = () => {
   // Add this before the return statement
   const handleTimeSkip = (hours) => {
     const hoursToSkip = parseInt(hours);
-    console.log(`handleTimeSkip called with hours: ${hoursToSkip}`); // Log hours requested to skip
     if (isNaN(hoursToSkip) || hoursToSkip <= 0) {
       alert('Please enter a valid number of hours');
       return;
-    }
-
-    const totalMinutesToSkip = hoursToSkip * 60;
-    let remainingMinutesToSkip = totalMinutesToSkip;
-
+    }    const totalMinutesToSkip = hoursToSkip * 60;
+    
     setGameTime(prevTime => {
       let currentTotalMinutes = prevTime.hours * 60 + prevTime.minutes;
       let newTotalMinutes = currentTotalMinutes + totalMinutesToSkip;
 
-      console.log(`Current total minutes: ${currentTotalMinutes}`); // Log current time in minutes
-      console.log(`New total minutes (before rollover): ${newTotalMinutes}`); // Log new time before rollover
-
-      let daysToAdd = Math.floor(newTotalMinutes / (24 * 60)) - Math.floor(currentTotalMinutes / (24 * 60));
-      console.log(`Calculated days to add: ${daysToAdd}`); // Log calculated days to add
-
-      // Only update day and simulate crop growth if at least one full day has passed
+      let daysToAdd = Math.floor(newTotalMinutes / (24 * 60)) - Math.floor(currentTotalMinutes / (24 * 60));      // Only update day and simulate crop growth if at least one full day has passed
       if (daysToAdd > 0) {
         setCurrentDay(prevDay => {
           const newDay = prevDay + daysToAdd;
-          console.log(`Setting new day to: ${newDay}`); // Log the new day being set
 
           // Simulate daily growth and watering needs for each skipped day
           setPlantedCrops(prevCrops => {
             let updatedCrops = [...prevCrops];
-            console.log(`Simulating crop growth for ${daysToAdd} skipped days...`); // Log start of simulation
             for (let i = 0; i < daysToAdd; i++) {
-              console.log(`Simulating Day ${currentDay + i + 1}...`); // Log current simulated day
               updatedCrops = updatedCrops.map(crop => {
                 if (crop.stage < 3) {
                   const grewToday = !crop.needsWatering;
-                  const nextStage = grewToday ? Math.min(3, crop.stage + 1) : crop.stage;
-                  const needsWateringForNewDay = nextStage < 3;
-                  // No need for console logs inside this inner loop for now, relies on the time effect logs
+                  const nextStage = grewToday ? Math.min(3, crop.stage + 1) : crop.stage;                  const needsWateringForNewDay = nextStage < 3;
                   return { ...crop, stage: nextStage, needsWatering: needsWateringForNewDay };
                 }
                 return crop;
               });
             }
-            console.log(`Simulation complete.`); // Log end of simulation
             return updatedCrops;
           });
 
           return newDay;
         });
-      } else {
-          console.log('Not enough time skipped for a full day change.'); // Log if not enough time for day change
       }
 
       // Calculate the final time within the day
       newTotalMinutes = newTotalMinutes % (24 * 60);
       const finalHours = Math.floor(newTotalMinutes / 60);
       const finalMinutes = newTotalMinutes % 60;
-
-      console.log(`Final time set to: ${finalHours}:${finalMinutes}`); // Log final time set
 
       return { hours: finalHours, minutes: finalMinutes };
     });
@@ -1786,7 +1755,7 @@ const Game = () => {
                         playCash();
                         setMoney(prevMoney => prevMoney - seedItem.price);
                         addItemToInventory(seedItem.id, 1);
-                        console.log('Bought Seeds!'); // Placeholder feedback
+
 
                         // Update quest objective: Buy seeds from the shop
                         setQuests(prevQuests => {
@@ -1808,9 +1777,9 @@ const Game = () => {
                         });
 
                       } else if (seedItem) {
-                        console.log('Not enough money for Seeds!'); // Placeholder feedback
+
                       } else {
-                        console.error('Seeds item details not found!');
+
                       }
                     }}
                   >
@@ -1830,11 +1799,11 @@ const Game = () => {
                         playCash();
                         setMoney(prevMoney => prevMoney - breadItem.price);
                         addItemToInventory(breadItem.id, 1);
-                        console.log('Bought Bread!'); // Placeholder feedback
+
                       } else if (breadItem) {
-                        console.log('Not enough money for Bread!'); // Placeholder feedback
+
                       } else {
-                        console.error('Bread item details not found!');
+
                       }
                     }}
                   >
@@ -1877,7 +1846,7 @@ const Game = () => {
                             }
                             return newInventory;
                           });
-                          console.log(`Sold ${item.name}!`); // Placeholder feedback
+
                         }
                       }}
                     >
@@ -2009,27 +1978,7 @@ const Game = () => {
             setCurrentDay={setCurrentDay}
           />
         </DialogProvider>
-      ) : (
-        <>
-          {/* Elder NPC Sprite */}
-          {/* Commented out because asset is not ready */}
-          {/*
-          {!isLoading && !showCutscene && (
-            <img
-              src={elderStand}
-              alt="Village Elder"
-              className="absolute pixelated"
-              style={{
-                left: `${ELDER_POSITION_PIXEL.x}px`,
-                top: `${ELDER_POSITION_PIXEL.y}px`,
-                width: `${ELDER_SIZE}px`,
-                height: `${ELDER_SIZE}px`,
-                zIndex: 2, // Ensure elder is above background
-              }}
-            />
-          )}
-          */}
-
+      ) : (        <>
           {/* Elder Talk Confirmation Popup */}
           {showElderTalkPopup && !isPaused && !isDialogActive && !showShop && (
             <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}>
@@ -2206,7 +2155,7 @@ const Game = () => {
                                     plantDay: currentDay, // Record the day it was planted
                                     needsWatering: true, // Needs watering immediately on day 1
                                   }]);
-                                  console.log(`Planted potato at ${spot.x}, ${spot.y} on Day ${currentDay}`);
+
 
                                   // Update quest objective: Plant the seed (assuming this quest exists and objective matches)
                                   setQuests(prevQuests => {
@@ -2228,10 +2177,10 @@ const Game = () => {
                                   });
 
                                 } else {
-                                  console.log('You need seeds to plant!');
+
                                 }
                               } else {
-                                console.log('Cannot plant here right now.');
+
                               }
                             } else if (iconType === 'wateringCan' && isCurrentlyPlanted && isCurrentlyPlanted.needsWatering) {
                               // Watering logic
@@ -2241,10 +2190,10 @@ const Game = () => {
                                 }
                                 return crop;
                               }));
-                              console.log(`Watered crop at ${spot.x}, ${spot.y} on Day ${currentDay}`);
+
                             } else if (iconType === 'sickle' && isCurrentlyPlanted && isCurrentlyPlanted.stage === 3) {
                               // Harvest logic
-                              console.log(`Harvesting crop at ${spot.x}, ${spot.y} on Day ${currentDay}`);
+
                               // Add harvested item (Potato) to inventory
                               addItemToInventory(2); // Assuming Potato has ID 2 based on ITEMS definition
                               // Remove the crop from plantedCrops
@@ -2255,8 +2204,7 @@ const Game = () => {
                       );
                     }
                     return null;
-                  })}
-                  {!isSleeping && (
+                  })}                  {!isSleeping && (
                     <div
                       className="player"
                       style={{
@@ -2264,6 +2212,21 @@ const Game = () => {
                         top: `${position.y}px`,
                         backgroundImage: `url(${getSprite()})`,
                         imageRendering: 'pixelated',
+                      }}
+                    />
+                  )}
+                  {/* Elder NPC Sprite */}
+                  {!isLoading && !showCutscene && (
+                    <img
+                      src={elderStand}
+                      alt="Village Elder"
+                      className="absolute pixelated"
+                      style={{
+                        left: `${ELDER_POSITION_PIXEL.x}px`,
+                        top: `${ELDER_POSITION_PIXEL.y}px`,
+                        width: `${ELDER_SIZE}px`,
+                        height: `${ELDER_SIZE}px`,
+                        zIndex: 2, // Ensure elder is above background
                       }}
                     />
                   )}
