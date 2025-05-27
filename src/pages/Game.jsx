@@ -84,9 +84,9 @@ import Counter from '../components/Counter';
 // Define collision points using grid coordinates
 const COLLISION_MAP = [
     //kali diatas 30s (full collision)
-    ...Array.from({ length: 10 }, (_, i) => ({ x: 30, y: i, type: 'full' })),
-    ...Array.from({ length: 8 }, (_, i) => ({ x: 31, y: i, type: 'full' })),
-    ...Array.from({ length: 3 }, (_, i) => ({ x: 32, y: i, type: 'full' })),
+    // ...Array.from({ length: 10 }, (_, i) => ({ x: 30, y: i, type: 'full' })),
+    // ...Array.from({ length: 8 }, (_, i) => ({ x: 31, y: i, type: 'full' })),
+    // ...Array.from({ length: 3 }, (_, i) => ({ x: 32, y: i, type: 'full' })),
     
     // pagar
     ...Array.from({ length: 4 }, (_, i) => ({ x: i+1, y: 2, type: 'half-bottom' })),
@@ -118,14 +118,14 @@ const COLLISION_MAP = [
     {x: 44, y: 39, type: 'half-bottom'},
   
   
-    { x: 29, y: 7, type: 'half-right' },   
-    { x: 29, y: 8, type: 'half-right' },   
-    { x: 29, y: 9, type: 'half-right' },   
-    { x: 27, y: 44, type: 'half-left' },
-    { x: 26, y: 43, type: 'half-left' },
-    { x: 14, y: 37, type: 'half-bottom' },
+    // { x: 29, y: 7, type: 'half-right' },   
+    // { x: 29, y: 8, type: 'half-right' },   
+    // { x: 29, y: 9, type: 'half-right' },   
+    // { x: 27, y: 44, type: 'half-left' },
+    // { x: 26, y: 43, type: 'half-left' },
+    
     { x: 8, y: 35, type: 'half-left' },
-    { x: 35, y: 36, type: 'half-right' },
+    { x: 35, y: 36, type: 'full' },
     {x: 36, y: 35, type: 'half-right'},
     {x: 37, y: 35, type: 'full'},
     {x: 42, y: 34, type: 'half-right'},
@@ -168,15 +168,15 @@ const COLLISION_MAP = [
     // ...Array.from({ length: 21 }, (_, i) => ({ x: i, y: 40, type: 'full' })),
     // ...Array.from({ length: 27 }, (_, i) => ({ x: i, y: 39, type: 'full' })),
     // ...Array.from({ length: 36 }, (_, i) => {
-    //   if (i === 18 || i === 19) {
-    //     return { x: i, y: 38, type: 'half-bottom' };
-    //   }else if (i === 15 || i === 16 || i === 17) {
-    //     return { x: i, y: 38, type: 'half-top' };
-    //   }
-    //   return { x: i, y: 38, type: 'full' };
-    // }).filter(Boolean),
-    // ...Array.from({ length: 14 }, (_, i) => ({ x: i, y: 37, type: 'full' })), 
-    // ...Array.from({ length: 10 }, (_, i) => ({ x: i, y: 36, type: 'full' })), 
+      //   if (i === 18 || i === 19) {
+        //     return { x: i, y: 38, type: 'half-bottom' };
+        //   }else if (i === 15 || i === 16 || i === 17) {
+          //     return { x: i, y: 38, type: 'half-top' };
+          //   }
+          //   return { x: i, y: 38, type: 'full' };
+          // }).filter(Boolean),
+          // ...Array.from({ length: 14 }, (_, i) => ({ x: i, y: 37, type: 'full' })), 
+          // ...Array.from({ length: 10 }, (_, i) => ({ x: i, y: 36, type: 'full' })), 
     // ...Array.from({ length: 10 }, (_, i) => ({ x: i, y: 36, type: 'full' })), 
     // ...Array.from({ length: 6 }, (_, i) => ({ x: i+2, y: 35, type: 'full' })), 
     // ...Array.from({ length: 6 }, (_, i) => ({ x: i+2, y: 35, type: 'full' })), 
@@ -191,7 +191,7 @@ const COLLISION_MAP = [
     // ...Array.from({ length: 7 }, (_, i) => ({ x: i+32, y: 20, type: (i >= 4 && i <= 8) ? 'half-top' : 'full' })), 
     // ...Array.from({ length: 9 }, (_, i) => ({ x: i+33, y: 21, type: 'full' })), 
     // ...Array.from({ length: 3 }, (_, i) => ({ x: i+33, y: 19, type: 'full' })), 
-
+    
     
     // {x: 45, y: 21, type: 'half-top'},
     // {x: 46, y: 21, type: 'half-top'},
@@ -211,14 +211,21 @@ const COLLISION_MAP = [
     // {x: 47, y: 36, type: 'half-bottom'},
     // {x: 50, y: 34, type: 'half-left'},
     // {x: 51, y: 33, type: 'full'},
-    ...Array.from({ length: 2 }, (_, i) => ({ x: i+45 , y: 36  , type: 'full' })), 
-    ...Array.from({ length: 3 }, (_, i) => ({ x: i+47 , y: 34  , type: 'full' })), 
-    ...Array.from({ length: 5 }, (_, i) => ({ x: 53 , y: i+26  , type: 'half-left' })), 
-    ...Array.from({ length: 2 }, (_, i) => ({ x: 52 , y: i+31  , type: 'half-right' })), 
-    ...Array.from({ length: 13 }, (_, i) => ({ x: i + 16 , y: 12 , type: 'half-bottom' })), 
-    ...Array.from({ length: 13 }, (_, i) => ({ x: i + 18 , y: 12 , type: 'half-top' })), 
-    ...Array.from({ length: 1 }, (_, i) => ({ x: i + 17 , y: 11 , type: 'half-bottom' })), 
-    
+    // ...Array.from({ length: 2 }, (_, i) => ({ x: i+45 , y: 36  , type: 'full' })), 
+    // ...Array.from({ length: 3 }, (_, i) => ({ x: i+47 , y: 34  , type: 'full' })), 
+    // ...Array.from({ length: 5 }, (_, i) => ({ x: 53 , y: i+26  , type: 'half-left' })), 
+    // ...Array.from({ length: 2 }, (_, i) => ({ x: 52 , y: i+31  , type: 'half-right' })), 
+    // ...Array.from({ length: 13 }, (_, i) => ({ x: i + 16 , y: 12 , type: 'half-bottom' })), 
+    // ...Array.from({ length: 13 }, (_, i) => ({ x: i + 18 , y: 12 , type: 'half-top' })), 
+    // ...Array.from({ length: 1 }, (_, i) => ({ x: i + 17 , y: 11 , type: 'half-bottom' })), 
+     ...Array.from({ length: 14 }, (_, i) => ({ x: i + 14 , y: 37 , type: 'half-bottom' })), 
+     ...Array.from({ length: 4 }, (_, i) => ({ x: i + 31 , y: 36   , type: 'half-bottom' })), 
+     {x:27, y:36, type:'full'},
+     {x:8, y:36, type:'full'},
+     {x:8, y:37, type:'full'},
+     ...Array.from({ length: 5 }, (_, i) => ({ x: i + 9 , y: 37   , type: 'full' })), 
+    // {x: 28, y: 23, type: 'half-top'},
+
     
     // end buat danau + air
     
@@ -255,11 +262,13 @@ const COLLISION_MAP = [
     ...Array.from({ length: 17 }, (_, i) => ({ x: i+39 , y: 10  , type: 'half-top' })),
     ...Array.from({ length: 2 }, (_, i) => ({ x: 55 , y: i+8  , type: 'half-right' })),
     ...Array.from({ length: 3 }, (_, i) => ({ x: i+56 , y: 8  , type: 'half-bottom' })),
-    ...Array.from({ length: 4 }, (_, i) => ({ x: 39 , y: 6+i  , type: 'half-left' })),
-    ...Array.from({ length: 4 }, (_, i) => ({ x: i+36 , y: 6  , type: 'half-bottom' })),
-    ...Array.from({ length: 4 }, (_, i) => ({ x: 36 , y: 4+i  , type: 'full' })),
-    ...Array.from({ length: 24 }, (_, i) => ({ x: 36+i , y: 4  , type: 'full' })),
-    ...Array.from({ length: 24 }, (_, i) => ({ x: 36+i , y: 4  , type: 'full' })),
+    // ...Array.from({ length: 4 }, (_, i) => ({ x: 39 , y: 6+i  , type: 'half-left' })),
+    // ...Array.from({ length: 4 }, (_, i) => ({ x: i+36 , y: 6  , type: 'half-bottom' })),
+    // ...Array.from({ length: 4 }, (_, i) => ({ x: 36 , y: 4+i  , type: 'full' })),
+    // ...Array.from({ length: 24 }, (_, i) => ({ x: 36+i , y: 4  , type: 'full' })),
+    // ...Array.from({ length: 24 }, (_, i) => ({ x: 36+i , y: 4  , type: 'full' })),
+
+    ...Array.from({ length: 5 }, (_, i) => ({ x: 34+i , y: 9  , type: 'half-top' })),
     ...Array.from({ length: 1 }, (_, i) => ({ x: 4+i , y: 5  , type: 'full' })),
     ...Array.from({ length: 3 }, (_, i) => ({ x: i+10 , y: 6  , type: 'full' })),
     ...Array.from({ length: 3 }, (_, i) => ({ x: 11 , y: 7+i  , type: 'half-right' })),
@@ -306,6 +315,37 @@ const COLLISION_MAP = [
     ...Array.from({ length: 2 }, (_, i) => ({ x:i+7 , y: 25 , type: 'half-bottom' })),
     ...Array.from({ length: 13 }, (_, i) => ({ x:i+34 , y: 13 , type: 'half-top' })),
     ...Array.from({ length: 1 }, (_, i) => ({ x:i+45 , y: 14 , type: 'half-right' })),
+    ...Array.from({ length: 5 }, (_, i) => ({ x:45-i , y: 14+i , type: 'full' })),
+    ...Array.from({ length: 5 }, (_, i) => ({ x:50-i , y: 14+i , type: 'full' })),
+    ...Array.from({ length: 9 }, (_, i) => ({ x:51+i , y: 14 , type: 'full' })),
+    ...Array.from({ length: 13}, (_, i) => ({ x:16+i , y: 12 , type: 'full' })),
+    { x: 45, y: 20,type:'full' },
+    { x: 42, y: 19,type:'half-left' },
+    ...Array.from({ length: 6}, (_, i) => ({ x:17+i , y: 31 , type: 'full' })),
+    ...Array.from({ length: 6}, (_, i) => ({ x:18+i , y: 28 , type: 'full' })),
+    ...Array.from({ length: 3}, (_, i) => ({ x:31+i , y: 32 , type: 'full' })),
+    { x: 24, y: 31,type:'half-left' },
+    { x: 26, y: 31,type:'half-bottom' },
+    { x: 29, y: 32,type:'half-left' },
+    { x: 27, y: 33,type:'full' },
+    { x: 21, y: 36,type:'full' },
+    { x: 21, y: 32,type:'half-bottom' },
+    { x: 27, y: 31,type:'half-bottom' },
+    { x: 27, y: 32,type:'full' },
+    { x: 28, y: 32,type:'full' },
+    { x: 29, y: 30,type:'half-top' },
+    { x: 37, y: 28,type:'full' },
+    { x: 34, y: 28,type:'half-bottom' },
+    { x: 32, y: 25,type:'half-right' },
+    { x: 33, y: 26,type:'full' },
+    { x: 21, y: 27,type:'full' },
+    { x: 15, y: 27,type:'half-top' },
+    ...Array.from({ length: 3}, (_, i) => ({ x:28+i , y: 29 , type: 'full' })),
+    ...Array.from({ length: 2}, (_, i) => ({ x:35+i , y: 29 , type: 'full' })),
+    ...Array.from({ length: 2}, (_, i) => ({ x:8 , y: 31+i , type: 'full' })),
+    
+
+
   ];
   
   // Define plantable points using grid coordinates
@@ -389,8 +429,7 @@ const ITEMS = {
     icon: royalDocumentIcon,
     type: 'quest',
     description: 'An official document from the royal family',
-    // price: -1, // Not buyable - removed
-    // sellPrice: -1 // Not sellable - removed
+
   },
   meat: {
     id: 7,
@@ -506,7 +545,7 @@ const Game = () => {
   const [position, setPosition] = useState({ x: 350, y: 150 });
   const [facing, setFacing] = useState('stand');
   const [isInInterior, setIsInInterior] = useState(false);
-  const speed = 25;
+  const speed = 15;
   const scale = 2;
   const GRID_SIZE = 40;
   const PLAYER_BASE_SIZE = 10;
@@ -749,16 +788,7 @@ const Game = () => {
     );
     const proximityThreshold = GRID_SIZE * 1.5; // Increased threshold for easier interaction
     
-    // Debug logging
-    console.log('Elder Proximity Check:', {
-      playerPosition: { x: playerX, y: playerY },
-      playerCenter: { x: playerCenterX, y: playerCenterY },
-      elderPosition: ELDER_POSITION_PIXEL,
-      elderCenter: { x: elderCenterX, y: elderCenterY },
-      distance,
-      threshold: proximityThreshold,
-      isClose: distance < proximityThreshold
-    });
+
     
     return distance < proximityThreshold;
   }, [ELDER_POSITION_PIXEL.x, ELDER_POSITION_PIXEL.y, ELDER_SIZE, PLAYER_SIZE, GRID_SIZE]);
@@ -888,7 +918,8 @@ const Game = () => {
   };
   const getSprite = () => {
     const sprite = characterSprites[facing === 'stand' ? 'stand' : `walk${facing.charAt(0).toUpperCase() + facing.slice(1)}`];
-    return sprite;  };
+    return sprite;
+  };
   // Check collision based on type
   const checkCollision = (playerX, playerY, collisionPoint) => {
     const gridX = collisionPoint.x * GRID_SIZE;
@@ -1031,6 +1062,25 @@ const Game = () => {
     }
   }, []);
 
+  // Add state to track pressed keys
+  const [pressedKeys, setPressedKeys] = useState(new Set());
+
+  // Add state for movement
+  const [isMoving, setIsMoving] = useState(false);
+  const [lastDirection, setLastDirection] = useState('down');
+
+  // Add state for smooth movement
+  const [velocity, setVelocity] = useState({ x: 0, y: 0 });
+  const [targetPosition, setTargetPosition] = useState({ x: 350, y: 150 });
+  const lastTime = useRef(performance.now());
+  const FPS = 144; // Higher FPS for smoother movement
+  const LERP_FACTOR = 0.25; // Interpolation factor (0-1), higher = more responsive
+
+  // Helper function for linear interpolation
+  const lerp = (start, end, factor) => {
+    return start + (end - start) * factor;
+  };
+
   // Prevent movement and interactions when paused, in dialogue, in shop, or talking to elder
   useEffect(() => {
     const handleKeyPress = (e) => {
@@ -1040,8 +1090,9 @@ const Game = () => {
 
       let newX = position.x;
       let newY = position.y;
-      const energyCost = 0.5;
-      const cleanlinessCost = 0.5;
+      // Drain slower: reduce cost per move
+      const energyCost = 0.15; // was 0.5
+      const cleanlinessCost = 0.15; // was 0.5
 
       // Handle number keys for item slots (1-9)
       if (e.key >= '1' && e.key <= '9') {
@@ -1068,11 +1119,9 @@ const Game = () => {
               ...prev,
               y: Math.max(0, newY),
             }));
-            // Batch state updates to reduce re-renders
             setEnergy((prev) => Math.max(0, prev - energyCost));
             setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));
             
-            // Check save point and update save state
             const isAtSavePoint = checkSavePoint(newX, newY);
             setCanSave(isAtSavePoint);
             setShowSavePrompt(isAtSavePoint);
@@ -1080,7 +1129,6 @@ const Game = () => {
             checkTeleport(newX, newY);
             checkShopTrigger(newX, newY);
             
-            // Check proximity to Elder after movement
             if (checkElderProximity(newX, newY)) {
               setShowElderTalkPopup(true);
             }
@@ -1099,7 +1147,6 @@ const Game = () => {
             setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));
             checkTeleport(newX, newY);
             checkShopTrigger(newX, newY);
-            // Check proximity to Elder after movement
             if (checkElderProximity(newX, newY)) {
               setShowElderTalkPopup(true);
             }
@@ -1118,7 +1165,6 @@ const Game = () => {
             setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));
             checkTeleport(newX, newY);
             checkShopTrigger(newX, newY);
-            // Check proximity to Elder after movement
             if (checkElderProximity(newX, newY)) {
               setShowElderTalkPopup(true);
             }
@@ -1137,7 +1183,6 @@ const Game = () => {
             setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));
             checkTeleport(newX, newY);
             checkShopTrigger(newX, newY);
-            // Check proximity to Elder after movement
             if (checkElderProximity(newX, newY)) {
               setShowElderTalkPopup(true);
             }
@@ -1212,7 +1257,7 @@ const Game = () => {
     checkElderProximity,
     getGridPosition,
     handleUseItem
-  ]); // Reduced and memoized dependencies
+  ]);
 
   const getCameraStyle = () => {
     const viewportCenterX = window.innerWidth / 2;
@@ -1355,7 +1400,7 @@ const Game = () => {
         if (!isPlanted) {
           // Show hoe icon if spot is empty and near
           iconsToShow[`${spot.x},${spot.y}`] = 'hoe';
-        } else if (isPlanted.stage === 3) {
+                                                         } else if (isPlanted.stage === 3) {
           // Show sickle icon if crop is mature (stage 3)
           iconsToShow[`${spot.x},${spot.y}`] = 'sickle';
         } else if (isPlanted.needsWatering) {
@@ -1583,6 +1628,46 @@ const handleBath = () => {
   setCleanliness(prev => Math.min(100, prev + 40)); // Increase cleanliness
   setShowBathPopup(false);
 };
+
+  // Health drain effect if energy or cleanliness is 0
+useEffect(() => {
+  const interval = setInterval(() => {
+    // Only drain health if not sleeping, not paused, not in interior, not in dialog, not in shop
+    if (
+      !isSleeping &&
+      !isPaused &&
+      !isInInterior &&
+      !isDialogActive &&
+      !showShop
+    ) {
+      if (energy === 0 && cleanliness === 0) {
+        setHealth(prev => Math.max(0, prev - 0.25)); // Both 0: drain faster
+      } else if (energy === 0 || cleanliness === 0) {
+        setHealth(prev => Math.max(0, prev - 0.12)); // One 0: drain slower
+      }
+    }
+  }, 1000); // Check every second
+
+  return () => clearInterval(interval);
+}, [energy, cleanliness, isSleeping, isPaused, isInInterior, isDialogActive, showShop]);
+
+  // Hunger drain effect (Tarkov-like, drains a bit faster)
+useEffect(() => {
+  const interval = setInterval(() => {
+    // Only drain hunger if not sleeping, not paused, not in interior, not in dialog, not in shop
+    if (
+      !isSleeping &&
+      !isPaused &&
+      !isInInterior &&
+      !isDialogActive &&
+      !showShop
+    ) {
+      setHunger(prev => Math.max(0, prev - 0.25)); // Adjust value for desired speed
+    }
+  }, 1000); // Every second
+
+  return () => clearInterval(interval);
+}, [isSleeping, isPaused, isInInterior, isDialogActive, showShop]);
 
   if (isInInterior) {
     return (
@@ -2041,7 +2126,7 @@ const handleBath = () => {
 
       {/* Bath Popup Button */}
       {showBathPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.15)' }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.15)' }}>
           <div className="bg-[#8B4513] p-6 rounded-lg border-8 border-[#D2B48C] shadow-lg flex flex-col items-center gap-4">
             <h2 className="text-xl font-bold text-[#F5DEB3]">Take a Bath?</h2>
             <button
@@ -2350,11 +2435,11 @@ const handleBath = () => {
                                   // Update quest objective: Plant the seed (assuming this quest exists and objective matches)
                                   setQuests(prevQuests => {
                                     const updatedQuests = prevQuests.map(quest => {
-                                      if (quest.title === "The First Harvest") { // Adjust quest title if needed
+                                      if (quest.title === "The First Harvest") {
                                         return {
                                           ...quest,
                                           objectives: quest.objectives.map(objective => {
-                                            if (objective.description === "Plant the seed") { // Adjust objective description if needed
+                                            if (objective.description === "Plant the seed") {
                                               return { ...objective, completed: true };
                                             }
                                             return objective;
