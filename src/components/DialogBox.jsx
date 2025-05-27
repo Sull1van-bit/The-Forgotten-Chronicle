@@ -18,6 +18,7 @@ import eugeneVeryHappy from '../assets/characters/eugene/veryHappy.png';
 import louisePortrait from '../assets/characters/louise/character.png';
 import eugenePortrait from '../assets/characters/eugene/character.png';
 import elderPortrait from '../assets/npc/elder/character.png';
+import merchantPortrait from '../assets/npc/merchant/character.png';
 
 // Map character names and expressions to portrait images
 const portraits = {
@@ -47,6 +48,10 @@ const portraits = {
   'village elder': {
     neutral: elderPortrait,
     default: elderPortrait,
+  },
+  'merchant': {
+    neutral: merchantPortrait,
+    default: merchantPortrait,
   },
 };
 

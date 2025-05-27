@@ -19,9 +19,10 @@ export const createSaveFileData = (gameState) => {
     currentDay: gameState.currentDay || 1,
     plantedCrops: gameState.plantedCrops || [],
     gameTime: gameState.gameTime || { hours: 6, minutes: 0 },
-    stats: gameState.stats || {},
-    settings: gameState.settings || {},
+    stats: gameState.stats || {},    settings: gameState.settings || {},
     hasSeenHouseDialog: gameState.hasSeenHouseDialog ?? false,
+    hasSeenFirstShopDialogue: gameState.hasSeenFirstShopDialogue ?? false,
+    hasHarvestedFirstCrop: gameState.hasHarvestedFirstCrop ?? false,
   };
 };
 
@@ -39,10 +40,11 @@ export const loadSaveFileData = async (saveId) => {
       wateringDaysCompleted: saveData.wateringDaysCompleted || [],
       currentDay: saveData.currentDay || 1,
       plantedCrops: saveData.plantedCrops || [],
-      gameTime: saveData.gameTime || { hours: 6, minutes: 0 },
-      stats: saveData.stats || {},
+      gameTime: saveData.gameTime || { hours: 6, minutes: 0 },      stats: saveData.stats || {},
       settings: saveData.settings || {},
       hasSeenHouseDialog: saveData.hasSeenHouseDialog ?? false,
+      hasSeenFirstShopDialogue: saveData.hasSeenFirstShopDialogue ?? false,
+      hasHarvestedFirstCrop: saveData.hasHarvestedFirstCrop ?? false,
     };
   } catch (error) {
     console.error('Error loading save file:', error);

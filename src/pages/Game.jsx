@@ -476,7 +476,7 @@ const sunsetEnd = 19 * 60;   // 7:00 PM
 const nightStart = 20 * 60;  // 8:00 PM
 const nightEnd = 4 * 60;     // 4:00 AM
 
-const Game = () => {
+const Game = () => {  
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -505,9 +505,11 @@ const Game = () => {
 
   // Add plantedCrops state
   const [plantedCrops, setPlantedCrops] = useState([]);
-
   // Add state to control visibility of interactive icons on plantable spots (hoe or watering can)
   const [interactiveIcons, setInteractiveIcons] = useState({});
+
+  // Add state to track if player has harvested their first crop
+  const [hasHarvestedFirstCrop, setHasHarvestedFirstCrop] = useState(false);
 
   // Ref to store previous quests state for comparison - MOVED HERE
   const prevQuestsRef = useRef([]);
@@ -527,9 +529,11 @@ const Game = () => {
 
   // Add state to control visibility of hoe icons on plantable spots
   const [showHoeIcon, setShowHoeIcon] = useState({});
-
   // Add state for house dialog
   const [hasSeenHouseDialog, setHasSeenHouseDialog] = useState(false);
+
+  // Add state for first shop dialogue
+  const [hasSeenFirstShopDialogue, setHasSeenFirstShopDialogue] = useState(false);
 
   // Add state for elder talk popup
   const [showElderTalkPopup, setShowElderTalkPopup] = useState(false);
@@ -622,9 +626,9 @@ const Game = () => {
         setHappiness(initialSaveData.stats.happiness || 100);
         setMoney(initialSaveData.stats.money || 0);
         setCleanliness(initialSaveData.stats.cleanliness || 100);
-      }
-      
-      setHasSeenHouseDialog(initialSaveData.hasSeenHouseDialog ?? false);
+      }        setHasSeenHouseDialog(initialSaveData.hasSeenHouseDialog ?? false);
+      setHasSeenFirstShopDialogue(initialSaveData.hasSeenFirstShopDialogue ?? false);
+      setHasHarvestedFirstCrop(initialSaveData.hasHarvestedFirstCrop ?? false);
     }
   }, [isLoadedGame, initialSaveData]);
 
@@ -650,9 +654,7 @@ const Game = () => {
         dialogue: monologueScript
       });
     }
-  };
-
-  // Handle advancing the monologue
+  };  // Handle advancing the monologue
   const handleAdvanceMonologue = () => {
     if (dialogIndex < monologueScript.length - 1) {
       advanceDialog();
@@ -665,7 +667,14 @@ const Game = () => {
         if (welcomeHomeExists) {
           return prevQuests;
         }
-        // Add the quest if it doesn't exist
+        
+        // Quest doesn't exist, so add it and trigger popup outside of setQuests
+        setTimeout(() => {
+          setNewQuestTitle("Welcome Home");
+          setShowNewQuestPopup(true);
+        }, 100);
+        
+        // Add the quest
         return [
           ...prevQuests,
           {
@@ -684,17 +693,8 @@ const Game = () => {
           }
         ];
       });
-      // Only show popup if we added the quest
-      setQuests(prevQuests => {
-        const welcomeHomeExists = prevQuests.some(quest => quest.title === "Welcome Home");
-        if (!welcomeHomeExists) {
-          setNewQuestTitle("Welcome Home");
-          setShowNewQuestPopup(true);
-        }
-        return prevQuests;
-      });
     }
-  };  // Handle skipping the entire monologue
+  };// Handle skipping the entire monologue
   const handleSkipMonologue = () => {
     endDialog();
     // Add the initial quest and trigger popup when skipping only if it doesn't exist
@@ -704,6 +704,13 @@ const Game = () => {
       if (welcomeHomeExists) {
         return prevQuests;
       }
+      
+      // Quest doesn't exist, so add it and trigger popup outside of setQuests
+      setTimeout(() => {
+        setNewQuestTitle("Welcome Home");
+        setShowNewQuestPopup(true);
+      }, 100);
+      
       // Add the quest if it doesn't exist
       return [
         ...prevQuests,
@@ -723,15 +730,7 @@ const Game = () => {
         }
       ];
     });
-    // Only show popup if we added the quest
-    setQuests(prevQuests => {
-      const welcomeHomeExists = prevQuests.some(quest => quest.title === "Welcome Home");
-      if (!welcomeHomeExists) {
-        setNewQuestTitle("Welcome Home");
-        setShowNewQuestPopup(true);
-      }
-      return prevQuests;
-    });  };
+  };
 
   // Convert pixel position to grid coordinates
   const getGridPosition = useCallback((x, y) => ({
@@ -823,9 +822,10 @@ const Game = () => {
           soundEnabled,
           sfxVolume,
           musicEnabled,
-          musicVolume
-        },
+          musicVolume        },
         hasSeenHouseDialog,
+        hasSeenFirstShopDialogue,
+        hasHarvestedFirstCrop,
       };
 
       const saveData = createSaveFileData(gameState);
@@ -862,9 +862,9 @@ const Game = () => {
           setSoundEnabled(gameState.settings.soundEnabled ?? true);
           setSfxVolume(gameState.settings.sfxVolume ?? 0.5);
           setMusicEnabled(gameState.settings.musicEnabled ?? true);
-          setMusicVolume(gameState.settings.musicVolume ?? 0.5);
-        }
-        setHasSeenHouseDialog(gameState.hasSeenHouseDialog ?? false);      }
+          setMusicVolume(gameState.settings.musicVolume ?? 0.5);        }
+        setHasSeenHouseDialog(gameState.hasSeenHouseDialog ?? false);
+        setHasSeenFirstShopDialogue(gameState.hasSeenFirstShopDialogue ?? false);}
     } catch (error) {
     }
   };
@@ -1082,8 +1082,20 @@ const Game = () => {
 
       let newX = position.x;
       let newY = position.y;
+      // Drain slower: reduce cost per move
+      const energyCost = 0.15; // was 0.5
+      const cleanlinessCost = 0.15; // was 0.5
 
-      // Handle movement
+      // Handle number keys for item slots (1-9)
+      if (e.key >= '1' && e.key <= '9') {
+        const slotIndex = parseInt(e.key) - 1;
+        const item = inventory[slotIndex];
+        if (item) {
+          handleUseItem(item);
+        }
+        return;
+      }
+
       switch (e.key.toLowerCase()) {
         case 'w':
         case 'arrowup':
@@ -1435,7 +1447,7 @@ const Game = () => {
         if (!isPlanted) {
           // Show hoe icon if spot is empty and near
           iconsToShow[`${spot.x},${spot.y}`] = 'hoe';
-        } else if (isPlanted.stage === 3) {
+                                                         } else if (isPlanted.stage === 3) {
           // Show sickle icon if crop is mature (stage 3)
           iconsToShow[`${spot.x},${spot.y}`] = 'sickle';
         } else if (isPlanted.needsWatering) {
@@ -1664,6 +1676,46 @@ const handleBath = () => {
   setShowBathPopup(false);
 };
 
+  // Health drain effect if energy or cleanliness is 0
+useEffect(() => {
+  const interval = setInterval(() => {
+    // Only drain health if not sleeping, not paused, not in interior, not in dialog, not in shop
+    if (
+      !isSleeping &&
+      !isPaused &&
+      !isInInterior &&
+      !isDialogActive &&
+      !showShop
+    ) {
+      if (energy === 0 && cleanliness === 0) {
+        setHealth(prev => Math.max(0, prev - 0.25)); // Both 0: drain faster
+      } else if (energy === 0 || cleanliness === 0) {
+        setHealth(prev => Math.max(0, prev - 0.12)); // One 0: drain slower
+      }
+    }
+  }, 1000); // Check every second
+
+  return () => clearInterval(interval);
+}, [energy, cleanliness, isSleeping, isPaused, isInInterior, isDialogActive, showShop]);
+
+  // Hunger drain effect (Tarkov-like, drains a bit faster)
+useEffect(() => {
+  const interval = setInterval(() => {
+    // Only drain hunger if not sleeping, not paused, not in interior, not in dialog, not in shop
+    if (
+      !isSleeping &&
+      !isPaused &&
+      !isInInterior &&
+      !isDialogActive &&
+      !showShop
+    ) {
+      setHunger(prev => Math.max(0, prev - 0.25)); // Adjust value for desired speed
+    }
+  }, 1000); // Every second
+
+  return () => clearInterval(interval);
+}, [isSleeping, isPaused, isInInterior, isDialogActive, showShop]);
+
   if (isInInterior) {
     return (
       <DialogProvider>
@@ -1743,7 +1795,7 @@ const handleBath = () => {
 
               <div className="flex items-center gap-3 mb-1">
                 <span className="text-sm flex items-center">
-                  <img src={hungerIcon} alt="Hunger" className="w-6 h-6 mr-1" /> {Math.round(hunger)}/100
+                  <img src={hungerIcon} alt="Hunger" className="w-6 h-a6 mr-1" /> {Math.round(hunger)}/100
                 </span>
                 <div className="w-28 h-4 bg-gray-700 rounded overflow-hidden">
                   <div className="h-full bg-yellow-500" style={{ width: `${hunger}%` }}></div>
@@ -1942,9 +1994,19 @@ const handleBath = () => {
         <div className="fixed inset-0 z-50 bg-black bg-opacity-60 flex items-center justify-center">
           <div className="bg-[#8B4513] p-3 rounded-lg text-white border-3 border-[#D2B48C] shadow-lg w-[280px] h-fit">
             <div className="flex justify-between items-center mb-1">
-              <h2 className="text-base font-bold text-[#F5DEB3]">Shop ({shopMode === 'buy' ? 'Buying' : 'Selling'})</h2>
-              <button
-                onClick={() => setShowShop(false)}
+              <h2 className="text-base font-bold text-[#F5DEB3]">Shop ({shopMode === 'buy' ? 'Buying' : 'Selling'})</h2>              <button
+                onClick={() => {
+                  playClick();
+                  setShowShop(false);
+                  // Show merchant cancel dialogue
+                  setTimeout(() => {
+                    startDialog({
+                      characterName: 'merchant',
+                      expression: 'neutral',
+                      dialogue: ["No need to rush—just remember, a farm doesn't grow itself."]
+                    });
+                  }, 100);
+                }}
                 className="bg-red-500 text-white px-1 py-[2px] rounded hover:bg-red-600 transition-colors text-xs"
               >
                 Close
@@ -2039,8 +2101,7 @@ const handleBath = () => {
                   inventory.map((item, index) => (
                     <div 
                       key={index} 
-                      className="bg-[#A0522D] p-2 rounded border border-[#D2B48C] hover:border-[#F5DEB3] transition-colors cursor-pointer flex items-center gap-2"
-                      onClick={() => {
+                      className="bg-[#A0522D] p-2 rounded border border-[#D2B48C] hover:border-[#F5DEB3] transition-colors cursor-pointer flex items-center gap-2"                      onClick={() => {
                         if (item.sellPrice !== -1) {
                           playCash();
                           setMoney(prevMoney => prevMoney + item.sellPrice);
@@ -2055,7 +2116,25 @@ const handleBath = () => {
                               newInventory.splice(index, 1);
                             }
                             return newInventory;
-                          });
+                          });                          // Update quest objective: Sell the potato at the shop (if selling a potato)
+                          if (item.name === 'Potato') {
+                            setQuests(prevQuests => {
+                              return prevQuests.map(quest => {
+                                if (quest.title === "The First Harvest") {
+                                  return {
+                                    ...quest,
+                                    objectives: quest.objectives.map(objective => {
+                                      if (objective.description === "Sell the potato at the shop") {
+                                        return { ...objective, completed: true };
+                                      }
+                                      return objective;
+                                    })
+                                  };
+                                }
+                                return quest;
+                              });
+                            });
+                          }
 
                         }
                       }}
@@ -2094,7 +2173,7 @@ const handleBath = () => {
 
       {/* Bath Popup Button */}
       {showBathPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.15)' }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.15)' }}>
           <div className="bg-[#8B4513] p-6 rounded-lg border-8 border-[#D2B48C] shadow-lg flex flex-col items-center gap-4">
             <h2 className="text-xl font-bold text-[#F5DEB3]">Take a Bath?</h2>
             <button
@@ -2265,10 +2344,16 @@ const handleBath = () => {
                                     },
                                     {
                                       description: "Plant the seed",
+                                      completed: false                                    },
+                                    {
+                                      description: "Water your planted crops for 2 day (0/2)",
+                                      completed: false                                    },
+                                    {
+                                      description: "Harvest the mature potato",
                                       completed: false
                                     },
                                     {
-                                      description: "Water your planted crops for 3 days (0/3)",
+                                      description: "Sell the potato at the shop",
                                       completed: false
                                     }
                                   ]
@@ -2334,7 +2419,7 @@ const handleBath = () => {
                         position: 'absolute',
                         left: `${crop.x * GRID_SIZE}px`,
                         top: `${crop.y * GRID_SIZE + 12}px`,
-                        width: `${GRID_SIZE * 0.8}px`,
+                        width: `${GRID_SIZE * 1}px`,
                         height: `${GRID_SIZE * 0.8}px`,
                         backgroundImage: `url(${CROP_STAGES[crop.type][crop.stage]})`,
                         backgroundSize: 'contain',
@@ -2347,11 +2432,13 @@ const handleBath = () => {
                   {/* Render hoe icons on plantable spots */}
                   {PLANTABLE_SPOTS.map(spot => {
                     const spotKey = `${spot.x},${spot.y}`;
-                    const iconType = interactiveIcons[spotKey];
-
-                    if (iconType) {
-                      const iconSrc = iconType === 'hoe' ? hoeIcon : wateringCanIcon;
-                      const altText = iconType === 'hoe' ? 'Plant' : 'Water';
+                    const iconType = interactiveIcons[spotKey];                    if (iconType) {
+                      const iconSrc = iconType === 'hoe' ? hoeIcon : 
+                                     iconType === 'wateringCan' ? wateringCanIcon : 
+                                     iconType === 'sickle' ? sickleIcon : hoeIcon;
+                      const altText = iconType === 'hoe' ? 'Plant' : 
+                                     iconType === 'wateringCan' ? 'Water' : 
+                                     iconType === 'sickle' ? 'Harvest' : 'Plant';
 
                       return (
                         <img
@@ -2395,11 +2482,11 @@ const handleBath = () => {
                                   // Update quest objective: Plant the seed (assuming this quest exists and objective matches)
                                   setQuests(prevQuests => {
                                     const updatedQuests = prevQuests.map(quest => {
-                                      if (quest.title === "The First Harvest") { // Adjust quest title if needed
+                                      if (quest.title === "The First Harvest") {
                                         return {
                                           ...quest,
                                           objectives: quest.objectives.map(objective => {
-                                            if (objective.description === "Plant the seed") { // Adjust objective description if needed
+                                            if (objective.description === "Plant the seed") {
                                               return { ...objective, completed: true };
                                             }
                                             return objective;
@@ -2438,13 +2525,11 @@ const handleBath = () => {
                                   return prevQuests.map(quest => {
                                     if (quest.title === "The First Harvest") {
                                       return {
-                                        ...quest,
-                                        objectives: quest.objectives.map(objective => {
-                                          if (objective.description.includes("Water your planted crops for 3 days")) {
+                                        ...quest,                                        objectives: quest.objectives.map(objective => {                                          if (objective.description.includes("Water your planted crops for 2 day")) {
                                             return { 
                                               ...objective, 
-                                              description: `Water your planted crops for 3 days (${newProgress}/3)`,
-                                              completed: newProgress >= 3
+                                              description: `Water your planted crops for 2 day (${newProgress}/2)`,
+                                              completed: newProgress >= 2
                                             };
                                           }
                                           return objective;
@@ -2454,15 +2539,42 @@ const handleBath = () => {
                                     return quest;
                                   });
                                 });
-                              }
-
-                            } else if (iconType === 'sickle' && isCurrentlyPlanted && isCurrentlyPlanted.stage === 3) {
-                              // Harvest logic
-
-                              // Add harvested item (Potato) to inventory
+                              }                            } else if (iconType === 'sickle' && isCurrentlyPlanted && isCurrentlyPlanted.stage === 3) {
+                              // Harvest logic                              // Add harvested item (Potato) to inventory
                               addItemToInventory(2); // Assuming Potato has ID 2 based on ITEMS definition
                               // Remove the crop from plantedCrops
                               setPlantedCrops(prevCrops => prevCrops.filter(crop => !(crop.x === spot.x && crop.y === spot.y)));
+                              
+                              // Trigger first harvest dialogue (only on first harvest)
+                              if (!hasHarvestedFirstCrop) {
+                                startDialog({
+                                  characterName: character?.name || 'Character',
+                                  expression: 'smile',
+                                  dialogue: [
+                                    "Ah… my first harvest. It may not be much, but it's mine.",
+                                    "Time to see if these are worth anything at the market."
+                                  ]
+                                });
+                                setHasHarvestedFirstCrop(true);
+                              }
+
+                              // Update quest objective: Harvest the mature potato
+                              setQuests(prevQuests => {
+                                return prevQuests.map(quest => {
+                                  if (quest.title === "The First Harvest") {
+                                    return {
+                                      ...quest,
+                                      objectives: quest.objectives.map(objective => {
+                                        if (objective.description === "Harvest the mature potato") {
+                                          return { ...objective, completed: true };
+                                        }
+                                        return objective;
+                                      })
+                                    };
+                                  }
+                                  return quest;
+                                });
+                              });
                             }
                           }}
                         />
@@ -2571,10 +2683,40 @@ const handleBath = () => {
             </div>
           )}
         </>
-      )}
+      )}      {/* Shop Confirmation Popup */}
+      {showShopConfirm && !isPaused && !isDialogActive && !showShop && (() => {
+        // Check if this is the first shop encounter with buy seeds objective
+        const hasFirstHarvestQuest = quests.some(quest => quest.title === "The First Harvest");
+        const hasBuySeedsObjective = quests.some(quest => 
+          quest.title === "The First Harvest" && 
+          quest.objectives.some(obj => obj.description === "Buy seeds from the shop" && !obj.completed)
+        );
+        const shouldShowMerchantDialogue = hasFirstHarvestQuest && hasBuySeedsObjective && !hasSeenFirstShopDialogue;
 
-      {/* Shop Confirmation Popup */}
-      {showShopConfirm && !isPaused && !isDialogActive && !showShop && (
+        if (shouldShowMerchantDialogue) {
+          // Trigger merchant dialogue
+          setTimeout(() => {
+            setShowShopConfirm(false);
+            startDialog({
+              characterName: 'merchant',
+              expression: 'neutral',
+              dialogue: [
+                "Ah… a new face, or rather, an old one returned. Haven't seen anyone from that cottage in years.",
+                "So, what's it going to be? Looking for tools? A bite to eat? No, wait—must be seeds. Can't live off an empty field, eh?",
+                "Wheat for steady trade, turnips for a quick harvest… or maybe something more refined? What'll it be?"
+              ],
+              onComplete: () => {
+                setHasSeenFirstShopDialogue(true);
+                setShopMode('buy');
+                setShowShop(true);
+              }
+            });
+          }, 100);
+          return null; // Don't render the popup if we're showing dialogue
+        }
+
+        return true; // Render the popup normally
+      })() && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}>
           <div className="bg-[#8B4513] p-8 rounded-lg max-w-md w-full mx-4 relative border-8 border-[#D2B48C] shadow-lg flex flex-col items-center gap-4">
             <h2 className="text-2xl font-bold text-center text-[#F5DEB3]">Shop</h2>
@@ -2602,12 +2744,19 @@ const handleBath = () => {
                 onMouseEnter={playHover}
               >
                 Sell
-              </button>
-              <button 
+              </button>              <button 
                 className="bg-[#8B4513] text-[#F5DEB3] px-6 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 w-32"
                 onClick={() => {
                   playClick();
                   setShowShopConfirm(false);
+                  // Show merchant cancel dialogue
+                  setTimeout(() => {
+                    startDialog({
+                      characterName: 'merchant',
+                      expression: 'neutral',
+                      dialogue: ["No need to rush—just remember, a farm doesn't grow itself."]
+                    });
+                  }, 100);
                 }}
                 onMouseEnter={playHover}
               >
