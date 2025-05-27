@@ -1169,24 +1169,16 @@ const Game = () => {
   // Add state for movement
   const [isMoving, setIsMoving] = useState(false);
   const [lastDirection, setLastDirection] = useState('down');
+  const moveSpeed = 5; // Reduced speed for smoother movement
+  const moveTimeoutRef = useRef(null);
 
-  // Add state for smooth movement
-  const [velocity, setVelocity] = useState({ x: 0, y: 0 });
-  const [targetPosition, setTargetPosition] = useState({ x: 350, y: 150 });
-  const lastTime = useRef(performance.now());
-  const FPS = 144; // Higher FPS for smoother movement
-  const LERP_FACTOR = 0.25; // Interpolation factor (0-1), higher = more responsive
+  // Movement constants
+  const MOVEMENT_SPEED = 8; // Reduced speed for smoother movement
 
-  // Helper function for linear interpolation
-  const lerp = (start, end, factor) => {
-    return start + (end - start) * factor;
-  };
-
-  // Prevent movement and interactions when paused, in dialogue, in shop, or talking to elder
+  // Movement handler
   useEffect(() => {
     const handleKeyPress = (e) => {
       if (isSleeping || isPaused || isDialogActive || showShop || showElderTalkPopup) return;
-
       if (isInInterior) return;
 
       let newX = position.x;
@@ -1206,14 +1198,9 @@ const Game = () => {
       }
 
       switch (e.key.toLowerCase()) {
-        case 't': // Time skip
-          if (!isDialogActive && !isPaused && !showShop) {
-            setShowTimeSkipPopup(true);
-          }
-          break;
         case 'w':
         case 'arrowup':
-          newY = position.y - speed;
+          newY -= MOVEMENT_SPEED;
           if (!hasCollision(newX, newY)) {
             setFacing('up');
             setPosition((prev) => ({
@@ -1239,7 +1226,7 @@ const Game = () => {
           break;
         case 's':
         case 'arrowdown':
-          newY = position.y + speed;
+          newY += MOVEMENT_SPEED;
           if (!hasCollision(newX, newY)) {
             setFacing('down');
             setPosition((prev) => ({
@@ -1259,7 +1246,7 @@ const Game = () => {
           break;
         case 'a':
         case 'arrowleft':
-          newX = position.x - speed;
+          newX -= MOVEMENT_SPEED;
           if (!hasCollision(newX, newY)) {
             setFacing('left');
             setPosition((prev) => ({
@@ -1279,7 +1266,7 @@ const Game = () => {
           break;
         case 'd':
         case 'arrowright':
-          newX = position.x + speed;
+          newX += MOVEMENT_SPEED;
           if (!hasCollision(newX, newY)) {
             setFacing('right');
             setPosition((prev) => ({
@@ -1332,8 +1319,21 @@ const Game = () => {
         case 'e':
           checkShopTrigger(position.x, position.y);
           break;
-        default:
+        case 't':
+          if (!isDialogActive && !isPaused && !showShop) {
+            setShowTimeSkipPopup(true);
+          }
           break;
+      }
+
+      // Check interactions
+      const isAtSavePoint = checkSavePoint(newX, newY);
+      setCanSave(isAtSavePoint);
+      setShowSavePrompt(isAtSavePoint);
+      
+      checkTeleport(newX, newY);
+      if (checkElderProximity(newX, newY)) {
+        setShowElderTalkPopup(true);
       }
     };
 
@@ -1346,27 +1346,151 @@ const Game = () => {
 
     window.addEventListener('keydown', handleKeyPress);
     window.addEventListener('keyup', handleKeyUp);
+    
     return () => {
       window.removeEventListener('keydown', handleKeyPress);
       window.removeEventListener('keyup', handleKeyUp);
     };
   }, [
-    position, 
-    isInInterior, 
-    isSleeping, 
-    isPaused, 
-    isDialogActive, 
-    showShop, 
-    showElderTalkPopup, 
-    canSave,
-    inventory,
-    plantedCrops,
+    position,
+    isSleeping,
+    isPaused,
+    isDialogActive,
+    showShop,
+    showElderTalkPopup,
+    isInInterior,
+    MAP_HEIGHT,
+    MAP_WIDTH,
+    PLAYER_SIZE,
     checkSavePoint,
     checkTeleport,
     checkShopTrigger,
     checkElderProximity,
-    getGridPosition,
-    handleUseItem
+    hasCollision
+  ]);
+
+  // Prevent movement and interactions when paused, in dialogue, in shop, or talking to elder
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      if (isSleeping || isPaused || isDialogActive || showShop || showElderTalkPopup) return;
+      if (isInInterior) return;
+
+      const key = e.key.toLowerCase();
+      setPressedKeys(prev => new Set([...prev, key]));
+    };
+
+    const handleKeyUp = (e) => {
+      const key = e.key.toLowerCase();
+      setPressedKeys(prev => {
+        const newKeys = new Set([...prev]);
+        newKeys.delete(key);
+        return newKeys;
+      });
+      
+      if (!pressedKeys.size) {
+        setIsMoving(false);
+        setFacing('stand');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyPress);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [isSleeping, isPaused, isDialogActive, showShop, showElderTalkPopup, isInInterior]);
+
+  // Handle continuous movement
+  useEffect(() => {
+    const movePlayer = () => {
+      if (isSleeping || isPaused || isDialogActive || showShop || showElderTalkPopup || isInInterior) return;
+
+      let newX = position.x;
+      let newY = position.y;
+      let hasMoved = false;
+      const energyCost = 0.1;
+      const cleanlinessCost = 0.1;
+
+      // Handle diagonal movement with normalized speed
+      const moveDiagonal = pressedKeys.size > 1;
+      const speedMultiplier = moveDiagonal ? 0.707 : 1; // 1/√2 for diagonal movement
+      const currentSpeed = moveSpeed * speedMultiplier;
+
+      if (pressedKeys.has('w') || pressedKeys.has('arrowup')) {
+        newY -= currentSpeed;
+        setFacing('up');
+        hasMoved = true;
+      }
+      if (pressedKeys.has('s') || pressedKeys.has('arrowdown')) {
+        newY += currentSpeed;
+        setFacing('down');
+        hasMoved = true;
+      }
+      if (pressedKeys.has('a') || pressedKeys.has('arrowleft')) {
+        newX -= currentSpeed;
+        setFacing('left');
+        hasMoved = true;
+      }
+      if (pressedKeys.has('d') || pressedKeys.has('arrowright')) {
+        newX += currentSpeed;
+        setFacing('right');
+        hasMoved = true;
+      }
+
+      // Check collision and boundaries
+      if (hasMoved && !hasCollision(newX, newY)) {
+        newX = Math.max(0, Math.min(MAP_WIDTH - PLAYER_SIZE, newX));
+        newY = Math.max(0, Math.min(MAP_HEIGHT - PLAYER_SIZE, newY));
+        
+        setPosition({ x: newX, y: newY });
+        setIsMoving(true);
+        
+        // Apply costs only when actually moving
+        setEnergy(prev => Math.max(0, prev - energyCost));
+        setCleanliness(prev => Math.max(0, prev - cleanlinessCost));
+        
+        // Check various interactions
+        const isAtSavePoint = checkSavePoint(newX, newY);
+        setCanSave(isAtSavePoint);
+        setShowSavePrompt(isAtSavePoint);
+        
+        checkTeleport(newX, newY);
+        checkShopTrigger(newX, newY);
+        
+        if (checkElderProximity(newX, newY)) {
+          setShowElderTalkPopup(true);
+        }
+      } else if (!hasMoved) {
+        setIsMoving(false);
+      }
+
+      moveTimeoutRef.current = requestAnimationFrame(movePlayer);
+    };
+
+    moveTimeoutRef.current = requestAnimationFrame(movePlayer);
+
+    return () => {
+      if (moveTimeoutRef.current) {
+        cancelAnimationFrame(moveTimeoutRef.current);
+      }
+    };
+  }, [
+    position,
+    pressedKeys,
+    isSleeping,
+    isPaused,
+    isDialogActive,
+    showShop,
+    showElderTalkPopup,
+    isInInterior,
+    checkSavePoint,
+    checkTeleport,
+    checkShopTrigger,
+    checkElderProximity,
+    MAP_WIDTH,
+    MAP_HEIGHT,
+    PLAYER_SIZE
   ]);
 
   const getCameraStyle = () => {
@@ -1646,7 +1770,7 @@ const Game = () => {
     const hoursToSkip = parseInt(hours);
     if (isNaN(hoursToSkip) || hoursToSkip <= 0) {
       alert('Please enter a valid number of hours');
-      return;
+        return;
     }    const totalMinutesToSkip = hoursToSkip * 60;
     
     setGameTime(prevTime => {
