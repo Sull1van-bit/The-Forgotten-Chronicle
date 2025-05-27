@@ -14,6 +14,11 @@ export const createSaveFileData = (gameState) => {
     // Add any other game state you want to save
     inventory: gameState.inventory || [],
     quests: gameState.quests || [],
+    wateringProgress: gameState.wateringProgress || 0,
+    wateringDaysCompleted: gameState.wateringDaysCompleted || [],
+    currentDay: gameState.currentDay || 1,
+    plantedCrops: gameState.plantedCrops || [],
+    gameTime: gameState.gameTime || { hours: 6, minutes: 0 },
     stats: gameState.stats || {},
     settings: gameState.settings || {},
     hasSeenHouseDialog: gameState.hasSeenHouseDialog ?? false,
@@ -23,15 +28,18 @@ export const createSaveFileData = (gameState) => {
 export const loadSaveFileData = async (saveId) => {
   try {
     const saveData = await saveFileService.loadSaveFile(saveId);
-    if (!saveData) return null;
-
-    return {
+    if (!saveData) return null;    return {
       character: saveData.character,
       position: saveData.position,
       facing: saveData.facing,
       // Restore any other game state
       inventory: saveData.inventory || [],
       quests: saveData.quests || [],
+      wateringProgress: saveData.wateringProgress || 0,
+      wateringDaysCompleted: saveData.wateringDaysCompleted || [],
+      currentDay: saveData.currentDay || 1,
+      plantedCrops: saveData.plantedCrops || [],
+      gameTime: saveData.gameTime || { hours: 6, minutes: 0 },
       stats: saveData.stats || {},
       settings: saveData.settings || {},
       hasSeenHouseDialog: saveData.hasSeenHouseDialog ?? false,

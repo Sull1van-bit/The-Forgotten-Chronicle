@@ -31,6 +31,9 @@ import eugeneEat from '../assets/characters/eugene/eat.gif';
 import elderStand from '../assets/npc/elder/stand.gif';
 import elderPortrait from '../assets/npc/elder/character.png';
 
+// Import guard assets
+import guardStand from '../assets/npc/guard/stand.gif';
+
 // Import character portraits
 import louisePortrait from '../assets/characters/louise/character.png';
 import eugenePortrait from '../assets/characters/eugene/character.png';
@@ -55,7 +58,7 @@ import ActiveQuestFolderUI from '../components/ActiveQuestFolderUI';
 import seedsIcon from '../assets/items/seeds.png';
 import breadIcon from '../assets/items/bread.png';
 import stewIcon from '../assets/items/stew.png';
-import ledgerIcon from '../assets/items/ledger.png';
+import ledgerIcon from '../assets/items/royal-document.png';
 import royalDocumentIcon from '../assets/items/royal-document.png';
 import meatIcon from '../assets/items/meat.png';
 import mushroomIcon from '../assets/items/mushroom.png';
@@ -140,9 +143,9 @@ const COLLISION_MAP = [
   
     // jembatan uhuy
     ...Array.from({ length: 3 }, (_, i) => ({ x: 41 , y: i+36, type: 'half-right' })),
-    ...Array.from({ length: 3 }, (_, i) => ({ x: 39 , y: i+36, type: 'half-left' })),
-    ...Array.from({ length: 3 }, (_, i) => ({ x: i+29 , y: 10, type: 'half-top'  })),
+    ...Array.from({ length: 3 }, (_, i) => ({ x: 39 , y: i+36, type: 'half-left' })),    ...Array.from({ length: 3 }, (_, i) => ({ x: i+29 , y: 10, type: 'half-top'  })),
     ...Array.from({ length: 3 }, (_, i) => ({ x: i+29 , y: 11, type: 'half-bottom'  })),
+
     {x: 41, y: 22, type: 'half-right'},
     {x: 44, y: 23, type: 'half-top'},
     ...Array.from({ length: 2 }, (_, i) => ({ x: 42 , y: i+20, type: 'half-left'  })),
@@ -155,59 +158,59 @@ const COLLISION_MAP = [
     ...Array.from({ length: 3 }, (_, i) => ({ x: 25+i , y: 29, type: 'half-bottom'  })),
   
     // buat danau + air (full collision)
-    ...Array.from({ length: 3 }, (_, i) => ({ x: i+36 , y: 36, type: 'full' })),
-    ...Array.from({ length: 8 }, (_, i) => ({ x: i+31 , y: 37, type: 'full' })),
-    ...Array.from({ length: 3 }, (_, i) => ({ x: i +23, y: 42, type: 'half-bottom' })),
-    ...Array.from({ length: 27 }, (_, i) => ({ x: i, y: 44, type: 'full' })),
-    ...Array.from({ length: 26 }, (_, i) => ({ x: i, y: 43, type: 'full' })),
-    ...Array.from({ length: 23 }, (_, i) => ({ x: i, y: 42, type: 'full' })),
-    ...Array.from({ length: 22 }, (_, i) => ({ x: i, y: 41, type: 'full' })),
-    ...Array.from({ length: 21 }, (_, i) => ({ x: i, y: 40, type: 'full' })),
-    ...Array.from({ length: 27 }, (_, i) => ({ x: i, y: 39, type: 'full' })),
-    ...Array.from({ length: 36 }, (_, i) => {
-      if (i === 18 || i === 19) {
-        return { x: i, y: 38, type: 'half-bottom' };
-      }else if (i === 15 || i === 16 || i === 17) {
-        return { x: i, y: 38, type: 'half-top' };
-      }
-      return { x: i, y: 38, type: 'full' };
-    }).filter(Boolean),
-    ...Array.from({ length: 14 }, (_, i) => ({ x: i, y: 37, type: 'full' })), 
-    ...Array.from({ length: 10 }, (_, i) => ({ x: i, y: 36, type: 'full' })), 
-    ...Array.from({ length: 10 }, (_, i) => ({ x: i, y: 36, type: 'full' })), 
-    ...Array.from({ length: 6 }, (_, i) => ({ x: i+2, y: 35, type: 'full' })), 
-    ...Array.from({ length: 6 }, (_, i) => ({ x: i+2, y: 35, type: 'full' })), 
-    ...Array.from({ length: 3 }, (_, i) => ({ x: i+42, y: 37, type: 'half-top' })), 
-    ...Array.from({ length: 7 }, (_, i) => ({ x: i+42, y: 35, type: i >= 3 ? 'full' : 'half-bottom' })), 
-    ...Array.from({ length: 7 }, (_, i) => ({ x: 30, y: i+12, type: (i >= 4 && i <= 6) ? 'half-left' : 'full' })), 
-    ...Array.from({ length: 8 }, (_, i) => ({ x: 31, y: i+12, type: (i >= 4 && i <= 8) ? 'full' : 'half-right' })), 
-    ...Array.from({ length: 5 }, (_, i) => ({ x: 32, y: i+17, type: (i >= 4 && i <= 6) ? 'full' : 'half-right' })), 
-    {x: 32, y: 16, type: 'half-left'},
-    ...Array.from({ length: 4 }, (_, i) => ({ x: 29, y: i+12, type: 'half-right' })), 
-    ...Array.from({ length: 3 }, (_, i) => ({ x: i+39, y: 20, type: 'half-top' })), 
-    ...Array.from({ length: 7 }, (_, i) => ({ x: i+32, y: 20, type: (i >= 4 && i <= 8) ? 'half-top' : 'full' })), 
-    ...Array.from({ length: 9 }, (_, i) => ({ x: i+33, y: 21, type: 'full' })), 
-    ...Array.from({ length: 3 }, (_, i) => ({ x: i+33, y: 19, type: 'full' })), 
+    // ...Array.from({ length: 3 }, (_, i) => ({ x: i+36 , y: 36, type: 'full' })),
+    // ...Array.from({ length: 8 }, (_, i) => ({ x: i+31 , y: 37, type: 'full' })),
+    // ...Array.from({ length: 3 }, (_, i) => ({ x: i +23, y: 42, type: 'half-bottom' })),
+    // ...Array.from({ length: 27 }, (_, i) => ({ x: i, y: 44, type: 'full' })),
+    // ...Array.from({ length: 26 }, (_, i) => ({ x: i, y: 43, type: 'full' })),
+    // ...Array.from({ length: 23 }, (_, i) => ({ x: i, y: 42, type: 'full' })),
+    // ...Array.from({ length: 22 }, (_, i) => ({ x: i, y: 41, type: 'full' })),
+    // ...Array.from({ length: 21 }, (_, i) => ({ x: i, y: 40, type: 'full' })),
+    // ...Array.from({ length: 27 }, (_, i) => ({ x: i, y: 39, type: 'full' })),
+    // ...Array.from({ length: 36 }, (_, i) => {
+    //   if (i === 18 || i === 19) {
+    //     return { x: i, y: 38, type: 'half-bottom' };
+    //   }else if (i === 15 || i === 16 || i === 17) {
+    //     return { x: i, y: 38, type: 'half-top' };
+    //   }
+    //   return { x: i, y: 38, type: 'full' };
+    // }).filter(Boolean),
+    // ...Array.from({ length: 14 }, (_, i) => ({ x: i, y: 37, type: 'full' })), 
+    // ...Array.from({ length: 10 }, (_, i) => ({ x: i, y: 36, type: 'full' })), 
+    // ...Array.from({ length: 10 }, (_, i) => ({ x: i, y: 36, type: 'full' })), 
+    // ...Array.from({ length: 6 }, (_, i) => ({ x: i+2, y: 35, type: 'full' })), 
+    // ...Array.from({ length: 6 }, (_, i) => ({ x: i+2, y: 35, type: 'full' })), 
+    // ...Array.from({ length: 3 }, (_, i) => ({ x: i+42, y: 37, type: 'half-top' })), 
+    // ...Array.from({ length: 7 }, (_, i) => ({ x: i+42, y: 35, type: i >= 3 ? 'full' : 'half-bottom' })), 
+    // ...Array.from({ length: 7 }, (_, i) => ({ x: 30, y: i+12, type: (i >= 4 && i <= 6) ? 'half-left' : 'full' })), 
+    // ...Array.from({ length: 8 }, (_, i) => ({ x: 31, y: i+12, type: (i >= 4 && i <= 8) ? 'full' : 'half-right' })), 
+    // ...Array.from({ length: 5 }, (_, i) => ({ x: 32, y: i+17, type: (i >= 4 && i <= 6) ? 'full' : 'half-right' })), 
+    // {x: 32, y: 16, type: 'half-left'},
+    // ...Array.from({ length: 4 }, (_, i) => ({ x: 29, y: i+12, type: 'half-right' })), 
+    // ...Array.from({ length: 3 }, (_, i) => ({ x: i+39, y: 20, type: 'half-top' })), 
+    // ...Array.from({ length: 7 }, (_, i) => ({ x: i+32, y: 20, type: (i >= 4 && i <= 8) ? 'half-top' : 'full' })), 
+    // ...Array.from({ length: 9 }, (_, i) => ({ x: i+33, y: 21, type: 'full' })), 
+    // ...Array.from({ length: 3 }, (_, i) => ({ x: i+33, y: 19, type: 'full' })), 
 
     
-    {x: 45, y: 21, type: 'half-top'},
-    {x: 46, y: 21, type: 'half-top'},
-    {x: 46, y: 23, type: 'half-top'},
-    {x: 45, y: 23, type: 'half-top'},
-    {x: 47, y: 21, type: 'half-bottom'},
-    {x: 51, y: 23, type: 'half-bottom'},
-    {x: 48, y: 24, type: 'half-right'},
-    ...Array.from({ length: 5 }, (_, i) => ({ x: i+45, y: 22, type: 'full' })), 
-    ...Array.from({ length: 4 }, (_, i) => ({ x: i+47, y: 23  , type: 'full' })), 
-    ...Array.from({ length: 4 }, (_, i) => ({ x: i+49, y: 24  , type: 'full' })), 
-    ...Array.from({ length: 4 }, (_, i) => ({ x: 51, y: i+24  , type: 'full' })), 
-    ...Array.from({ length: 6 }, (_, i) => ({ x: 50, y: i+25  , type: (i >= 2 && i <= 6) ? 'half-right' : 'full' })),  
-    ...Array.from({ length: 6 }, (_, i) => ({ x: 49-i, y: 31+i, type: 'half-right' })),
-    ...Array.from({ length: 6 }, (_, i) => ({ x: 50-i, y: 31+i, type: 'full' })),
-    {x: 45, y: 34, type: 'half-bottom'},
-    {x: 47, y: 36, type: 'half-bottom'},
-    {x: 50, y: 34, type: 'half-left'},
-    {x: 51, y: 33, type: 'full'},
+    // {x: 45, y: 21, type: 'half-top'},
+    // {x: 46, y: 21, type: 'half-top'},
+    // {x: 46, y: 23, type: 'half-top'},
+    // {x: 45, y: 23, type: 'half-top'},
+    // {x: 47, y: 21, type: 'half-bottom'},
+    // {x: 51, y: 23, type: 'half-bottom'},
+    // {x: 48, y: 24, type: 'half-right'},
+    // ...Array.from({ length: 5 }, (_, i) => ({ x: i+45, y: 22, type: 'full' })), 
+    // ...Array.from({ length: 4 }, (_, i) => ({ x: i+47, y: 23  , type: 'full' })), 
+    // ...Array.from({ length: 4 }, (_, i) => ({ x: i+49, y: 24  , type: 'full' })), 
+    // ...Array.from({ length: 4 }, (_, i) => ({ x: 51, y: i+24  , type: 'full' })), 
+    // ...Array.from({ length: 6 }, (_, i) => ({ x: 50, y: i+25  , type: (i >= 2 && i <= 6) ? 'half-right' : 'full' })),  
+    // ...Array.from({ length: 6 }, (_, i) => ({ x: 49-i, y: 31+i, type: 'half-right' })),
+    // ...Array.from({ length: 6 }, (_, i) => ({ x: 50-i, y: 31+i, type: 'full' })),
+    // {x: 45, y: 34, type: 'half-bottom'},
+    // {x: 47, y: 36, type: 'half-bottom'},
+    // {x: 50, y: 34, type: 'half-left'},
+    // {x: 51, y: 33, type: 'full'},
     ...Array.from({ length: 2 }, (_, i) => ({ x: i+45 , y: 36  , type: 'full' })), 
     ...Array.from({ length: 3 }, (_, i) => ({ x: i+47 , y: 34  , type: 'full' })), 
     ...Array.from({ length: 5 }, (_, i) => ({ x: 53 , y: i+26  , type: 'half-left' })), 
@@ -215,15 +218,7 @@ const COLLISION_MAP = [
     ...Array.from({ length: 13 }, (_, i) => ({ x: i + 16 , y: 12 , type: 'half-bottom' })), 
     ...Array.from({ length: 13 }, (_, i) => ({ x: i + 18 , y: 12 , type: 'half-top' })), 
     ...Array.from({ length: 1 }, (_, i) => ({ x: i + 17 , y: 11 , type: 'half-bottom' })), 
-    ...Array.from({ length: 17 }, (_, i) => ({ x: i + 12 , y: 9 , type: 'half-bottom' })), 
-    ...Array.from({ length: 1 }, (_, i) => ({ x: i + 11 , y: 9 , type: 'half-right' })), 
-    ...Array.from({ length: 7 }, (_, i) => ({ x:10 , y: i , type: 'half-left' })), 
-    ...Array.from({ length: 1 }, (_, i) => ({ x:2 , y: i+2 , type: 'half-right' })), 
-    ...Array.from({ length: 3 }, (_, i) => ({ x:i+3 , y: 1 , type: 'half-bottom' })), 
-    ...Array.from({ length: 3 }, (_, i) => ({ x:i+7 , y: 1 , type: 'half-top' })), 
-    ...Array.from({ length: 29 }, (_, i) => ({ x:5 , y: i+6 , type: 'half-right' })),
-    ...Array.from({ length: 1 }, (_, i) => ({ x:6 , y: i+17 , type: 'half-top' })),
-     
+    
     
     // end buat danau + air
     
@@ -276,11 +271,45 @@ const COLLISION_MAP = [
     ...Array.from({ length: 1 }, (_, i) => ({ x: 16 , y: 13  , type: 'half-left' })),
     ...Array.from({ length: 1 }, (_, i) => ({ x: 16 , y: 13  , type: 'half-left' })),
     ...Array.from({ length: 1 }, (_, i) => ({ x: 8 , y: 17  , type: 'half-bottom' })),
-    
+    ...Array.from({ length: 1 }, (_, i) => ({ x: 6 , y: 11  , type: 'half-bottom' })),
+    ...Array.from({ length: 1 }, (_, i) => ({ x: 11 , y: 17  , type: 'half-bottom' })),
+    ...Array.from({ length: 1 }, (_, i) => ({ x: 16 , y: 26  , type: 'half-bottom' })),
+    ...Array.from({ length: 25 }, (_, i) => ({ x: i+16 , y: 23  , type: 'half-bottom' })),
+    ...Array.from({ length: 11 }, (_, i) => ({ x: 45 , y: 24  , type: 'full' })),
+    ...Array.from({ length: 9 }, (_, i) => ({ x: 44 , y: i+25  , type: 'half-left' })),
+    ...Array.from({ length: 17 }, (_, i) => ({ x: i + 12 , y: 9 , type: 'half-bottom' })), 
+    ...Array.from({ length: 1 }, (_, i) => ({ x: i + 11 , y: 9 , type: 'half-right' })), 
+    ...Array.from({ length: 7 }, (_, i) => ({ x:10 , y: i , type: 'half-left' })), 
+    ...Array.from({ length: 1 }, (_, i) => ({ x:2 , y: i+2 , type: 'half-right' })), 
+    ...Array.from({ length: 3 }, (_, i) => ({ x:i+3 , y: 1 , type: 'half-bottom' })), 
+    ...Array.from({ length: 3 }, (_, i) => ({ x:i+7 , y: 1 , type: 'half-top' })), 
+    ...Array.from({ length: 29 }, (_, i) => ({ x:5 , y: i+6 , type: 'half-right' })),
+    ...Array.from({ length: 1 }, (_, i) => ({ x:6 , y: i+17 , type: 'half-top' })),
+    ...Array.from({ length: 4 }, (_, i) => ({ x:i+38 , y: 36 , type: 'half-top' })),
+    ...Array.from({ length: 1 }, (_, i) => ({ x:42 , y: 35 , type: 'half-left' })),
+    ...Array.from({ length: 2 }, (_, i) => ({ x:i+6 , y: 35 , type: 'half-bottom' })),
+    ...Array.from({ length: 1 }, (_, i) => ({ x:i+5 , y: 35 , type: 'half-right' })),
+    ...Array.from({ length: 1 }, (_, i) => ({ x:i+28 , y: 10 , type: 'half-top' })),
+    ...Array.from({ length: 1 }, (_, i) => ({ x:i+41 , y: 23 , type: 'half-left' })),
+    ...Array.from({ length: 1 }, (_, i) => ({ x:i+15 , y: 16 , type: 'half-right' })),
+    ...Array.from({ length: 1 }, (_, i) => ({ x:i+13 , y: 25 , type: 'half-right' })),
+    ...Array.from({ length: 2 }, (_, i) => ({ x:i+32 , y: 30 , type: 'half-top' })),
+    ...Array.from({ length: 1 }, (_, i) => ({ x:i+20 , y: 24 , type: 'half-bottom' })),
+    ...Array.from({ length: 1 }, (_, i) => ({ x:i+38 , y: 25 , type: 'half-top' })),
+    ...Array.from({ length: 1 }, (_, i) => ({ x:i+43 , y: 28 , type: 'half-right' })),
+    ...Array.from({ length: 1 }, (_, i) => ({ x:i+6 , y: 9 , type: 'full' })),
+    ...Array.from({ length: 2 }, (_, i) => ({ x:21 , y: i+24 , type: 'half-right' })),
+    ...Array.from({ length: 1 }, (_, i) => ({ x:41 , y: i+34 , type: 'half-right' })),
+    ...Array.from({ length: 3 }, (_, i) => ({ x:i+6 , y: 26 , type: 'full' })),
+    ...Array.from({ length: 1 }, (_, i) => ({ x:i+6 , y: 30 , type: 'full' })),
+    ...Array.from({ length: 1 }, (_, i) => ({ x:i+6 , y: 33 , type: 'full' })),
+    ...Array.from({ length: 2 }, (_, i) => ({ x:i+7 , y: 25 , type: 'half-bottom' })),
+    ...Array.from({ length: 13 }, (_, i) => ({ x:i+34 , y: 13 , type: 'half-top' })),
+    ...Array.from({ length: 1 }, (_, i) => ({ x:i+45 , y: 14 , type: 'half-right' })),
   ];
-
-// Define plantable points using grid coordinates
-const PLANTABLE_SPOTS = [
+  
+  // Define plantable points using grid coordinates
+  const PLANTABLE_SPOTS = [
   { x: 2, y: 3 },
   { x: 3, y: 3 },
   { x: 4, y: 3 },
@@ -414,9 +443,9 @@ const Game = () => {
   const { user } = useAuth();
   const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume, playClick, playHover, playCash } = useSound();
   const { musicEnabled, setMusicEnabled, musicVolume, setMusicVolume, startMusicPlayback } = useMusic();
-  const { startDialog, advanceDialog, endDialog, isDialogActive, currentDialog, dialogIndex } = useDialog();
-  const character = location.state?.character;
+  const { startDialog, advanceDialog, endDialog, isDialogActive, currentDialog, dialogIndex } = useDialog();  const character = location.state?.character;
   const isLoadedGame = location.state?.isLoadedGame;
+  const initialSaveData = location.state?.saveData;
   const [isLoading, setIsLoading] = useState(true);
   const [showCutscene, setShowCutscene] = useState(false);
   const [saveFiles, setSaveFiles] = useState([]);
@@ -445,14 +474,17 @@ const Game = () => {
   const prevQuestsRef = useRef([]);
 
   // Add character stats state
-  const [health, setHealth] = useState(100);
-  const [energy, setEnergy] = useState(100);
+  const [health, setHealth] = useState(100);  const [energy, setEnergy] = useState(100);
   const [hunger, setHunger] = useState(100);
   const [happiness, setHappiness] = useState(100);
   const [money, setMoney] = useState(0);
   const [cleanliness, setCleanliness] = useState(100);
   const [gameTime, setGameTime] = useState({ hours: 6, minutes: 0 }); // Start at 6:00 AM
   const [currentDay, setCurrentDay] = useState(1); // Add day counter
+  
+  // Quest progress tracking
+  const [wateringProgress, setWateringProgress] = useState(0); // Track days watered (0/3)
+  const [wateringDaysCompleted, setWateringDaysCompleted] = useState(new Set()); // Track which days watering was completed
 
   // Add state to control visibility of hoe icons on plantable spots
   const [showHoeIcon, setShowHoeIcon] = useState({});
@@ -470,8 +502,8 @@ const Game = () => {
   const [position, setPosition] = useState({ x: 350, y: 150 });
   const [facing, setFacing] = useState('stand');
   const [isInInterior, setIsInInterior] = useState(false);
-  const speed = 20;
-  const scale = 1.2;
+  const speed = 25;
+  const scale = 2;
   const GRID_SIZE = 40;
   const PLAYER_BASE_SIZE = 10;
   const PLAYER_SCALE = 1.3;
@@ -528,10 +560,34 @@ const Game = () => {
         // Give player money to buy 5 breads (5 * 15 = 75)
         setMoney(75);
       }
-    }, 2000);
-
-    return () => clearTimeout(timer);
+    }, 2000);    return () => clearTimeout(timer);
   }, [character, isLoadedGame]);
+
+  // Initialize game state from loaded save data
+  useEffect(() => {
+    if (isLoadedGame && initialSaveData) {
+      // Set all game state from save data
+      setPosition(initialSaveData.position || { x: 1200, y: 900 });
+      setFacing(initialSaveData.facing || 'down');
+      setQuests(initialSaveData.quests || []);
+      setWateringProgress(initialSaveData.wateringProgress || 0);
+      setWateringDaysCompleted(new Set(initialSaveData.wateringDaysCompleted || []));
+      setCurrentDay(initialSaveData.currentDay || 1);
+      setPlantedCrops(initialSaveData.plantedCrops || []);
+      setGameTime(initialSaveData.gameTime || { hours: 6, minutes: 0 });
+      
+      if (initialSaveData.stats) {
+        setHealth(initialSaveData.stats.health || 100);
+        setEnergy(initialSaveData.stats.energy || 100);
+        setHunger(initialSaveData.stats.hunger || 100);
+        setHappiness(initialSaveData.stats.happiness || 100);
+        setMoney(initialSaveData.stats.money || 0);
+        setCleanliness(initialSaveData.stats.cleanliness || 100);
+      }
+      
+      setHasSeenHouseDialog(initialSaveData.hasSeenHouseDialog ?? false);
+    }
+  }, [isLoadedGame, initialSaveData]);
 
   // Effect to auto-hide new quest pop-up
   useEffect(() => {
@@ -561,8 +617,7 @@ const Game = () => {
   const handleAdvanceMonologue = () => {
     if (dialogIndex < monologueScript.length - 1) {
       advanceDialog();
-    } else {
-      // Dialogue ends here
+    } else {      // Dialogue ends here
       endDialog();
       // Add the initial quest after dialogue only if it doesn't exist
       setQuests(prevQuests => {
@@ -600,9 +655,7 @@ const Game = () => {
         return prevQuests;
       });
     }
-  };
-
-  // Handle skipping the entire monologue
+  };  // Handle skipping the entire monologue
   const handleSkipMonologue = () => {
     endDialog();
     // Add the initial quest and trigger popup when skipping only if it doesn't exist
@@ -659,12 +712,32 @@ const Game = () => {
       point.x === playerGridPos.gridX && point.y === playerGridPos.gridY
     );
   }, [getGridPosition]);
-
   // Define Elder position (grid coordinates)
   const ELDER_POSITION_GRID = { x: 15, y: 16 };
   // Calculate Elder pixel position
   const ELDER_POSITION_PIXEL = { x: ELDER_POSITION_GRID.x * GRID_SIZE, y: ELDER_POSITION_GRID.y * GRID_SIZE };
   const ELDER_SIZE = 32; // Assuming similar size to player for positioning
+  // Define Guard position (grid coordinates)
+  const GUARD_POSITION_GRID = { x: 28, y: 10 };
+  // Calculate Guard pixel position
+  const GUARD_POSITION_PIXEL = { x: GUARD_POSITION_GRID.x * GRID_SIZE, y: GUARD_POSITION_GRID.y * GRID_SIZE };
+  const GUARD_SIZE = 32; // Similar size to other NPCs
+  // Define Second Guard position (grid coordinates)
+  const GUARD2_POSITION_GRID = { x: 41, y: 23 };
+  // Calculate Second Guard pixel position
+  const GUARD2_POSITION_PIXEL = { x: GUARD2_POSITION_GRID.x * GRID_SIZE, y: GUARD2_POSITION_GRID.y * GRID_SIZE };
+  const GUARD2_SIZE = 32; // Similar size to other NPCs
+  // Define Third Guard position (grid coordinates)
+  const GUARD3_POSITION_GRID = { x: 41, y: 34 };
+  // Calculate Third Guard pixel position
+  const GUARD3_POSITION_PIXEL = { x: GUARD3_POSITION_GRID.x * GRID_SIZE, y: GUARD3_POSITION_GRID.y * GRID_SIZE };
+  const GUARD3_SIZE = 32; // Similar size to other NPCs
+
+  // Define Fourth Guard position (grid coordinates)
+  const GUARD4_POSITION_GRID = { x: 13, y: 25 };
+  // Calculate Fourth Guard pixel position
+  const GUARD4_POSITION_PIXEL = { x: GUARD4_POSITION_GRID.x * GRID_SIZE, y: GUARD4_POSITION_GRID.y * GRID_SIZE };
+  const GUARD4_SIZE = 32; // Similar size to other NPCs
 
   // Check proximity to Elder
   const checkElderProximity = useCallback((playerX, playerY) => {
@@ -675,7 +748,19 @@ const Game = () => {
     const distance = Math.sqrt(
       Math.pow(playerCenterX - elderCenterX, 2) + Math.pow(playerCenterY - elderCenterY, 2)
     );
-    const proximityThreshold = GRID_SIZE / 2; // Half a grid cell away
+    const proximityThreshold = GRID_SIZE * 1.5; // Increased threshold for easier interaction
+    
+    // Debug logging
+    console.log('Elder Proximity Check:', {
+      playerPosition: { x: playerX, y: playerY },
+      playerCenter: { x: playerCenterX, y: playerCenterY },
+      elderPosition: ELDER_POSITION_PIXEL,
+      elderCenter: { x: elderCenterX, y: elderCenterY },
+      distance,
+      threshold: proximityThreshold,
+      isClose: distance < proximityThreshold
+    });
+    
     return distance < proximityThreshold;
   }, [ELDER_POSITION_PIXEL.x, ELDER_POSITION_PIXEL.y, ELDER_SIZE, PLAYER_SIZE, GRID_SIZE]);
 
@@ -683,13 +768,17 @@ const Game = () => {
   const saveGame = async () => {
     if (!user || !canSave) return;
 
-    try {
-      const gameState = {
+    try {      const gameState = {
         character,
         position,
         facing,
-        inventory: [],
-        quests: [],
+        inventory: inventory || [],
+        quests: quests || [],
+        wateringProgress,
+        wateringDaysCompleted: Array.from(wateringDaysCompleted),
+        currentDay,
+        plantedCrops,
+        gameTime,
         stats: {
           level: 1,
           playTime: '0:00',
@@ -717,7 +806,6 @@ const Game = () => {
       setShowSavePrompt(false);    } catch (error) {
     }
   };
-
   // Load game function
   const loadGame = async (saveId) => {
     try {
@@ -731,6 +819,15 @@ const Game = () => {
         setHappiness(gameState.stats.happiness || 100);
         setMoney(gameState.stats.money || 0);
         setCleanliness(gameState.stats.cleanliness || 100);
+        
+        // Restore quest and watering progress
+        setQuests(gameState.quests || []);
+        setWateringProgress(gameState.wateringProgress || 0);
+        setWateringDaysCompleted(new Set(gameState.wateringDaysCompleted || []));
+        setCurrentDay(gameState.currentDay || 1);
+        setPlantedCrops(gameState.plantedCrops || []);
+        setGameTime(gameState.gameTime || { hours: 6, minutes: 0 });
+        
         if (gameState.settings) {
           setSoundEnabled(gameState.settings.soundEnabled ?? true);
           setSfxVolume(gameState.settings.sfxVolume ?? 0.5);
@@ -1303,6 +1400,7 @@ const Game = () => {
             setCurrentDay(prevDay => {
               const newDay = prevDay + 1;
 
+             
               // Update crop state based on watering and day progression
               setPlantedCrops(prevCrops => prevCrops.map(crop => {
                 // Only process non-mature crops
@@ -2019,9 +2117,7 @@ const Game = () => {
                             });
                             
                             // Then add the new quest
-                            const firstHarvestQuestExists = updatedQuests.some(quest => quest.title === "The First Harvest");
-
-                            if (!firstHarvestQuestExists) {
+                            const firstHarvestQuestExists = updatedQuests.some(quest => quest.title === "The First Harvest");                            if (!firstHarvestQuestExists) {
                               return [
                                 ...updatedQuests,
                                 {
@@ -2034,6 +2130,10 @@ const Game = () => {
                                     },
                                     {
                                       description: "Plant the seed",
+                                      completed: false
+                                    },
+                                    {
+                                      description: "Water your planted crops for 3 days (0/3)",
                                       completed: false
                                     }
                                   ]
@@ -2181,8 +2281,7 @@ const Game = () => {
                                 }
                               } else {
 
-                              }
-                            } else if (iconType === 'wateringCan' && isCurrentlyPlanted && isCurrentlyPlanted.needsWatering) {
+                              }                            } else if (iconType === 'wateringCan' && isCurrentlyPlanted && isCurrentlyPlanted.needsWatering) {
                               // Watering logic
                               setPlantedCrops(prevCrops => prevCrops.map(crop => {
                                 if (crop.x === spot.x && crop.y === spot.y) {
@@ -2190,6 +2289,37 @@ const Game = () => {
                                 }
                                 return crop;
                               }));
+
+                              // Track watering progress for quest (only count once per day)
+                              if (!wateringDaysCompleted.has(currentDay)) {
+                                const newWateringDaysCompleted = new Set(wateringDaysCompleted);
+                                newWateringDaysCompleted.add(currentDay);
+                                setWateringDaysCompleted(newWateringDaysCompleted);
+                                
+                                const newProgress = newWateringDaysCompleted.size;
+                                setWateringProgress(newProgress);
+                                  // Update quest objective description and completion status
+                                setQuests(prevQuests => {
+                                  return prevQuests.map(quest => {
+                                    if (quest.title === "The First Harvest") {
+                                      return {
+                                        ...quest,
+                                        objectives: quest.objectives.map(objective => {
+                                          if (objective.description.includes("Water your planted crops for 3 days")) {
+                                            return { 
+                                              ...objective, 
+                                              description: `Water your planted crops for 3 days (${newProgress}/3)`,
+                                              completed: newProgress >= 3
+                                            };
+                                          }
+                                          return objective;
+                                        })
+                                      };
+                                    }
+                                    return quest;
+                                  });
+                                });
+                              }
 
                             } else if (iconType === 'sickle' && isCurrentlyPlanted && isCurrentlyPlanted.stage === 3) {
                               // Harvest logic
@@ -2214,8 +2344,7 @@ const Game = () => {
                         imageRendering: 'pixelated',
                       }}
                     />
-                  )}
-                  {/* Elder NPC Sprite */}
+                  )}                  {/* Elder NPC Sprite */}
                   {!isLoading && !showCutscene && (
                     <img
                       src={elderStand}
@@ -2229,8 +2358,66 @@ const Game = () => {
                         zIndex: 2, // Ensure elder is above background
                       }}
                     />
+                  )}                  {/* Guard NPC Sprite */}
+                  {!isLoading && !showCutscene && (
+                    <img
+                      src={guardStand}
+                      alt="Guard"
+                      className="absolute pixelated"
+                      style={{
+                        left: `${GUARD_POSITION_PIXEL.x}px`,
+                        top: `${GUARD_POSITION_PIXEL.y}px`,
+                        width: `${GUARD_SIZE}px`,
+                        height: `${GUARD_SIZE}px`,
+                        zIndex: 2, // Ensure guard is above background
+                      }}
+                    />
+                  )}                  {/* Second Guard NPC Sprite */}
+                  {!isLoading && !showCutscene && (
+                    <img
+                      src={guardStand}
+                      alt="Guard 2"
+                      className="absolute pixelated"
+                      style={{
+                        left: `${GUARD2_POSITION_PIXEL.x}px`,
+                        top: `${GUARD2_POSITION_PIXEL.y}px`,
+                        width: `${GUARD2_SIZE}px`,
+                        height: `${GUARD2_SIZE}px`,
+                        zIndex: 2, // Ensure guard is above background
+                      }}
+                    />
+                  )}                  {/* Third Guard NPC Sprite */}
+                  {!isLoading && !showCutscene && (
+                    <img
+                      src={guardStand}
+                      alt="Guard 3"
+                      className="absolute pixelated"
+                      style={{
+                        left: `${GUARD3_POSITION_PIXEL.x}px`,
+                        top: `${GUARD3_POSITION_PIXEL.y}px`,
+                        width: `${GUARD3_SIZE}px`,
+                        height: `${GUARD3_SIZE}px`,
+                        zIndex: 2, // Ensure guard is above background
+                      }}
+                    />
                   )}
-                  <div 
+
+                  {/* Fourth Guard NPC Sprite */}
+                  {!isLoading && !showCutscene && (
+                    <img
+                      src={guardStand}
+                      alt="Guard 4"
+                      className="absolute pixelated"
+                      style={{
+                        left: `${GUARD4_POSITION_PIXEL.x}px`,
+                        top: `${GUARD4_POSITION_PIXEL.y}px`,
+                        width: `${GUARD4_SIZE}px`,
+                        height: `${GUARD4_SIZE}px`,
+                        zIndex: 2, // Ensure guard is above background
+                      }}
+                    />
+                  )}
+                  <div
                     className="map-foreground"
                     style={{
                       width: `${MAP_WIDTH}px`,
