@@ -84,9 +84,9 @@ import Counter from '../components/Counter';
 // Define collision points using grid coordinates
 const COLLISION_MAP = [
     //kali diatas 30s (full collision)
-    ...Array.from({ length: 10 }, (_, i) => ({ x: 30, y: i, type: 'full' })),
-    ...Array.from({ length: 8 }, (_, i) => ({ x: 31, y: i, type: 'full' })),
-    ...Array.from({ length: 3 }, (_, i) => ({ x: 32, y: i, type: 'full' })),
+    // ...Array.from({ length: 10 }, (_, i) => ({ x: 30, y: i, type: 'full' })),
+    // ...Array.from({ length: 8 }, (_, i) => ({ x: 31, y: i, type: 'full' })),
+    // ...Array.from({ length: 3 }, (_, i) => ({ x: 32, y: i, type: 'full' })),
     
     // pagar
     ...Array.from({ length: 4 }, (_, i) => ({ x: i+1, y: 2, type: 'half-bottom' })),
@@ -118,11 +118,11 @@ const COLLISION_MAP = [
     {x: 44, y: 39, type: 'half-bottom'},
   
   
-    { x: 29, y: 7, type: 'half-right' },   
-    { x: 29, y: 8, type: 'half-right' },   
-    { x: 29, y: 9, type: 'half-right' },   
-    { x: 27, y: 44, type: 'half-left' },
-    { x: 26, y: 43, type: 'half-left' },
+    // { x: 29, y: 7, type: 'half-right' },   
+    // { x: 29, y: 8, type: 'half-right' },   
+    // { x: 29, y: 9, type: 'half-right' },   
+    // { x: 27, y: 44, type: 'half-left' },
+    // { x: 26, y: 43, type: 'half-left' },
     
     { x: 8, y: 35, type: 'half-left' },
     { x: 35, y: 36, type: 'full' },
@@ -262,11 +262,13 @@ const COLLISION_MAP = [
     ...Array.from({ length: 17 }, (_, i) => ({ x: i+39 , y: 10  , type: 'half-top' })),
     ...Array.from({ length: 2 }, (_, i) => ({ x: 55 , y: i+8  , type: 'half-right' })),
     ...Array.from({ length: 3 }, (_, i) => ({ x: i+56 , y: 8  , type: 'half-bottom' })),
-    ...Array.from({ length: 4 }, (_, i) => ({ x: 39 , y: 6+i  , type: 'half-left' })),
-    ...Array.from({ length: 4 }, (_, i) => ({ x: i+36 , y: 6  , type: 'half-bottom' })),
-    ...Array.from({ length: 4 }, (_, i) => ({ x: 36 , y: 4+i  , type: 'full' })),
-    ...Array.from({ length: 24 }, (_, i) => ({ x: 36+i , y: 4  , type: 'full' })),
-    ...Array.from({ length: 24 }, (_, i) => ({ x: 36+i , y: 4  , type: 'full' })),
+    // ...Array.from({ length: 4 }, (_, i) => ({ x: 39 , y: 6+i  , type: 'half-left' })),
+    // ...Array.from({ length: 4 }, (_, i) => ({ x: i+36 , y: 6  , type: 'half-bottom' })),
+    // ...Array.from({ length: 4 }, (_, i) => ({ x: 36 , y: 4+i  , type: 'full' })),
+    // ...Array.from({ length: 24 }, (_, i) => ({ x: 36+i , y: 4  , type: 'full' })),
+    // ...Array.from({ length: 24 }, (_, i) => ({ x: 36+i , y: 4  , type: 'full' })),
+
+    ...Array.from({ length: 5 }, (_, i) => ({ x: 34+i , y: 9  , type: 'half-top' })),
     ...Array.from({ length: 1 }, (_, i) => ({ x: 4+i , y: 5  , type: 'full' })),
     ...Array.from({ length: 3 }, (_, i) => ({ x: i+10 , y: 6  , type: 'full' })),
     ...Array.from({ length: 3 }, (_, i) => ({ x: 11 , y: 7+i  , type: 'half-right' })),
@@ -319,6 +321,31 @@ const COLLISION_MAP = [
     ...Array.from({ length: 13}, (_, i) => ({ x:16+i , y: 12 , type: 'full' })),
     { x: 45, y: 20,type:'full' },
     { x: 42, y: 19,type:'half-left' },
+    ...Array.from({ length: 6}, (_, i) => ({ x:17+i , y: 31 , type: 'full' })),
+    ...Array.from({ length: 6}, (_, i) => ({ x:18+i , y: 28 , type: 'full' })),
+    ...Array.from({ length: 3}, (_, i) => ({ x:31+i , y: 32 , type: 'full' })),
+    { x: 24, y: 31,type:'half-left' },
+    { x: 26, y: 31,type:'half-bottom' },
+    { x: 29, y: 32,type:'half-left' },
+    { x: 27, y: 33,type:'full' },
+    { x: 21, y: 36,type:'full' },
+    { x: 21, y: 32,type:'half-bottom' },
+    { x: 27, y: 31,type:'half-bottom' },
+    { x: 27, y: 32,type:'full' },
+    { x: 28, y: 32,type:'full' },
+    { x: 29, y: 30,type:'half-top' },
+    { x: 37, y: 28,type:'full' },
+    { x: 34, y: 28,type:'half-bottom' },
+    { x: 32, y: 25,type:'half-right' },
+    { x: 33, y: 26,type:'full' },
+    { x: 21, y: 27,type:'full' },
+    { x: 15, y: 27,type:'half-top' },
+    ...Array.from({ length: 3}, (_, i) => ({ x:28+i , y: 29 , type: 'full' })),
+    ...Array.from({ length: 2}, (_, i) => ({ x:35+i , y: 29 , type: 'full' })),
+    ...Array.from({ length: 2}, (_, i) => ({ x:8 , y: 31+i , type: 'full' })),
+    
+
+
   ];
   
   // Define plantable points using grid coordinates
@@ -402,8 +429,7 @@ const ITEMS = {
     icon: royalDocumentIcon,
     type: 'quest',
     description: 'An official document from the royal family',
-    // price: -1, // Not buyable - removed
-    // sellPrice: -1 // Not sellable - removed
+
   },
   meat: {
     id: 7,
@@ -763,16 +789,7 @@ const Game = () => {
     );
     const proximityThreshold = GRID_SIZE * 1.5; // Increased threshold for easier interaction
     
-    // Debug logging
-    console.log('Elder Proximity Check:', {
-      playerPosition: { x: playerX, y: playerY },
-      playerCenter: { x: playerCenterX, y: playerCenterY },
-      elderPosition: ELDER_POSITION_PIXEL,
-      elderCenter: { x: elderCenterX, y: elderCenterY },
-      distance,
-      threshold: proximityThreshold,
-      isClose: distance < proximityThreshold
-    });
+
     
     return distance < proximityThreshold;
   }, [ELDER_POSITION_PIXEL.x, ELDER_POSITION_PIXEL.y, ELDER_SIZE, PLAYER_SIZE, GRID_SIZE]);
@@ -901,7 +918,8 @@ const Game = () => {
   };
   const getSprite = () => {
     const sprite = characterSprites[facing === 'stand' ? 'stand' : `walk${facing.charAt(0).toUpperCase() + facing.slice(1)}`];
-    return sprite;  };
+    return sprite;
+  };
   // Check collision based on type
   const checkCollision = (playerX, playerY, collisionPoint) => {
     const gridX = collisionPoint.x * GRID_SIZE;
@@ -1044,6 +1062,25 @@ const Game = () => {
     }
   }, []);
 
+  // Add state to track pressed keys
+  const [pressedKeys, setPressedKeys] = useState(new Set());
+
+  // Add state for movement
+  const [isMoving, setIsMoving] = useState(false);
+  const [lastDirection, setLastDirection] = useState('down');
+
+  // Add state for smooth movement
+  const [velocity, setVelocity] = useState({ x: 0, y: 0 });
+  const [targetPosition, setTargetPosition] = useState({ x: 350, y: 150 });
+  const lastTime = useRef(performance.now());
+  const FPS = 144; // Higher FPS for smoother movement
+  const LERP_FACTOR = 0.25; // Interpolation factor (0-1), higher = more responsive
+
+  // Helper function for linear interpolation
+  const lerp = (start, end, factor) => {
+    return start + (end - start) * factor;
+  };
+
   // Prevent movement and interactions when paused, in dialogue, in shop, or talking to elder
   useEffect(() => {
     const handleKeyPress = (e) => {
@@ -1085,7 +1122,6 @@ const Game = () => {
             setEnergy((prev) => Math.max(0, prev - energyCost));
             setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));
             
-            // Check save point and update save state
             const isAtSavePoint = checkSavePoint(newX, newY);
             setCanSave(isAtSavePoint);
             setShowSavePrompt(isAtSavePoint);
@@ -1093,7 +1129,6 @@ const Game = () => {
             checkTeleport(newX, newY);
             checkShopTrigger(newX, newY);
             
-            // Check proximity to Elder after movement
             if (checkElderProximity(newX, newY)) {
               setShowElderTalkPopup(true);
             }
@@ -1112,7 +1147,6 @@ const Game = () => {
             setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));
             checkTeleport(newX, newY);
             checkShopTrigger(newX, newY);
-            // Check proximity to Elder after movement
             if (checkElderProximity(newX, newY)) {
               setShowElderTalkPopup(true);
             }
@@ -1131,7 +1165,6 @@ const Game = () => {
             setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));
             checkTeleport(newX, newY);
             checkShopTrigger(newX, newY);
-            // Check proximity to Elder after movement
             if (checkElderProximity(newX, newY)) {
               setShowElderTalkPopup(true);
             }
@@ -1150,7 +1183,6 @@ const Game = () => {
             setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));
             checkTeleport(newX, newY);
             checkShopTrigger(newX, newY);
-            // Check proximity to Elder after movement
             if (checkElderProximity(newX, newY)) {
               setShowElderTalkPopup(true);
             }
@@ -1225,7 +1257,7 @@ const Game = () => {
     checkElderProximity,
     getGridPosition,
     handleUseItem
-  ]); // Reduced and memoized dependencies
+  ]);
 
   const getCameraStyle = () => {
     const viewportCenterX = window.innerWidth / 2;
