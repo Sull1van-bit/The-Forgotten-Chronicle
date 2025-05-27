@@ -123,9 +123,9 @@ const COLLISION_MAP = [
     { x: 29, y: 9, type: 'half-right' },   
     { x: 27, y: 44, type: 'half-left' },
     { x: 26, y: 43, type: 'half-left' },
-    { x: 14, y: 37, type: 'half-bottom' },
+    
     { x: 8, y: 35, type: 'half-left' },
-    { x: 35, y: 36, type: 'half-right' },
+    { x: 35, y: 36, type: 'full' },
     {x: 36, y: 35, type: 'half-right'},
     {x: 37, y: 35, type: 'full'},
     {x: 42, y: 34, type: 'half-right'},
@@ -168,15 +168,15 @@ const COLLISION_MAP = [
     // ...Array.from({ length: 21 }, (_, i) => ({ x: i, y: 40, type: 'full' })),
     // ...Array.from({ length: 27 }, (_, i) => ({ x: i, y: 39, type: 'full' })),
     // ...Array.from({ length: 36 }, (_, i) => {
-    //   if (i === 18 || i === 19) {
-    //     return { x: i, y: 38, type: 'half-bottom' };
-    //   }else if (i === 15 || i === 16 || i === 17) {
-    //     return { x: i, y: 38, type: 'half-top' };
-    //   }
-    //   return { x: i, y: 38, type: 'full' };
-    // }).filter(Boolean),
-    // ...Array.from({ length: 14 }, (_, i) => ({ x: i, y: 37, type: 'full' })), 
-    // ...Array.from({ length: 10 }, (_, i) => ({ x: i, y: 36, type: 'full' })), 
+      //   if (i === 18 || i === 19) {
+        //     return { x: i, y: 38, type: 'half-bottom' };
+        //   }else if (i === 15 || i === 16 || i === 17) {
+          //     return { x: i, y: 38, type: 'half-top' };
+          //   }
+          //   return { x: i, y: 38, type: 'full' };
+          // }).filter(Boolean),
+          // ...Array.from({ length: 14 }, (_, i) => ({ x: i, y: 37, type: 'full' })), 
+          // ...Array.from({ length: 10 }, (_, i) => ({ x: i, y: 36, type: 'full' })), 
     // ...Array.from({ length: 10 }, (_, i) => ({ x: i, y: 36, type: 'full' })), 
     // ...Array.from({ length: 6 }, (_, i) => ({ x: i+2, y: 35, type: 'full' })), 
     // ...Array.from({ length: 6 }, (_, i) => ({ x: i+2, y: 35, type: 'full' })), 
@@ -191,7 +191,7 @@ const COLLISION_MAP = [
     // ...Array.from({ length: 7 }, (_, i) => ({ x: i+32, y: 20, type: (i >= 4 && i <= 8) ? 'half-top' : 'full' })), 
     // ...Array.from({ length: 9 }, (_, i) => ({ x: i+33, y: 21, type: 'full' })), 
     // ...Array.from({ length: 3 }, (_, i) => ({ x: i+33, y: 19, type: 'full' })), 
-
+    
     
     // {x: 45, y: 21, type: 'half-top'},
     // {x: 46, y: 21, type: 'half-top'},
@@ -211,14 +211,21 @@ const COLLISION_MAP = [
     // {x: 47, y: 36, type: 'half-bottom'},
     // {x: 50, y: 34, type: 'half-left'},
     // {x: 51, y: 33, type: 'full'},
-    ...Array.from({ length: 2 }, (_, i) => ({ x: i+45 , y: 36  , type: 'full' })), 
-    ...Array.from({ length: 3 }, (_, i) => ({ x: i+47 , y: 34  , type: 'full' })), 
-    ...Array.from({ length: 5 }, (_, i) => ({ x: 53 , y: i+26  , type: 'half-left' })), 
-    ...Array.from({ length: 2 }, (_, i) => ({ x: 52 , y: i+31  , type: 'half-right' })), 
-    ...Array.from({ length: 13 }, (_, i) => ({ x: i + 16 , y: 12 , type: 'half-bottom' })), 
-    ...Array.from({ length: 13 }, (_, i) => ({ x: i + 18 , y: 12 , type: 'half-top' })), 
-    ...Array.from({ length: 1 }, (_, i) => ({ x: i + 17 , y: 11 , type: 'half-bottom' })), 
-    
+    // ...Array.from({ length: 2 }, (_, i) => ({ x: i+45 , y: 36  , type: 'full' })), 
+    // ...Array.from({ length: 3 }, (_, i) => ({ x: i+47 , y: 34  , type: 'full' })), 
+    // ...Array.from({ length: 5 }, (_, i) => ({ x: 53 , y: i+26  , type: 'half-left' })), 
+    // ...Array.from({ length: 2 }, (_, i) => ({ x: 52 , y: i+31  , type: 'half-right' })), 
+    // ...Array.from({ length: 13 }, (_, i) => ({ x: i + 16 , y: 12 , type: 'half-bottom' })), 
+    // ...Array.from({ length: 13 }, (_, i) => ({ x: i + 18 , y: 12 , type: 'half-top' })), 
+    // ...Array.from({ length: 1 }, (_, i) => ({ x: i + 17 , y: 11 , type: 'half-bottom' })), 
+     ...Array.from({ length: 14 }, (_, i) => ({ x: i + 14 , y: 37 , type: 'half-bottom' })), 
+     ...Array.from({ length: 4 }, (_, i) => ({ x: i + 31 , y: 36   , type: 'half-bottom' })), 
+     {x:27, y:36, type:'full'},
+     {x:8, y:36, type:'full'},
+     {x:8, y:37, type:'full'},
+     ...Array.from({ length: 5 }, (_, i) => ({ x: i + 9 , y: 37   , type: 'full' })), 
+    // {x: 28, y: 23, type: 'half-top'},
+
     
     // end buat danau + air
     
@@ -306,6 +313,12 @@ const COLLISION_MAP = [
     ...Array.from({ length: 2 }, (_, i) => ({ x:i+7 , y: 25 , type: 'half-bottom' })),
     ...Array.from({ length: 13 }, (_, i) => ({ x:i+34 , y: 13 , type: 'half-top' })),
     ...Array.from({ length: 1 }, (_, i) => ({ x:i+45 , y: 14 , type: 'half-right' })),
+    ...Array.from({ length: 5 }, (_, i) => ({ x:45-i , y: 14+i , type: 'full' })),
+    ...Array.from({ length: 5 }, (_, i) => ({ x:50-i , y: 14+i , type: 'full' })),
+    ...Array.from({ length: 9 }, (_, i) => ({ x:51+i , y: 14 , type: 'full' })),
+    ...Array.from({ length: 13}, (_, i) => ({ x:16+i , y: 12 , type: 'full' })),
+    { x: 45, y: 20,type:'full' },
+    { x: 42, y: 19,type:'half-left' },
   ];
   
   // Define plantable points using grid coordinates
@@ -502,7 +515,7 @@ const Game = () => {
   const [position, setPosition] = useState({ x: 350, y: 150 });
   const [facing, setFacing] = useState('stand');
   const [isInInterior, setIsInInterior] = useState(false);
-  const speed = 25;
+  const speed = 15;
   const scale = 2;
   const GRID_SIZE = 40;
   const PLAYER_BASE_SIZE = 10;
