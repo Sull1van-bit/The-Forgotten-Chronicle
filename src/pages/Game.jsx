@@ -1053,8 +1053,9 @@ const Game = () => {
 
       let newX = position.x;
       let newY = position.y;
-      const energyCost = 0.5;
-      const cleanlinessCost = 0.5;
+      // Drain slower: reduce cost per move
+      const energyCost = 0.15; // was 0.5
+      const cleanlinessCost = 0.15; // was 0.5
 
       // Handle number keys for item slots (1-9)
       if (e.key >= '1' && e.key <= '9') {
@@ -1081,7 +1082,6 @@ const Game = () => {
               ...prev,
               y: Math.max(0, newY),
             }));
-            // Batch state updates to reduce re-renders
             setEnergy((prev) => Math.max(0, prev - energyCost));
             setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));
             
@@ -1368,7 +1368,7 @@ const Game = () => {
         if (!isPlanted) {
           // Show hoe icon if spot is empty and near
           iconsToShow[`${spot.x},${spot.y}`] = 'hoe';
-        } else if (isPlanted.stage === 3) {
+                                                         } else if (isPlanted.stage === 3) {
           // Show sickle icon if crop is mature (stage 3)
           iconsToShow[`${spot.x},${spot.y}`] = 'sickle';
         } else if (isPlanted.needsWatering) {
@@ -1596,6 +1596,46 @@ const handleBath = () => {
   setCleanliness(prev => Math.min(100, prev + 40)); // Increase cleanliness
   setShowBathPopup(false);
 };
+
+  // Health drain effect if energy or cleanliness is 0
+useEffect(() => {
+  const interval = setInterval(() => {
+    // Only drain health if not sleeping, not paused, not in interior, not in dialog, not in shop
+    if (
+      !isSleeping &&
+      !isPaused &&
+      !isInInterior &&
+      !isDialogActive &&
+      !showShop
+    ) {
+      if (energy === 0 && cleanliness === 0) {
+        setHealth(prev => Math.max(0, prev - 0.25)); // Both 0: drain faster
+      } else if (energy === 0 || cleanliness === 0) {
+        setHealth(prev => Math.max(0, prev - 0.12)); // One 0: drain slower
+      }
+    }
+  }, 1000); // Check every second
+
+  return () => clearInterval(interval);
+}, [energy, cleanliness, isSleeping, isPaused, isInInterior, isDialogActive, showShop]);
+
+  // Hunger drain effect (Tarkov-like, drains a bit faster)
+useEffect(() => {
+  const interval = setInterval(() => {
+    // Only drain hunger if not sleeping, not paused, not in interior, not in dialog, not in shop
+    if (
+      !isSleeping &&
+      !isPaused &&
+      !isInInterior &&
+      !isDialogActive &&
+      !showShop
+    ) {
+      setHunger(prev => Math.max(0, prev - 0.25)); // Adjust value for desired speed
+    }
+  }, 1000); // Every second
+
+  return () => clearInterval(interval);
+}, [isSleeping, isPaused, isInInterior, isDialogActive, showShop]);
 
   if (isInInterior) {
     return (
@@ -2027,7 +2067,7 @@ const handleBath = () => {
 
       {/* Bath Popup Button */}
       {showBathPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.15)' }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.15)' }}>
           <div className="bg-[#8B4513] p-6 rounded-lg border-8 border-[#D2B48C] shadow-lg flex flex-col items-center gap-4">
             <h2 className="text-xl font-bold text-[#F5DEB3]">Take a Bath?</h2>
             <button
@@ -2328,11 +2368,11 @@ const handleBath = () => {
                                   // Update quest objective: Plant the seed (assuming this quest exists and objective matches)
                                   setQuests(prevQuests => {
                                     const updatedQuests = prevQuests.map(quest => {
-                                      if (quest.title === "The First Harvest") { // Adjust quest title if needed
+                                      if (quest.title === "The First Harvest") {
                                         return {
                                           ...quest,
                                           objectives: quest.objectives.map(objective => {
-                                            if (objective.description === "Plant the seed") { // Adjust objective description if needed
+                                            if (objective.description === "Plant the seed") {
                                               return { ...objective, completed: true };
                                             }
                                             return objective;
