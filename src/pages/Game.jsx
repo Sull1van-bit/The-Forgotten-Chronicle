@@ -27,6 +27,13 @@ import eugeneWalkLeft from '../assets/characters/eugene/walk-left.gif';
 import eugeneWalkRight from '../assets/characters/eugene/walk-right.gif';
 import eugeneEat from '../assets/characters/eugene/eat.gif';
 
+import alexStand from '../assets/characters/alex/stand.gif';
+import alexWalkUp from '../assets/characters/alex/walk-up.gif';
+import alexWalkDown from '../assets/characters/alex/walk-down.gif';
+import alexWalkLeft from '../assets/characters/alex/walk-left.gif';
+import alexWalkRight from '../assets/characters/alex/walk-right.gif';
+import alexEat from '../assets/characters/alex/eat.gif';
+
 // Import elder assets
 import elderStand from '../assets/npc/elder/stand.gif';
 import elderPortrait from '../assets/npc/elder/character.png';
@@ -34,9 +41,16 @@ import elderPortrait from '../assets/npc/elder/character.png';
 // Import guard assets
 import guardStand from '../assets/npc/guard/stand.gif';
 
+// Import merchant assets
+import merchantStand from '../assets/npc/merchant/stand.gif';
+
+// Import blacksmith assets
+import blacksmithStand from '../assets/npc/blacksmith/stand.gif';
+
 // Import character portraits
 import louisePortrait from '../assets/characters/louise/character.png';
 import eugenePortrait from '../assets/characters/eugene/character.png';
+import alexPortrait from '../assets/characters/alex/character.png';
 
 // Import maps
 import allMap from '../assets/Maps/all-map.png';
@@ -480,7 +494,7 @@ const Game = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume, playClick, playHover, playCash } = useSound();
+  const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume, playClick, playHover, playCash, playNewQuest } = useSound();
   const { musicEnabled, setMusicEnabled, musicVolume, setMusicVolume, startMusicPlayback } = useMusic();
   const { startDialog, advanceDialog, endDialog, isDialogActive, currentDialog, dialogIndex } = useDialog();  const character = location.state?.character;
   const isLoadedGame = location.state?.isLoadedGame;
@@ -497,11 +511,14 @@ const Game = () => {
   const [showShopConfirm, setShowShopConfirm] = useState(false);
   const [showTimeSkipPopup, setShowTimeSkipPopup] = useState(false);
   const [timeSkipHours, setTimeSkipHours] = useState('');
-
   // State for new quest pop-up - MOVED HERE
   const [showNewQuestPopup, setShowNewQuestPopup] = useState(false);
   const [newQuestTitle, setNewQuestTitle] = useState('');
   const [showEatAnimation, setShowEatAnimation] = useState(false);
+
+  // State for objective pop-up  // Objective popup state
+  const [completedObjectives, setCompletedObjectives] = useState([]);
+  const [newObjectives, setNewObjectives] = useState([]);
 
   // Add plantedCrops state
   const [plantedCrops, setPlantedCrops] = useState([]);
@@ -534,9 +551,11 @@ const Game = () => {
 
   // Add state for first shop dialogue
   const [hasSeenFirstShopDialogue, setHasSeenFirstShopDialogue] = useState(false);
-
   // Add state for elder talk popup
   const [showElderTalkPopup, setShowElderTalkPopup] = useState(false);
+
+  // Add state for blacksmith talk popup
+  const [showBlacksmithTalkPopup, setShowBlacksmithTalkPopup] = useState(false);
 
   // Add state for shop confirmation and mode
   const [shopMode, setShopMode] = useState('buy'); // 'buy' or 'sell'
@@ -631,18 +650,67 @@ const Game = () => {
       setHasHarvestedFirstCrop(initialSaveData.hasHarvestedFirstCrop ?? false);
     }
   }, [isLoadedGame, initialSaveData]);
-
   // Effect to auto-hide new quest pop-up
   useEffect(() => {
     let timer;
     if (showNewQuestPopup) {
+      // Play new quest sound effect when popup appears
+      playNewQuest();
+      
       timer = setTimeout(() => {
         setShowNewQuestPopup(false);
         setNewQuestTitle(''); // Clear title after hiding
       }, 5000); // Show for 5 seconds
+    }    return () => clearTimeout(timer);
+  }, [showNewQuestPopup, playNewQuest]);  // Auto-hide completed objectives after 4 seconds, new objectives after 6 seconds
+  useEffect(() => {
+    if (completedObjectives.length > 0) {
+      const timer = setTimeout(() => {
+        setCompletedObjectives([]);
+      }, 4000);
+      return () => clearTimeout(timer);
     }
-    return () => clearTimeout(timer);
-  }, [showNewQuestPopup]);
+  }, [completedObjectives]);
+
+  useEffect(() => {
+    if (newObjectives.length > 0) {
+      const timer = setTimeout(() => {
+        setNewObjectives([]);
+      }, 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [newObjectives]);
+  // Helper functions for objective popups
+  const showCompletedObjective = (text) => {
+    setCompletedObjectives(prev => [...prev, { text, id: Date.now() }]);
+  };
+
+  const showNewObjective = (text) => {
+    setNewObjectives(prev => [...prev, { text, id: Date.now() }]);
+  };
+  
+  // Function to show a chained objective (completed and next together)
+  const showChainedObjective = (completedText, nextText) => {
+    const chainId = Date.now(); // Use the same ID for related objectives
+    setCompletedObjectives(prev => [...prev, { 
+      text: completedText, 
+      id: chainId,
+      hasNextObjective: !!nextText // Flag indicating this is part of a chain
+    }]);
+    
+    if (nextText) {
+      setNewObjectives(prev => [...prev, { 
+        text: nextText, 
+        id: chainId,
+        isChainedFromPrevious: true // Flag indicating this is chained from a completed objective
+      }]);
+    }
+  };
+
+  // Backward compatibility function
+  const showObjective = (text) => {
+    showNewObjective(text);
+  };
 
   const handleCutsceneComplete = () => {
     setShowCutscene(false);
@@ -770,13 +838,23 @@ const Game = () => {
   // Calculate Third Guard pixel position
   const GUARD3_POSITION_PIXEL = { x: GUARD3_POSITION_GRID.x * GRID_SIZE, y: GUARD3_POSITION_GRID.y * GRID_SIZE };
   const GUARD3_SIZE = 32; // Similar size to other NPCs
-
   // Define Fourth Guard position (grid coordinates)
   const GUARD4_POSITION_GRID = { x: 13, y: 25 };
   // Calculate Fourth Guard pixel position
   const GUARD4_POSITION_PIXEL = { x: GUARD4_POSITION_GRID.x * GRID_SIZE, y: GUARD4_POSITION_GRID.y * GRID_SIZE };
   const GUARD4_SIZE = 32; // Similar size to other NPCs
 
+  // Define Merchant position (grid coordinates)
+  const MERCHANT_POSITION_GRID = { x: 34, y: 30 };
+  // Calculate Merchant pixel position
+  const MERCHANT_POSITION_PIXEL = { x: MERCHANT_POSITION_GRID.x * GRID_SIZE, y: MERCHANT_POSITION_GRID.y * GRID_SIZE };
+  const MERCHANT_SIZE = 32; // Similar size to other NPCs
+
+  // Define Blacksmith position (grid coordinates)
+  const BLACKSMITH_POSITION_GRID = { x: 9, y: 32 };
+  // Calculate Blacksmith pixel position
+  const BLACKSMITH_POSITION_PIXEL = { x: BLACKSMITH_POSITION_GRID.x * GRID_SIZE, y: BLACKSMITH_POSITION_GRID.y * GRID_SIZE };
+  const BLACKSMITH_SIZE = 32; // Similar size to other NPCs
   // Check proximity to Elder
   const checkElderProximity = useCallback((playerX, playerY) => {
     const playerCenterX = playerX + (PLAYER_SIZE / 2);
@@ -792,6 +870,20 @@ const Game = () => {
     
     return distance < proximityThreshold;
   }, [ELDER_POSITION_PIXEL.x, ELDER_POSITION_PIXEL.y, ELDER_SIZE, PLAYER_SIZE, GRID_SIZE]);
+
+  // Check proximity to Blacksmith
+  const checkBlacksmithProximity = useCallback((playerX, playerY) => {
+    const playerCenterX = playerX + (PLAYER_SIZE / 2);
+    const playerCenterY = playerY + (PLAYER_SIZE / 2);
+    const blacksmithCenterX = BLACKSMITH_POSITION_PIXEL.x + (BLACKSMITH_SIZE / 2);
+    const blacksmithCenterY = BLACKSMITH_POSITION_PIXEL.y + (BLACKSMITH_SIZE / 2);
+    const distance = Math.sqrt(
+      Math.pow(playerCenterX - blacksmithCenterX, 2) + Math.pow(playerCenterY - blacksmithCenterY, 2)
+    );
+    const proximityThreshold = GRID_SIZE * 1.5; // Same threshold as elder
+    
+    return distance < proximityThreshold;
+  }, [BLACKSMITH_POSITION_PIXEL.x, BLACKSMITH_POSITION_PIXEL.y, BLACKSMITH_SIZE, PLAYER_SIZE, GRID_SIZE]);
 
   // Update save game function
   const saveGame = async () => {
@@ -868,7 +960,6 @@ const Game = () => {
     } catch (error) {
     }
   };
-
   // Get character-specific sprites
   const getCharacterSprites = () => {
     
@@ -882,6 +973,15 @@ const Game = () => {
           walkLeft: eugeneWalkLeft,
           walkRight: eugeneWalkRight,
           eat: eugeneEat
+        };
+      case 'alex':
+        return {
+          stand: alexStand,
+          walkUp: alexWalkUp,
+          walkDown: alexWalkDown,
+          walkLeft: alexWalkLeft,
+          walkRight: alexWalkRight,
+          eat: alexEat
         };
       case 'louise':
         return {
@@ -904,13 +1004,14 @@ const Game = () => {
   };
 
   const characterSprites = getCharacterSprites();
-
   // Get character-specific portrait
   const getCharacterPortrait = () => {
     const characterName = typeof character === 'object' && character !== null ? character.name : character;
     switch (String(characterName).toLowerCase()) {
       case 'eugene':
         return eugenePortrait;
+      case 'alex':
+        return alexPortrait;
       case 'louise':
       default:
         return louisePortrait; // Default to louise
@@ -1125,12 +1226,14 @@ const Game = () => {
             const isAtSavePoint = checkSavePoint(newX, newY);
             setCanSave(isAtSavePoint);
             setShowSavePrompt(isAtSavePoint);
-            
-            checkTeleport(newX, newY);
+              checkTeleport(newX, newY);
             checkShopTrigger(newX, newY);
             
             if (checkElderProximity(newX, newY)) {
               setShowElderTalkPopup(true);
+            }
+            if (checkBlacksmithProximity(newX, newY)) {
+              setShowBlacksmithTalkPopup(true);
             }
           }
           break;
@@ -1144,11 +1247,13 @@ const Game = () => {
               y: Math.min(MAP_HEIGHT - PLAYER_SIZE, newY),
             }));
             setEnergy((prev) => Math.max(0, prev - energyCost));
-            setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));
-            checkTeleport(newX, newY);
+            setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));            checkTeleport(newX, newY);
             checkShopTrigger(newX, newY);
             if (checkElderProximity(newX, newY)) {
               setShowElderTalkPopup(true);
+            }
+            if (checkBlacksmithProximity(newX, newY)) {
+              setShowBlacksmithTalkPopup(true);
             }
           }
           break;
@@ -1162,11 +1267,13 @@ const Game = () => {
               x: Math.max(0, newX),
             }));
             setEnergy((prev) => Math.max(0, prev - energyCost));
-            setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));
-            checkTeleport(newX, newY);
+            setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));            checkTeleport(newX, newY);
             checkShopTrigger(newX, newY);
             if (checkElderProximity(newX, newY)) {
               setShowElderTalkPopup(true);
+            }
+            if (checkBlacksmithProximity(newX, newY)) {
+              setShowBlacksmithTalkPopup(true);
             }
           }
           break;
@@ -1180,11 +1287,13 @@ const Game = () => {
               x: Math.min(MAP_WIDTH - PLAYER_SIZE, newX),
             }));
             setEnergy((prev) => Math.max(0, prev - energyCost));
-            setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));
-            checkTeleport(newX, newY);
+            setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));            checkTeleport(newX, newY);
             checkShopTrigger(newX, newY);
             if (checkElderProximity(newX, newY)) {
               setShowElderTalkPopup(true);
+            }
+            if (checkBlacksmithProximity(newX, newY)) {
+              setShowBlacksmithTalkPopup(true);
             }
           }
           break;
@@ -1197,12 +1306,10 @@ const Game = () => {
               // Check if a crop is already planted here
               const existingCrop = plantedCrops.find(crop => crop.x === playerGridPos.gridX && crop.y === playerGridPos.gridY);
               if (!existingCrop) {
-                // Consume one seed
+                               // Consume one seed
                 setInventory(prev => prev.map(item => 
                   item.name === 'Seeds' ? { ...item, quantity: item.quantity - 1 } : item
-                ).filter(item => item.quantity > 0));
-
-                // Add new planted crop (start at stage 1)
+                ).filter(item => item.quantity > 0));                // Add new planted crop (start at stage 1)
                 setPlantedCrops(prev => [...prev, {
                   x: playerGridPos.gridX,
                   y: playerGridPos.gridY,
@@ -1210,6 +1317,9 @@ const Game = () => {
                   stage: 1,
                   plantTime: Date.now() // Track planting time for growth
                 }]);
+                
+                // Show objective popup
+                showObjective("Seed planted! Water it to help it grow.");
               }
             }
           }
@@ -1973,14 +2083,20 @@ useEffect(() => {
                 <div className="flex flex-col gap-2">
                   {/* Seeds */}
                   <div 
-                    className="bg-[#A0522D] p-2 rounded border border-[#D2B48C] hover:border-[#F5DEB3] transition-colors cursor-pointer flex items-center gap-2"
-                    onClick={() => {
+                    className="bg-[#A0522D] p-2 rounded border border-[#D2B48C] hover:border-[#F5DEB3] transition-colors cursor-pointer flex items-center gap-2"                    onClick={() => {
                       const seedItem = getItemById(1); // Use getItemById with ID 1 for Seeds
                       if (seedItem && money >= seedItem.price) {
+                        // Check if the objective is already completed before showing popup
+                        const currentQuest = quests.find(quest => quest.title === "The First Harvest");
+                        const buySeedsObjective = currentQuest?.objectives.find(obj => obj.description === "Buy seeds from the shop");
+                        const isObjectiveAlreadyCompleted = buySeedsObjective?.completed;
+
                         playCash();
                         setMoney(prevMoney => prevMoney - seedItem.price);
-                        addItemToInventory(seedItem.id, 1);
-
+                        addItemToInventory(seedItem.id, 1);                        // Only show objective popup if this is the first time completing the objective
+                        if (!isObjectiveAlreadyCompleted) {
+                          showChainedObjective("Buy seeds from the shop", "Plant the seed");
+                        }
 
                         // Update quest objective: Buy seeds from the shop
                         setQuests(prevQuests => {
@@ -2020,10 +2136,12 @@ useEffect(() => {
                     className="bg-[#A0522D] p-2 rounded border border-[#D2B48C] hover:border-[#F5DEB3] transition-colors cursor-pointer flex items-center gap-2"
                     onClick={() => {
                       const breadItem = getItemById(3); // Use getItemById with ID 3 for Bread
-                      if (breadItem && money >= breadItem.price) {
-                        playCash();
+                      if (breadItem && money >= breadItem.price) {                        playCash();
                         setMoney(prevMoney => prevMoney - breadItem.price);
                         addItemToInventory(breadItem.id, 1);
+                        
+                        // Show objective popup
+                        showObjective("Bread purchased! Food will restore your energy.");
 
                       } else if (breadItem) {
 
@@ -2071,8 +2189,14 @@ useEffect(() => {
                             return newInventory;
                           });                          // Update quest objective: Sell the potato at the shop (if selling a potato)
                           if (item.name === 'Potato') {
-                            setQuests(prevQuests => {
-                              return prevQuests.map(quest => {
+                            // Check if the objective is already completed before showing popup
+                            const currentQuest = quests.find(quest => quest.title === "The First Harvest");
+                            const sellPotatoObjective = currentQuest?.objectives.find(obj => obj.description === "Sell the potato at the shop");
+                            const isObjectiveAlreadyCompleted = sellPotatoObjective?.completed;                            // Only show objective popup if this is the first time completing the objective
+                            if (!isObjectiveAlreadyCompleted) {
+                              showChainedObjective("Sell the potato at the shop", "Quest completed: The First Harvest");
+                            }                            setQuests(prevQuests => {
+                              const updatedQuests = prevQuests.map(quest => {
                                 if (quest.title === "The First Harvest") {
                                   return {
                                     ...quest,
@@ -2086,6 +2210,47 @@ useEffect(() => {
                                 }
                                 return quest;
                               });
+                              
+                              // Check if "The First Harvest" quest is now fully completed
+                              const firstHarvestQuest = updatedQuests.find(quest => quest.title === "The First Harvest");
+                              const isFirstHarvestCompleted = firstHarvestQuest && 
+                                firstHarvestQuest.objectives.every(obj => obj.completed);
+                              
+                              // Check if blacksmith quest already exists
+                              const blacksmithQuestExists = updatedQuests.some(quest => quest.title === "The Blacksmith's Request");
+                              
+                              // If "The First Harvest" is completed and blacksmith quest doesn't exist, add it
+                              if (isFirstHarvestCompleted && !blacksmithQuestExists) {
+                                // Show a chained objective indicating quest completion and new quest
+                                setTimeout(() => {
+                                  showChainedObjective("Quest completed: The First Harvest", "New quest available: Visit the blacksmith");
+                                  
+                                  // Add the blacksmith quest after a short delay
+                                  setTimeout(() => {
+                                    setQuests(prevQuests => [
+                                      ...prevQuests,
+                                      {
+                                        title: "The Blacksmith's Request",
+                                        description: "The village blacksmith needs help gathering materials. Visit him to learn more.",
+                                        objectives: [
+                                          {
+                                            description: "Talk to the village blacksmith",
+                                            completed: false
+                                          }
+                                        ]
+                                      }
+                                    ]);
+                                    
+                                    // Show new quest popup
+                                    setNewQuestTitle("The Blacksmith's Request");
+                                    setShowNewQuestPopup(true);
+                                  }, 2000);
+                                }, 500);
+                                
+                                return updatedQuests;
+                              }
+                              
+                              return updatedQuests;
                             });
                           }
 
@@ -2156,14 +2321,63 @@ useEffect(() => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5, ease: "easeInOut" }}
-        >
-          <div className="text-white text-center text-3xl font-bold leading-tight">
+        >          <div className="text-white text-center text-3xl font-bold leading-tight">
             <p>New Quest Added</p>
             <p>{newQuestTitle}</p>
           </div>
         </motion.div>
-      )}
-      </AnimatePresence>
+      )}      </AnimatePresence>      {/* Skyrim-style Objective Popups - Top Middle - Posisi diturunkan sedikit */}
+      <div className="fixed top-28 left-1/2 transform -translate-x-1/2 z-[109] pointer-events-none text-center">
+        <AnimatePresence>
+          {/* Objectives display - Supports both individual and chained objectives */}
+          {completedObjectives.map((completedObj) => {
+            // Find if there's a chained new objective
+            const chainedObj = completedObj.hasNextObjective ? 
+              newObjectives.find(newObj => newObj.id === completedObj.id) : null;
+              
+            return (              <motion.div
+                key={`chain-${completedObj.id}`}
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.5 }}
+                className="mb-3"
+              >
+                {/* Completed objective */}
+                <p className="text-yellow-400 text-xl font-medium drop-shadow-lg tracking-wide">
+                  <span className="line-through">✓ {completedObj.text}</span>
+                </p>
+                
+                {/* Chained new objective - only show if this completed objective has a chained one */}                {chainedObj && (
+                  <div className="mt-2 pt-2">
+                    <p className="text-white text-xl font-medium drop-shadow-lg tracking-wide">
+                      ▶ {chainedObj.text}
+                    </p>
+                  </div>
+                )}
+              </motion.div>
+            );
+          })}
+          
+          {/* Standalone new objectives (those not chained from a completed objective) */}
+          {newObjectives
+            .filter(objective => !objective.isChainedFromPrevious)
+            .map((objective) => (
+              <motion.div
+                key={`new-${objective.id}`}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                transition={{ duration: 0.5 }}
+                className="mb-3"
+              >
+                <p className="text-white text-xl font-medium drop-shadow-lg tracking-wide">
+                  ▶ {objective.text}
+                </p>
+              </motion.div>
+            ))}
+        </AnimatePresence>
+      </div>
 
       {/* Add Eating Animation */}
       <AnimatePresence>
@@ -2238,9 +2452,10 @@ useEffect(() => {
             setHasSeenHouseDialog={setHasSeenHouseDialog}
             saveGame={saveGame}
             showEatAnimation={showEatAnimation}
-            setShowEatAnimation={setShowEatAnimation}
-            currentDay={currentDay}
+            setShowEatAnimation={setShowEatAnimation}            currentDay={currentDay}
             setCurrentDay={setCurrentDay}
+            plantedCrops={plantedCrops}
+            setPlantedCrops={setPlantedCrops}
           />
         </DialogProvider>
       ) : (        <>
@@ -2262,9 +2477,17 @@ useEffect(() => {
                           "Your family's cottage still stands, though time has not been kind to it. Much like the land… and its people.",
                           "The village remembers your name, but memories fade. If you wish to stay, you must build more than a home—you must build trust.",
                           "The fields need tending. The forge waits for skillful hands. And somewhere in the shadows of this land, echoes of your past linger still.",
-                          "Will you work the soil, forge your own tools, or seek the knowledge buried beneath stone and dust?"
-                        ],
-                        onComplete: () => {
+                          "Will you work the soil, forge your own tools, or seek the knowledge buried beneath stone and dust?"                        ],                        onComplete: () => {
+                          // Check if the objective is already completed before showing popup
+                          const currentQuest = quests.find(quest => quest.title === "Welcome Home");
+                          const elderObjective = currentQuest?.objectives.find(obj => obj.description === "Meet the village elder");
+                          const isObjectiveAlreadyCompleted = elderObjective?.completed;
+
+                          // Only show objective popup if this is the first time completing the objective
+                          if (!isObjectiveAlreadyCompleted) {
+                            showChainedObjective("Meet the village elder", "Quest completed: Welcome Home");
+                          }
+                          
                           // Add new quest after dialogue ends
                           setQuests(prevQuests => {
                             // First update the Welcome Home quest
@@ -2284,7 +2507,8 @@ useEffect(() => {
                             });
                             
                             // Then add the new quest
-                            const firstHarvestQuestExists = updatedQuests.some(quest => quest.title === "The First Harvest");                            if (!firstHarvestQuestExists) {
+                            const firstHarvestQuestExists = updatedQuests.some(quest => quest.title === "The First Harvest");
+                            if (!firstHarvestQuestExists) {
                               return [
                                 ...updatedQuests,
                                 {
@@ -2332,6 +2556,116 @@ useEffect(() => {
                   <button 
                     className="bg-[#8B4513] text-[#F5DEB3] px-6 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 w-32"
                     onClick={() => setShowElderTalkPopup(false)}
+                  >
+                    No
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Blacksmith Talk Confirmation Popup */}
+          {showBlacksmithTalkPopup && !isPaused && !isDialogActive && !showShop && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}>
+              <div className="bg-[#8B4513] p-8 rounded-lg max-w-md w-full mx-4 relative border-8 border-[#D2B48C] shadow-lg flex flex-col items-center gap-4">
+                <h2 className="text-2xl font-bold text-center text-[#F5DEB3]">Talk to Blacksmith?</h2>
+                <div className="flex flex-col gap-2">
+                  <button 
+                    className="bg-[#8B4513] text-[#F5DEB3] px-6 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 w-32"
+                    onClick={() => {
+                      // Start blacksmith dialog
+                      startDialog({
+                        characterName: "Village Blacksmith",
+                        expression: "neutral",
+                        dialogue: [
+                          "Ah, a new face! Or perhaps... an old one returned?",
+                          "I am the village blacksmith. These hands have forged tools for generations of farmers and workers.",
+                          "But times have been hard. My supplies are running low, and I need help gathering materials.",
+                          "If you could bring me some metal ore from the old mines, I could craft better tools for the village.",
+                          "What say you? Will you help an old smith restore his craft?"
+                        ],                        onComplete: () => {
+                          // Check if the blacksmith quest already exists
+                          const blacksmithQuestExists = quests.some(quest => quest.title === "The Blacksmith's Request");
+                          
+                          if (blacksmithQuestExists) {
+                            // Quest exists, check if it only has the "talk to blacksmith" objective
+                            const blacksmithQuest = quests.find(quest => quest.title === "The Blacksmith's Request");
+                            const hasOnlyTalkObjective = blacksmithQuest.objectives.length === 1 && 
+                              blacksmithQuest.objectives[0].description === "Talk to the village blacksmith";
+                            
+                            if (hasOnlyTalkObjective) {
+                              // Update the existing quest to add the mining objectives
+                              setQuests(prevQuests => {
+                                return prevQuests.map(quest => {
+                                  if (quest.title === "The Blacksmith's Request") {
+                                    return {
+                                      ...quest,
+                                      description: "Help the village blacksmith by gathering metal ore from the old mines.",
+                                      objectives: [
+                                        {
+                                          description: "Talk to the village blacksmith",
+                                          completed: true
+                                        },
+                                        {
+                                          description: "Find the old mines",
+                                          completed: false
+                                        },
+                                        {
+                                          description: "Collect metal ore (0/3)",
+                                          completed: false
+                                        },
+                                        {
+                                          description: "Return to the blacksmith",
+                                          completed: false
+                                        }
+                                      ]
+                                    };
+                                  }
+                                  return quest;
+                                });
+                              });
+                              
+                              // Show objective completion for talking to blacksmith
+                              showChainedObjective("Talk to the village blacksmith", "Find the old mines");
+                            }
+                          } else {
+                            // Add new blacksmith quest (fallback if quest doesn't exist yet)
+                            setQuests(prevQuests => [
+                              ...prevQuests,
+                              {
+                                title: "The Blacksmith's Request",
+                                description: "Help the village blacksmith by gathering metal ore from the old mines.",
+                                objectives: [
+                                  {
+                                    description: "Find the old mines",
+                                    completed: false
+                                  },
+                                  {
+                                    description: "Collect metal ore (0/3)",
+                                    completed: false
+                                  },
+                                  {
+                                    description: "Return to the blacksmith",
+                                    completed: false
+                                  }
+                                ]
+                              }
+                            ]);
+                            
+                            // Show new quest popup
+                            setNewQuestTitle("The Blacksmith's Request");
+                            setShowNewQuestPopup(true);
+                          }
+                        }
+                      });
+                      
+                      setShowBlacksmithTalkPopup(false);
+                    }}
+                  >
+                    Yes
+                  </button>                  <button 
+                    className="bg-[#8B4513] text-[#F5DEB3] px-6 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 w-32"
+                    onClick={() => setShowBlacksmithTalkPopup(false)}
                   >
                     No
                   </button>
@@ -2412,11 +2746,14 @@ useEffect(() => {
 
                             if (iconType === 'hoe') {
                               // Planting logic
-                              const isCurrentlyPlantable = PLANTABLE_SPOTS.some(p => p.x === playerGridPos.gridX && p.y === playerGridPos.gridY);
-
-                              if (isCurrentlyPlantable && !isCurrentlyPlanted) {
+                              const isCurrentlyPlantable = PLANTABLE_SPOTS.some(p => p.x === playerGridPos.gridX && p.y === playerGridPos.gridY);                              if (isCurrentlyPlantable && !isCurrentlyPlanted) {
                                 const seedItem = inventory.find(item => item.name === 'Seeds');
                                 if (seedItem && seedItem.quantity > 0) {
+                                  // Check if the objective is already completed before showing popup
+                                  const currentQuest = quests.find(quest => quest.title === "The First Harvest");
+                                  const plantSeedObjective = currentQuest?.objectives.find(obj => obj.description === "Plant the seed");
+                                  const isObjectiveAlreadyCompleted = plantSeedObjective?.completed;
+
                                   setInventory(prev => prev.map(item => 
                                     item.name === 'Seeds' ? { ...item, quantity: item.quantity - 1 } : item
                                   ).filter(item => item.quantity > 0));
@@ -2429,8 +2766,10 @@ useEffect(() => {
                                     plantTime: Date.now(), // Not strictly needed for day-based growth, but good to keep
                                     plantDay: currentDay, // Record the day it was planted
                                     needsWatering: true, // Needs watering immediately on day 1
-                                  }]);
-
+                                  }]);                                  // Only show objective popup if this is the first time completing the objective
+                                  if (!isObjectiveAlreadyCompleted) {
+                                    showChainedObjective("Plant the seed", "Water your planted crops");
+                                  }
 
                                   // Update quest objective: Plant the seed (assuming this quest exists and objective matches)
                                   setQuests(prevQuests => {
@@ -2478,11 +2817,20 @@ useEffect(() => {
                                   return prevQuests.map(quest => {
                                     if (quest.title === "The First Harvest") {
                                       return {
-                                        ...quest,                                        objectives: quest.objectives.map(objective => {                                          if (objective.description.includes("Water your planted crops for 2 day")) {
+                                        ...quest,
+                                        objectives: quest.objectives.map(objective => {                                          if (objective.description.includes("Water your planted crops for 2 day")) {                                            const isNowCompleted = newProgress >= 2;
+                                            const wasCompleted = objective.completed;
+                                            
+                                            // Show objective completion notification if this update completes the objective
+                                            if (isNowCompleted && !wasCompleted) {
+                                              showChainedObjective("Water your planted crops for 2 day (2/2)", 
+                                                "Wait for your crops to grow (use the sickle when ready)");
+                                            }
+                                            
                                             return { 
                                               ...objective, 
                                               description: `Water your planted crops for 2 day (${newProgress}/2)`,
-                                              completed: newProgress >= 2
+                                              completed: isNowCompleted
                                             };
                                           }
                                           return objective;
@@ -2493,8 +2841,30 @@ useEffect(() => {
                                   });
                                 });
                               }                            } else if (iconType === 'sickle' && isCurrentlyPlanted && isCurrentlyPlanted.stage === 3) {
-                              // Harvest logic                              // Add harvested item (Potato) to inventory
+                              // Harvest logic
+                              // Check if the objective is already completed before showing popup
+                              const currentQuest = quests.find(quest => quest.title === "The First Harvest");
+                              const harvestObjective = currentQuest?.objectives.find(obj => obj.description === "Harvest the mature potato");
+                              const isObjectiveAlreadyCompleted = harvestObjective?.completed;
+                              
+                              // Track this for debugging
+                              console.log("Harvesting potato:", { 
+                                isObjectiveAlreadyCompleted, 
+                                questExists: !!currentQuest,
+                                objectiveExists: !!harvestObjective 
+                              });
+
+                              // Add harvested item (Potato) to inventory
                               addItemToInventory(2); // Assuming Potato has ID 2 based on ITEMS definition
+                              
+                              // Only show objective popup if this is the first time completing the objective
+                              // Also check if a popup with the same text is currently displayed to avoid duplicates
+                              if (!isObjectiveAlreadyCompleted && 
+                                  !completedObjectives.some(obj => obj.text === "Harvest the mature potato")) {
+                                console.log("Showing harvest objective popup");
+                                showChainedObjective("Harvest the mature potato", "Sell the potato at the shop");
+                              }
+                              
                               // Remove the crop from plantedCrops
                               setPlantedCrops(prevCrops => prevCrops.filter(crop => !(crop.x === spot.x && crop.y === spot.y)));
                               
@@ -2509,10 +2879,15 @@ useEffect(() => {
                                   ]
                                 });
                                 setHasHarvestedFirstCrop(true);
-                              }
-
-                              // Update quest objective: Harvest the mature potato
+                              }// Update quest objective: Harvest the mature potato - only if not already completed
                               setQuests(prevQuests => {
+                                // Don't update if already marked as completed
+                                if (isObjectiveAlreadyCompleted) {
+                                  console.log("Quest objective already completed, not updating quest state");
+                                  return prevQuests;
+                                }
+                                
+                                console.log("Updating quest objective to completed state");
                                 return prevQuests.map(quest => {
                                   if (quest.title === "The First Harvest") {
                                     return {
@@ -2600,9 +2975,7 @@ useEffect(() => {
                         zIndex: 2, // Ensure guard is above background
                       }}
                     />
-                  )}
-
-                  {/* Fourth Guard NPC Sprite */}
+                  )}                  {/* Fourth Guard NPC Sprite */}
                   {!isLoading && !showCutscene && (
                     <img
                       src={guardStand}
@@ -2614,6 +2987,38 @@ useEffect(() => {
                         width: `${GUARD4_SIZE}px`,
                         height: `${GUARD4_SIZE}px`,
                         zIndex: 2, // Ensure guard is above background
+                      }}
+                    />
+                  )}
+
+                  {/* Merchant NPC Sprite */}
+                  {!isLoading && !showCutscene && (
+                    <img
+                      src={merchantStand}
+                      alt="Merchant"
+                      className="absolute pixelated"
+                      style={{
+                        left: `${MERCHANT_POSITION_PIXEL.x}px`,
+                        top: `${MERCHANT_POSITION_PIXEL.y}px`,
+                        width: `${MERCHANT_SIZE}px`,
+                        height: `${MERCHANT_SIZE}px`,
+                        zIndex: 2, // Ensure merchant is above background
+                      }}
+                    />
+                  )}
+
+                  {/* Blacksmith NPC Sprite */}
+                  {!isLoading && !showCutscene && (
+                    <img
+                      src={blacksmithStand}
+                      alt="Blacksmith"
+                      className="absolute pixelated"
+                      style={{
+                        left: `${BLACKSMITH_POSITION_PIXEL.x}px`,
+                        top: `${BLACKSMITH_POSITION_PIXEL.y}px`,
+                        width: `${BLACKSMITH_SIZE}px`,
+                        height: `${BLACKSMITH_SIZE}px`,
+                        zIndex: 2, // Ensure blacksmith is above background
                       }}
                     />
                   )}
@@ -2653,16 +3058,9 @@ useEffect(() => {
             startDialog({
               characterName: 'merchant',
               expression: 'neutral',
-              dialogue: [
-                "Ah… a new face, or rather, an old one returned. Haven't seen anyone from that cottage in years.",
+              dialogue: ["Ah… a new face, or rather, an old one returned. Haven't seen anyone from that cottage in years.",
                 "So, what's it going to be? Looking for tools? A bite to eat? No, wait—must be seeds. Can't live off an empty field, eh?",
-                "Wheat for steady trade, turnips for a quick harvest… or maybe something more refined? What'll it be?"
-              ],
-              onComplete: () => {
-                setHasSeenFirstShopDialogue(true);
-                setShopMode('buy');
-                setShowShop(true);
-              }
+                "Wheat for steady trade, turnips for a quick harvest… or maybe something more refined? What'll it be?"]
             });
           }, 100);
           return null; // Don't render the popup if we're showing dialogue
@@ -2743,8 +3141,7 @@ useEffect(() => {
                       value={parseInt(timeSkipHours) || 0}
                       fontSize={48}
                       textColor="#F5DEB3"
-                      places={[100, 10, 1]}
-                      containerStyle={{ width: '100%' }}
+                      places={[100, 10, 1]}                      containerStyle={{ width: '100%' }}
                       counterStyle={{ justifyContent: 'center' }}
                       gradientFrom="#A0522D"
                       gradientTo="transparent"

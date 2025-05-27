@@ -17,8 +17,10 @@ import eugeneVeryHappy from '../assets/characters/eugene/veryHappy.png';
 // Import general character portraits for neutral expression
 import louisePortrait from '../assets/characters/louise/character.png';
 import eugenePortrait from '../assets/characters/eugene/character.png';
+import alexPortrait from '../assets/characters/alex/character.png';
 import elderPortrait from '../assets/npc/elder/character.png';
 import merchantPortrait from '../assets/npc/merchant/character.png';
+import blacksmithPortrait from '../assets/npc/blacksmith/character.png';
 
 // Map character names and expressions to portrait images
 const portraits = {
@@ -31,11 +33,15 @@ const portraits = {
     // Default portrait if expression is not found
     default: louisePortrait,
   },
-  // Add other characters here when portraits are ready
-  // alex: {
-  //   angry: alexAngry,
-  //   // ... other alex expressions
-  // },
+  // Alex uses only character.png for all expressions
+  alex: {
+    angry: alexPortrait,
+    happy: alexPortrait,
+    smile: alexPortrait,
+    veryHappy: alexPortrait,
+    neutral: alexPortrait,
+    default: alexPortrait,
+  },
   eugene: {
     angry: eugeneAngry,
     happy: eugeneHappy,
@@ -52,6 +58,14 @@ const portraits = {
   'merchant': {
     neutral: merchantPortrait,
     default: merchantPortrait,
+  },
+  'blacksmith': {
+    neutral: blacksmithPortrait,
+    default: blacksmithPortrait,
+  },
+  'village blacksmith': {
+    neutral: blacksmithPortrait,
+    default: blacksmithPortrait,
   },
 };
 

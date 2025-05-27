@@ -4,18 +4,19 @@ import hoverSound from '../assets/sfx/hover.wav';
 import exitSound from '../assets/sfx/exit.wav';
 import cashSound from '../assets/sfx/cash.wav';
 import dialogSound from '../assets/sfx/dialog.wav';
+import newQuestSound from '../assets/sfx/newQuest.mp3';
 
 const SoundContext = createContext();
 
 export function SoundProvider({ children }) {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [sfxVolume, setSfxVolume] = useState(100);
-  
-  const clickAudioRef = useRef(new Audio(clickSound));
+    const clickAudioRef = useRef(new Audio(clickSound));
   const hoverAudioRef = useRef(new Audio(hoverSound));
   const exitAudioRef = useRef(new Audio(exitSound));
   const cashAudioRef = useRef(new Audio(cashSound));
   const dialogAudioRef = useRef(new Audio(dialogSound));
+  const newQuestAudioRef = useRef(new Audio(newQuestSound));
 
   const playClick = () => {
     if (soundEnabled) {
@@ -60,7 +61,6 @@ export function SoundProvider({ children }) {
       });
     }
   };
-
   const playDialog = () => {
     if (soundEnabled) {
       const audio = dialogAudioRef.current;
@@ -72,6 +72,16 @@ export function SoundProvider({ children }) {
     }
   };
 
+  const playNewQuest = () => {
+    if (soundEnabled) {
+      const audio = newQuestAudioRef.current;
+      audio.volume = sfxVolume / 100;
+      audio.currentTime = 0;
+      audio.play().catch(error => {
+        console.error('Error playing new quest sound:', error);
+      });
+    }
+  };
   return (
     <SoundContext.Provider value={{
       soundEnabled,
@@ -82,7 +92,8 @@ export function SoundProvider({ children }) {
       playHover,
       playExit,
       playCash,
-      playDialog
+      playDialog,
+      playNewQuest
     }}>
       {children}
     </SoundContext.Provider>

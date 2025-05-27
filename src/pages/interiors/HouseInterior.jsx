@@ -26,6 +26,7 @@ import pauseButton from '../../assets/menu/pause.png';
 // Import character portraits
 import louisePortrait from '../../assets/characters/louise/character.png';
 import eugenePortrait from '../../assets/characters/eugene/character.png';
+import alexPortrait from '../../assets/characters/alex/character.png';
 
 // Import character sprites
 import eugeneStand from '../../assets/characters/eugene/stand.gif';
@@ -38,10 +39,17 @@ import louiseWalkUp from '../../assets/characters/louise/walk-up.gif';
 import louiseWalkDown from '../../assets/characters/louise/walk-down.gif';
 import louiseWalkLeft from '../../assets/characters/louise/walk-left.gif';
 import louiseWalkRight from '../../assets/characters/louise/walk-right.gif';
+import alexStand from '../../assets/characters/alex/stand.gif';
+import alexWalkUp from '../../assets/characters/alex/walk-up.gif';
+import alexWalkDown from '../../assets/characters/alex/walk-down.gif';
+import alexWalkLeft from '../../assets/characters/alex/walk-left.gif';
+import alexWalkRight from '../../assets/characters/alex/walk-right.gif';
 import eugeneSleep from '../../assets/characters/eugene/sleep.gif';
 import louiseSleep from '../../assets/characters/louise/sleep.gif';
+import alexSleep from '../../assets/characters/alex/sleep.gif';
 import eugeneEat from '../../assets/characters/eugene/eat.gif';
 import louiseEat from '../../assets/characters/louise/eat.gif';
+import alexEat from '../../assets/characters/alex/eat.gif';
 
 // Define collision points for interior
 const INTERIOR_COLLISION_MAP = [
@@ -89,22 +97,25 @@ const HouseInterior = ({
   onTimeUpdate,
   hasSeenHouseDialog,
   setHasSeenHouseDialog,
-  saveGame,
-  showEatAnimation,
+  saveGame,  showEatAnimation,
   setShowEatAnimation,
   currentDay,
-  setCurrentDay
+  setCurrentDay,
+  plantedCrops,
+  setPlantedCrops
 }) => {
   const { user } = useAuth();
   const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume, playClick, playHover } = useSound();
   const { musicEnabled, setMusicEnabled, musicVolume, setMusicVolume } = useMusic();
   const { isDialogActive, currentDialog, dialogIndex, startDialog, advanceDialog, endDialog } = useDialog();
-  const [facing, setFacing] = useState('stand');
-  const [showSleepButton, setShowSleepButton] = useState(false);
+  const [facing, setFacing] = useState('stand');  const [showSleepButton, setShowSleepButton] = useState(false);
   const [showSleepConfirmPopup, setShowSleepConfirmPopup] = useState(false);
   const [isNearSleepArea, setIsNearSleepArea] = useState(false);
   const prevIsNearSleepArea = useRef(false);
   const hasShownSleepPopup = useRef(false);
+    // Objective popup state
+  const [completedObjectives, setCompletedObjectives] = useState([]);
+  const [newObjectives, setNewObjectives] = useState([]);
   const INTERIOR_WIDTH = 800;
   const INTERIOR_HEIGHT = 600;
   const GRID_SIZE = 100;
@@ -213,15 +224,17 @@ const HouseInterior = ({
     console.log('Check Sleep Proximity:', { playerX: x, playerY: y, playerCenterX, playerCenterY, sleepCenterX, sleepCenterY, distance, isNear, proximityThreshold }); // Debug log
     setIsNearSleepArea(isNear);
     // Removed setShowSleepButton(isNear);
-  };
-
-  // Add effect to check quest progress when entering house
+  };  // Add effect to check quest progress when entering house
+  const hasShownHouseObjective = useRef(false);
+  
   useEffect(() => {
-    if (quests && quests.length > 0) {
+    if (quests && quests.length > 0 && !hasShownHouseObjective.current) {
       const updatedQuests = quests.map(quest => {
         if (quest.title === "Welcome Home") {
           const updatedObjectives = quest.objectives.map(objective => {
-            if (objective.description === "Enter your house" && !objective.completed) {
+            if (objective.description === "Enter your house" && !objective.completed) {              // Show completed objective popup when entering house - only once
+              showChainedObjective("Enter your house", "Meet the village elder");
+              hasShownHouseObjective.current = true; // Mark that we've shown this popup
               return { ...objective, completed: true };
             }
             return objective;
@@ -231,8 +244,26 @@ const HouseInterior = ({
         return quest;
       });
       setQuests(updatedQuests);
+    }  }, [quests]); // Only re-run when quests change
+
+  // Auto-hide completed objectives after 4 seconds, new objectives after 6 seconds
+  useEffect(() => {
+    if (completedObjectives.length > 0) {
+      const timer = setTimeout(() => {
+        setCompletedObjectives([]);
+      }, 4000);
+      return () => clearTimeout(timer);
     }
-  }, []); // Run once when component mounts
+  }, [completedObjectives]);
+
+  useEffect(() => {
+    if (newObjectives.length > 0) {
+      const timer = setTimeout(() => {
+        setNewObjectives([]);
+      }, 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [newObjectives]);
 
   // Handle sleep action
   const handleSleep = async () => {
@@ -270,56 +301,80 @@ const HouseInterior = ({
       console.log('Game saved after sleeping');
     } catch (error) {
       console.error('Error saving game after sleep:', error);
-    }
-
-    // Calculate time until 6 AM
+    }    // Calculate time until 6 AM
     const currentHour = gameTime.hours;
     const currentMinute = gameTime.minutes;
     let hoursUntilWake = 0;
     let shouldAdvanceDay = false;
-    
-    if (currentHour >= 19) { // If sleeping after 7 PM
+      if (currentHour >= 21) { // If sleeping after 9 PM (21:00)
       hoursUntilWake = 24 - currentHour + 6; // Hours until 6 AM next day
       shouldAdvanceDay = true;
+      console.log('Sleeping after 9 PM, will advance day. Current hour:', currentHour); // Debug log
     } else { // If sleeping before 6 AM
       hoursUntilWake = 6 - currentHour;
-    }
-
-    // Convert hours to milliseconds (1 hour = 1 second in game time)
+      console.log('Sleeping before 6 AM, will NOT advance day. Current hour:', currentHour); // Debug log
+    }// Convert hours to milliseconds (1 hour = 1 second in game time)
     const sleepDuration = hoursUntilWake * 1000;
+
+    // Track current time during sleep
+    let currentSleepHour = currentHour;
 
     // Create an interval to update time every second
     const timeInterval = setInterval(() => {
-      const newHour = gameTime.hours + 1;
+      currentSleepHour = (currentSleepHour + 1) % 24;
       const newTime = {
-        hours: newHour >= 24 ? 0 : newHour,
+        hours: currentSleepHour,
         minutes: 0
       };
       // Update the game time in the parent component
       if (typeof onTimeUpdate === 'function') {
         onTimeUpdate(newTime);
       }
-    }, 1000);
-
-    // Update stats and wake up after sleep duration
+    }, 1000);    // Update stats and wake up after sleep duration
     setTimeout(() => {
       clearInterval(timeInterval); // Stop the time updates
       setEnergy(prev => Math.min(100, prev + 50));
       setHappiness(prev => Math.min(100, prev + 30));
       setHunger(prev => Math.max(0, prev - 10));
-      setCleanliness(prev => Math.min(100, prev + 50));
-      setIsSleeping(false);
+      setCleanliness(prev => Math.min(100, prev + 50));      setIsSleeping(false);
+      
+      // Show objective popup after waking up - optional message that doesn't need to appear every time
+      if (Math.random() > 0.5) { // Only show 50% of the time to reduce popup fatigue
+        showObjective("Good morning! You feel refreshed and ready for a new day.");
+      }
       
       // Set time to 6 AM
       const wakeTime = { hours: 6, minutes: 0 };
       if (typeof onTimeUpdate === 'function') {
-        onTimeUpdate(wakeTime);
-      }
-
-      // Advance day if sleeping after 7 PM
+        onTimeUpdate(wakeTime);      }      // Advance day if sleeping after 9 PM
       if (shouldAdvanceDay && typeof setCurrentDay === 'function') {
-        setCurrentDay(prevDay => prevDay + 1);
-        console.log('Day advanced to:', currentDay + 1); // Debug log
+        setCurrentDay(prevDay => {
+          const newDay = prevDay + 1;
+          console.log('Day advanced to:', newDay); // Debug log
+          
+          // Update planted crops for the new day - reset watering needs and advance growth
+          if (typeof setPlantedCrops === 'function') {
+            setPlantedCrops(prevCrops => prevCrops.map(crop => {
+              // Only process non-mature crops
+              if (crop.stage < 3) {
+                // Check if the crop was watered on the previous day
+                const grewToday = !crop.needsWatering;
+                
+                // Advance stage if it grew today, otherwise keep current stage
+                const nextStage = grewToday ? Math.min(3, crop.stage + 1) : crop.stage;
+                
+                // All non-mature crops need watering at the start of a new day
+                const needsWateringForNewDay = nextStage < 3;
+                
+                return { ...crop, stage: nextStage, needsWatering: needsWateringForNewDay };
+              }
+              // Mature crops (stage 3) don't need watering and are ready for harvest
+              return crop;
+            }));
+          }
+          
+          return newDay;
+        });
       }
 
       // Update quest progress after sleeping
@@ -337,10 +392,38 @@ const HouseInterior = ({
           return quest;
         });
         setQuests(updatedQuests);
-      }
-    }, sleepDuration);
+      }    }, sleepDuration);
+  };  // Helper functions for objective popups
+  const showCompletedObjective = (text) => {
+    setCompletedObjectives(prev => [...prev, { text, id: Date.now() }]);
+  };
+  
+  // Function to show a chained objective (completed and next together)
+  const showChainedObjective = (completedText, nextText) => {
+    const chainId = Date.now(); // Use the same ID for related objectives
+    setCompletedObjectives(prev => [...prev, { 
+      text: completedText, 
+      id: chainId,
+      hasNextObjective: !!nextText // Flag indicating this is part of a chain
+    }]);
+    
+    if (nextText) {
+      setNewObjectives(prev => [...prev, { 
+        text: nextText, 
+        id: chainId,
+        isChainedFromPrevious: true // Flag indicating this is chained from a previous objective
+      }]);
+    }
   };
 
+  const showNewObjective = (text) => {
+    setNewObjectives(prev => [...prev, { text, id: Date.now() }]);
+  };
+
+  // Backward compatibility function
+  const showObjective = (text) => {
+    showNewObjective(text);
+  };
   // Get character-specific sprites
   const getCharacterSprites = () => {
     console.log('House Interior - Selected character:', character);
@@ -359,6 +442,17 @@ const HouseInterior = ({
           walkRight: eugeneWalkRight,
           sleep: eugeneSleep,
           eat: eugeneEat
+        };
+      case 'alex':
+        console.log('Loading Alex sprites in house');
+        return {
+          stand: alexStand,
+          walkUp: alexWalkUp,
+          walkDown: alexWalkDown,
+          walkLeft: alexWalkLeft,
+          walkRight: alexWalkRight,
+          sleep: alexSleep,
+          eat: alexEat
         };
       case 'louise':
         console.log('Loading Louise sprites in house');
@@ -591,8 +685,7 @@ const HouseInterior = ({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUpEvent);
-    };
-  }, [position, energy, cleanliness, isSleeping, isPaused, isDialogActive, inventory, onUseItem]); // Add all dependencies
+    };  }, [position, energy, cleanliness, isSleeping, isPaused, isDialogActive, inventory, onUseItem]); // Add all dependencies
 
   // Add getCharacterPortrait function
   const getCharacterPortrait = () => {
@@ -600,6 +693,8 @@ const HouseInterior = ({
     switch (String(characterName).toLowerCase()) {
       case 'eugene':
         return eugenePortrait;
+      case 'alex':
+        return alexPortrait;
       case 'louise':
       default:
         return louisePortrait;
@@ -799,10 +894,13 @@ const HouseInterior = ({
                 disabled={!isSleepTime()}
               >
                 Sleep
-              </button>
-              <button 
+              </button>              <button 
                 className="bg-[#8B4513] text-[#F5DEB3] px-6 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 w-32"
-                onClick={() => { saveGame(); setShowSleepConfirmPopup(false); }} // Call save and close popup
+                onClick={() => { 
+                  saveGame(); 
+                  showObjective("Game saved! Your progress has been preserved.");
+                  setShowSleepConfirmPopup(false); 
+                }}
               >
                 Save Game
               </button>
@@ -922,8 +1020,57 @@ const HouseInterior = ({
               <button className="pause-menu-btn w-56" onClick={handleExit}>Exit</button>
             </div>
           </div>
-        </div>
-      )}
+        </div>      )}      {/* Skyrim-style Objective Popups - Top Middle - Posisi diturunkan sedikit */}
+      <div className="fixed top-28 left-1/2 transform -translate-x-1/2 z-[60] pointer-events-none text-center">
+        <AnimatePresence>
+          {/* Objectives display - Supports both individual and chained objectives */}
+          {completedObjectives.map((completedObj) => {
+            // Find if there's a chained new objective
+            const chainedObj = completedObj.hasNextObjective ? 
+              newObjectives.find(newObj => newObj.id === completedObj.id) : null;
+              
+            return (              <motion.div
+                key={`chain-${completedObj.id}`}
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.5 }}
+                className="mb-3"
+              >
+                {/* Completed objective */}
+                <p className="text-yellow-400 text-xl font-medium drop-shadow-lg tracking-wide">
+                  <span className="line-through">✓ {completedObj.text}</span>
+                </p>
+                  {/* Chained new objective - only show if this completed objective has a chained one */}                {chainedObj && (
+                  <div className="mt-2 pt-2">
+                    <p className="text-white text-xl font-medium drop-shadow-lg tracking-wide">
+                      ▶ {chainedObj.text}
+                    </p>
+                  </div>
+                )}
+              </motion.div>
+            );
+          })}
+          
+          {/* Standalone new objectives (those not chained from a completed objective) */}
+          {newObjectives
+            .filter(objective => !objective.isChainedFromPrevious)
+            .map((objective) => (
+              <motion.div
+                key={`new-${objective.id}`}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                transition={{ duration: 0.5 }}
+                className="mb-3"
+            >
+              <p className="text-white text-xl font-medium drop-shadow-lg tracking-wide">
+                {objective.text}
+              </p>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
 
       {/* Add Settings Popup */}
       {showSettings && (
