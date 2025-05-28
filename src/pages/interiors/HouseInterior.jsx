@@ -558,7 +558,11 @@ const HouseInterior = ({
     };
 
     if (playerGridPos.x === exitPoint.x && playerGridPos.y === exitPoint.y) {
-      onExit({ x: 6, y: 2 });
+      // Convert coordinates to match Game.jsx's grid size (40)
+      const gameGridSize = 40;
+      const adjustedX = Math.round((7 * gameGridSize) / GRID_SIZE * GRID_SIZE / gameGridSize);
+      const adjustedY = Math.round((2 * gameGridSize) / GRID_SIZE * GRID_SIZE / gameGridSize);
+      onExit({ x: adjustedX, y: adjustedY });
     }
   };
 
