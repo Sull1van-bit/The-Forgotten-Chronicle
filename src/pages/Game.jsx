@@ -1173,7 +1173,7 @@ const Game = () => {
   // Add state for movement
   const [isMoving, setIsMoving] = useState(false);
   const [lastDirection, setLastDirection] = useState('down');
-  const moveSpeed = 5; // Reduced speed for smoother movement
+  const moveSpeed = 100; // Reduced speed for smoother movement
   const moveTimeoutRef = useRef(null);
 
   // Movement constants
@@ -1244,6 +1244,22 @@ const Game = () => {
   // Movement handler
   useEffect(() => {
     const handleKeyPress = (e) => {
+      // Handle special keys that don't require movement (checked before early returns)
+      if (e.key.toLowerCase() === 't') {
+        console.log('T key pressed! Conditions:', {
+          isDialogActive,
+          isPaused,
+          showShop,
+          showElderTalkPopup,
+          canActivate: !isDialogActive && !isPaused && !showShop && !showElderTalkPopup
+        });
+        if (!isDialogActive && !isPaused && !showShop && !showElderTalkPopup) {
+          console.log('Activating time skip popup...');
+          setShowTimeSkipPopup(true);
+        }
+        return;
+      }
+      
       if (isSleeping || isPaused || isDialogActive || showShop || showElderTalkPopup) return;
       if (isInInterior) return;
 
@@ -1381,14 +1397,8 @@ const Game = () => {
           if (canSave && !isDialogActive) {
             saveGame();
           }
-          break;
-        case 'e':
+          break;        case 'e':
           checkShopTrigger(position.x, position.y);
-          break;
-        case 't':
-          if (!isDialogActive && !isPaused && !showShop) {
-            setShowTimeSkipPopup(true);
-          }
           break;
       }
 
@@ -1432,40 +1442,7 @@ const Game = () => {
     checkTeleport,
     checkShopTrigger,
     checkElderProximity,
-    hasCollision
-  ]);
-
-  // Prevent movement and interactions when paused, in dialogue, in shop, or talking to elder
-  useEffect(() => {
-    const handleKeyPress = (e) => {
-      if (isSleeping || isPaused || isDialogActive || showShop || showElderTalkPopup) return;
-      if (isInInterior) return;
-
-      const key = e.key.toLowerCase();
-      setPressedKeys(prev => new Set([...prev, key]));
-    };
-
-    const handleKeyUp = (e) => {
-      const key = e.key.toLowerCase();
-      setPressedKeys(prev => {
-        const newKeys = new Set([...prev]);
-        newKeys.delete(key);
-        return newKeys;
-      });
-      
-      if (!pressedKeys.size) {
-        setIsMoving(false);
-        setFacing('stand');
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyPress);
-    window.addEventListener('keyup', handleKeyUp);
-    return () => {
-      window.removeEventListener('keydown', handleKeyPress);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, [isSleeping, isPaused, isDialogActive, showShop, showElderTalkPopup, isInInterior]);
+    hasCollision  ]);
 
   // Handle continuous movement
   useEffect(() => {
@@ -2429,11 +2406,18 @@ useEffect(() => {
                               const isFirstHarvestCompleted = firstHarvestQuest && 
                                 firstHarvestQuest.objectives.every(obj => obj.completed);
                               
+                              console.log("Quest completion check:", {
+                                firstHarvestQuest,
+                                isFirstHarvestCompleted,
+                                objectives: firstHarvestQuest?.objectives
+                              });
+                              
                               // Check if blacksmith quest already exists
                               const blacksmithQuestExists = updatedQuests.some(quest => quest.title === "The Blacksmith's Request");
                               
                               // If "The First Harvest" is completed and blacksmith quest doesn't exist, add it
                               if (isFirstHarvestCompleted && !blacksmithQuestExists) {
+                                console.log("Adding blacksmith quest!");
                                 // Show a chained objective indicating quest completion and new quest
                                 setTimeout(() => {
                                   showChainedObjective("Quest completed: The First Harvest", "New quest available: Visit the blacksmith");
@@ -3263,9 +3247,7 @@ useEffect(() => {
           quest.title === "The First Harvest" && 
           quest.objectives.some(obj => obj.description === "Buy seeds from the shop" && !obj.completed)
         );
-        const shouldShowMerchantDialogue = hasFirstHarvestQuest && hasBuySeedsObjective && !hasSeenFirstShopDialogue;
-
-        if (shouldShowMerchantDialogue) {
+        const shouldShowMerchantDialogue = hasFirstHarvestQuest && hasBuySeedsObjective && !hasSeenFirstShopDialogue;        if (shouldShowMerchantDialogue) {
           // Trigger merchant dialogue
           setTimeout(() => {
             setShowShopConfirm(false);
@@ -3274,7 +3256,15 @@ useEffect(() => {
               expression: 'neutral',
               dialogue: ["Ah… a new face, or rather, an old one returned. Haven't seen anyone from that cottage in years.",
                 "So, what's it going to be? Looking for tools? A bite to eat? No, wait—must be seeds. Can't live off an empty field, eh?",
-                "Wheat for steady trade, turnips for a quick harvest… or maybe something more refined? What'll it be?"]
+                "Wheat for steady trade, turnips for a quick harvest… or maybe something more refined? What'll it be?"],
+              onComplete: () => {
+                // Mark that the first shop dialogue has been seen
+                setHasSeenFirstShopDialogue(true);
+                // After dialogue ends, show the shop confirmation popup again
+                setTimeout(() => {
+                  setShowShopConfirm(true);
+                }, 100);
+              }
             });
           }, 100);
           return null; // Don't render the popup if we're showing dialogue
