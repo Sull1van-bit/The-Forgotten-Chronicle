@@ -11,6 +11,7 @@ import Settings from '../components/Settings';
 import Minimap from '../components/Minimap';
 import '../styles/Game.css';
 import { DialogProvider, useDialog } from '../context/DialogContext';
+import BlackjackGame from '../components/BlackjackGame';
 
 // Import character sprites
 import louiseStand from '../assets/characters/louise/stand.gif';
@@ -507,6 +508,7 @@ const Game = () => {
   const [isSleeping, setIsSleeping] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showBlackjack, setShowBlackjack] = useState(false);
   const [showShop, setShowShop] = useState(false);
   const [showShopConfirm, setShowShopConfirm] = useState(false);
   const [showTimeSkipPopup, setShowTimeSkipPopup] = useState(false);
@@ -1174,6 +1176,68 @@ const Game = () => {
 
   // Movement constants
   const MOVEMENT_SPEED = 8; // Reduced speed for smoother movement
+
+  // Check if player is at blackjack coordinates
+  const isAtBlackjackTable = () => {
+    const playerGridX = Math.floor(position.x / GRID_SIZE);
+    const playerGridY = Math.floor(position.y / GRID_SIZE);
+    
+    // Check if player is within 1 tile of the blackjack table
+    const isNearX = Math.abs(playerGridX - 27) <= 1;
+    const isNearY = Math.abs(playerGridY - 28) <= 1;
+    
+    return isNearX && isNearY;
+  };
+
+  // Handle interaction with blackjack table
+  const handleBlackjackInteraction = () => {
+    console.log('Blackjack interaction triggered');
+    if (isAtBlackjackTable()) {
+      console.log('Opening Blackjack game');
+      setShowBlackjack(true);
+      playSound('success');
+    }
+  };
+
+  // Add effect to track showBlackjack changes
+  useEffect(() => {
+    console.log('showBlackjack state changed:', showBlackjack);
+  }, [showBlackjack]);
+
+  // Add effect to track position changes for blackjack table proximity
+  useEffect(() => {
+    const playerGridX = Math.floor(position.x / GRID_SIZE);
+    const playerGridY = Math.floor(position.y / GRID_SIZE);
+    console.log('Player position (grid):', { x: playerGridX, y: playerGridY });
+    console.log('Is at blackjack table:', isAtBlackjackTable());
+  }, [position]);
+
+  // Handle key press
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      if (isSleeping || isPaused || isDialogActive || showShop || showElderTalkPopup) return;
+      if (isInInterior) return;
+
+      let newX = position.x;
+      let newY = position.y;
+      const energyCost = 0.15;
+      const cleanlinessCost = 0.15;
+
+      switch (e.key.toLowerCase()) {
+        case 'e':
+          if (isAtBlackjackTable()) {
+            handleBlackjackInteraction();
+            return;
+          }
+          checkShopTrigger(position.x, position.y);
+          break;
+        // ... rest of the cases ...
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [isSleeping, isPaused, isDialogActive, showShop, showElderTalkPopup, position]);
 
   // Movement handler
   useEffect(() => {
@@ -2102,6 +2166,29 @@ useEffect(() => {
         </>
       )}
 
+      {/* Game UI Elements */}
+      {!isDialogActive && !showCutscene && !showShop && !isSleeping && !isPaused && !showBlackjack && (
+        <>
+          {/* Blackjack Table Prompt */}
+          {isAtBlackjackTable() && (
+            <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-24 z-50">
+              <div className="bg-black bg-opacity-75 text-white px-4 py-2 rounded-lg shadow-lg text-center">
+                <p className="text-lg">Press E to play Blackjack</p>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Blackjack Game */}
+      {showBlackjack && (
+        <BlackjackGame
+          onClose={() => setShowBlackjack(false)}
+          money={money}
+          setMoney={setMoney}
+        />
+      )}
+
       {/* Pause Button */}
       {!isPaused && !isLoading && !showCutscene && !isDialogActive && !showShop && !isInInterior && (
         <img
@@ -2472,7 +2559,8 @@ useEffect(() => {
                   <span className="line-through">✓ {completedObj.text}</span>
                 </p>
                 
-                {/* Chained new objective - only show if this completed objective has a chained one */}                {chainedObj && (
+                {/* Chained new objective - only show if this completed objective has a chained one */}
+                {chainedObj && (
                   <div className="mt-2 pt-2">
                     <p className="text-white text-xl font-medium drop-shadow-lg tracking-wide">
                       ▶ {chainedObj.text}
@@ -3310,6 +3398,20 @@ useEffect(() => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Interaction Prompts */}
+      {!isDialogActive && !showCutscene && !showShop && !isSleeping && !isPaused && !showBlackjack && (
+        <>
+          {/* Blackjack Table Prompt */}
+          {isAtBlackjackTable() && (
+            <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-24 z-50">
+              <div className="bg-black bg-opacity-75 text-white px-4 py-2 rounded-lg shadow-lg text-center">
+                <p className="text-lg">Press E to play Blackjack</p>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
