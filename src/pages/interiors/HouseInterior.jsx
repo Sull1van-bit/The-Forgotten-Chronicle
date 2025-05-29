@@ -772,10 +772,9 @@ const HouseInterior = ({
 
       {/* Add UI Elements - Hide during dialog */}
       {!isDialogActive && !isSleeping && (
-        <>
-          <div className="absolute top-4 left-4 z-50 text-white flex items-center border-8 border-[#D2B48C]" style={{ backgroundColor: '#8B4513', padding: '10px', borderRadius: '10px' }}>
+        <>          <div className="absolute top-4 left-4 z-50 text-white flex items-center border-8 border-[#D2B48C]" style={{ backgroundColor: '#8B4513', padding: '10px', borderRadius: '10px' }}>
             {/* Character Portrait */}
-            <div className="w-16 h-16 rounded-full border-2 border-yellow-500 overflow-hidden flex items-center justify-center bg-gray-700">
+            <div className="w-24 h-28 rounded-lg border-2 border-yellow-500 overflow-hidden flex items-center justify-center bg-gray-700 shadow-lg">
               <img
                 src={getCharacterPortrait()}
                 alt={`${character?.name || character} Portrait`}
@@ -784,64 +783,67 @@ const HouseInterior = ({
             </div>
 
             {/* Character Info and Stats */}
-            <div className="ml-4 flex flex-col justify-center">
-              {/* Character Name */}
+            <div className="ml-4 flex flex-col justify-center">              {/* Character Name */}
               <span className="text-base font-bold mb-1">{character?.name || 'Character Name'}</span>
 
-              {/* Stat Bars */}
-              <div className="flex items-center gap-3 mb-1">
-                <span className="text-sm flex items-center">
-                  <img src={heartIcon} alt="HP" className="w-6 h-6 mr-1" /> {Math.round(health)}/100
-                </span>
-                <div className="w-28 h-4 bg-gray-700 rounded overflow-hidden">
-                  <div className="h-full bg-red-500" style={{ width: `${health}%` }}></div>
+              {/* Stat Bars - Left-aligned Inverted Pyramid Layout */}
+              <div className="flex flex-col gap-1">
+                {/* Health - Longest bar (top) */}
+                <div className="flex items-center gap-3">
+                  <span className="text-sm flex items-center w-24">
+                    <img src={heartIcon} alt="HP" className="w-6 h-6 mr-1" /> {Math.round(health)}/100
+                  </span>
+                  <div className="w-32 h-4 bg-gray-700 rounded overflow-hidden">
+                    <div className="h-full bg-red-500" style={{ width: `${health}%` }}></div>
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-3 mb-1">
-                <span className="text-sm flex items-center">
-                  <img src={hungerIcon} alt="Hunger" className="w-6 h-6 mr-1" /> {Math.round(hunger)}/100
-                </span>
-                <div className="w-28 h-4 bg-gray-700 rounded overflow-hidden">
-                  <div className="h-full bg-yellow-500" style={{ width: `${hunger}%` }}></div>
+                {/* Hunger - Second longest */}
+                <div className="flex items-center gap-3">
+                  <span className="text-sm flex items-center w-24">
+                    <img src={hungerIcon} alt="Hunger" className="w-6 h-6 mr-1" /> {Math.round(hunger)}/100
+                  </span>
+                  <div className="w-28 h-4 bg-gray-700 rounded overflow-hidden">
+                    <div className="h-full bg-yellow-500" style={{ width: `${hunger}%` }}></div>
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-3 mb-1">
-                <span className="text-sm flex items-center">
-                  <img src={hygieneIcon} alt="Cleanliness" className="w-6 h-6 mr-1" /> {Math.round(cleanliness)}/100
-                </span>
-                <div className="w-28 h-4 bg-gray-700 rounded overflow-hidden">
-                  <div className="h-full bg-cyan-500" style={{ width: `${cleanliness}%` }}></div>
+                {/* Cleanliness - Third longest */}
+                <div className="flex items-center gap-3">
+                  <span className="text-sm flex items-center w-24">
+                    <img src={hygieneIcon} alt="Cleanliness" className="w-6 h-6 mr-1" /> {Math.round(cleanliness)}/100
+                  </span>
+                  <div className="w-24 h-4 bg-gray-700 rounded overflow-hidden">
+                    <div className="h-full bg-cyan-500" style={{ width: `${cleanliness}%` }}></div>
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-3 mb-1">
-                <span className="text-sm flex items-center">
-                  <img src={happinessIcon} alt="Happiness" className="w-6 h-6 mr-1" /> {Math.round(happiness)}/100
-                </span>
-                <div className="w-28 h-4 bg-gray-700 rounded overflow-hidden">
-                  <div className="h-full bg-green-500" style={{ width: `${happiness}%` }}></div>
+                {/* Happiness - Fourth longest */}
+                <div className="flex items-center gap-3">
+                  <span className="text-sm flex items-center w-24">
+                    <img src={happinessIcon} alt="Happiness" className="w-6 h-6 mr-1" /> {Math.round(happiness)}/100
+                  </span>
+                  <div className="w-20 h-4 bg-gray-700 rounded overflow-hidden">
+                    <div className="h-full bg-green-500" style={{ width: `${happiness}%` }}></div>
+                  </div>
                 </div>
-              </div>
 
-              {/* Energy Stat Bar */}
-              <div className="flex items-center gap-3 mt-1">
-                <span className="text-sm flex items-center">
-                  <img src={energyIcon} alt="Energy" className="w-6 h-6 mr-1" /> {Math.round(energy)}/100
-                </span>
-                <div className="w-28 h-4 bg-gray-700 rounded overflow-hidden">
-                  <div className="h-full bg-blue-500" style={{ width: `${energy}%` }}></div>
+                {/* Energy - Shortest bar (bottom) */}
+                <div className="flex items-center gap-3">
+                  <span className="text-sm flex items-center w-24">
+                    <img src={energyIcon} alt="Energy" className="w-6 h-6 mr-1" /> {Math.round(energy)}/100
+                  </span>
+                  <div className="w-16 h-4 bg-gray-700 rounded overflow-hidden">
+                    <div className="h-full bg-blue-500" style={{ width: `${energy}%` }}></div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Money stat */}
-          <div className="absolute top-[180px] left-4 z-50 flex flex-col gap-1 text-white text-xs border-4 border-[#D2B48C]" style={{ backgroundColor: '#8B4513', padding: '5px', borderRadius: '5px' }}>
-            <div className="flex items-center gap-2">
-              <img src={moneyIcon} alt="Money" className="w-6 h-6 mr-1" />
-              <span>{money}</span>
+          </div>          {/* Money stat */}
+          <div className="absolute top-[180px] left-4 z-50 flex flex-col gap-1 text-white text-xs">
+            <div className="flex items-center gap-2 px-3 py-2">
+              <img src={moneyIcon} alt="Money" className="w-8 h-8" />
+              <span className="text-lg font-bold">{money}</span>
             </div>
           </div>
 

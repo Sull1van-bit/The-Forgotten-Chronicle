@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useSound } from '../context/SoundContext';
 import { useMusic } from '../context/MusicContext';
+import { useGame } from '../context/GameContext';
 import { AnimatePresence } from 'framer-motion';
 import { motion } from 'framer-motion';
 import LoadingScreen from '../components/LoadingScreen';
@@ -497,10 +498,40 @@ const Game = () => {
   const { user } = useAuth();
   const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume, playClick, playHover, playCash, playNewQuest } = useSound();
   const { musicEnabled, setMusicEnabled, musicVolume, setMusicVolume, startMusicPlayback } = useMusic();
-  const { startDialog, advanceDialog, endDialog, isDialogActive, currentDialog, dialogIndex } = useDialog();  const character = location.state?.character;
+  const { startDialog, advanceDialog, endDialog, isDialogActive, currentDialog, dialogIndex } = useDialog();
+  
+  // Use global game state
+  const {
+    health, setHealth,
+    energy, setEnergy,
+    hunger, setHunger,
+    happiness, setHappiness,
+    cleanliness, setCleanliness,
+    money, setMoney,
+    gameTime, setGameTime,
+    currentDay, setCurrentDay,
+    inventory, setInventory,
+    plantedCrops, setPlantedCrops,
+    quests, setQuests,
+    wateringProgress, setWateringProgress,
+    wateringDaysCompleted, setWateringDaysCompleted,
+    hasSeenHouseDialog, setHasSeenHouseDialog,
+    hasSeenFirstShopDialogue, setHasSeenFirstShopDialogue,
+    hasHarvestedFirstCrop, setHarvestedFirstCrop,
+    showEatAnimation, setShowEatAnimation,
+    addItemToInventory,
+    handleUseItem,
+    loadGameState,
+    createSaveData,
+    formatTime,
+    getDarknessLevel,
+    handleTimeSkip,
+    getItemById
+  } = useGame();
+  
+  const character = location.state?.character;
   const isLoadedGame = location.state?.isLoadedGame;
-  const initialSaveData = location.state?.saveData;
-  const [isLoading, setIsLoading] = useState(true);
+  const initialSaveData = location.state?.saveData;  const [isLoading, setIsLoading] = useState(true);
   const [showCutscene, setShowCutscene] = useState(false);
   const [saveFiles, setSaveFiles] = useState([]);
   const [canSave, setCanSave] = useState(false);
@@ -513,46 +544,23 @@ const Game = () => {
   const [showShopConfirm, setShowShopConfirm] = useState(false);
   const [showTimeSkipPopup, setShowTimeSkipPopup] = useState(false);
   const [timeSkipHours, setTimeSkipHours] = useState('');
-  // State for new quest pop-up - MOVED HERE
+  // State for new quest pop-up
   const [showNewQuestPopup, setShowNewQuestPopup] = useState(false);
   const [newQuestTitle, setNewQuestTitle] = useState('');
-  const [showEatAnimation, setShowEatAnimation] = useState(false);
 
-  // State for objective pop-up  // Objective popup state
+  // State for objective pop-up
   const [completedObjectives, setCompletedObjectives] = useState([]);
   const [newObjectives, setNewObjectives] = useState([]);
 
-  // Add plantedCrops state
-  const [plantedCrops, setPlantedCrops] = useState([]);
   // Add state to control visibility of interactive icons on plantable spots (hoe or watering can)
   const [interactiveIcons, setInteractiveIcons] = useState({});
 
-  // Add state to track if player has harvested their first crop
-  const [hasHarvestedFirstCrop, setHasHarvestedFirstCrop] = useState(false);
-
-  // Ref to store previous quests state for comparison - MOVED HERE
+  // Ref to store previous quests state for comparison
   const prevQuestsRef = useRef([]);
-
-  // Add character stats state
-  const [health, setHealth] = useState(100);  const [energy, setEnergy] = useState(100);
-  const [hunger, setHunger] = useState(100);
-  const [happiness, setHappiness] = useState(100);
-  const [money, setMoney] = useState(0);
-  const [cleanliness, setCleanliness] = useState(100);
-  const [gameTime, setGameTime] = useState({ hours: 6, minutes: 0 }); // Start at 6:00 AM
-  const [currentDay, setCurrentDay] = useState(1); // Add day counter
-  
-  // Quest progress tracking
-  const [wateringProgress, setWateringProgress] = useState(0); // Track days watered (0/3)
-  const [wateringDaysCompleted, setWateringDaysCompleted] = useState(new Set()); // Track which days watering was completed
 
   // Add state to control visibility of hoe icons on plantable spots
   const [showHoeIcon, setShowHoeIcon] = useState({});
-  // Add state for house dialog
-  const [hasSeenHouseDialog, setHasSeenHouseDialog] = useState(false);
 
-  // Add state for first shop dialogue
-  const [hasSeenFirstShopDialogue, setHasSeenFirstShopDialogue] = useState(false);
   // Add state for elder talk popup
   const [showElderTalkPopup, setShowElderTalkPopup] = useState(false);
 
@@ -562,11 +570,10 @@ const Game = () => {
   // Add state for shop confirmation and mode
   const [shopMode, setShopMode] = useState('buy'); // 'buy' or 'sell'
 
-  // Define basic game constants and initial player state - Moved up
+  // Define basic game constants and initial player state
   const [position, setPosition] = useState({ x: 350, y: 150 });
   const [facing, setFacing] = useState('stand');
-  const [isInInterior, setIsInInterior] = useState(false);
-  const speed = 15;
+  const [isInInterior, setIsInInterior] = useState(false);  const speed = 15;
   const scale = 2;
   const GRID_SIZE = 40;
   const PLAYER_BASE_SIZE = 10;
@@ -582,17 +589,6 @@ const Game = () => {
     { x: 32, y: 30 },
     { x: 33, y: 30 }
   ];
-
-  // Initialize inventory with 2 bread
-  const [inventory, setInventory] = useState([
-    { ...ITEMS.bread, quantity: 2 }
-  ]);
-  // Log inventory state whenever it changes
-  useEffect(() => {
-  }, [inventory]);
-
-  // Add quest state
-  const [quests, setQuests] = useState([]);
 
   // If no character is selected, redirect to main menu
   useEffect(() => {
@@ -1126,44 +1122,7 @@ const Game = () => {
   const handleSettings = () => setShowSettings(true);
   const handleCloseSettings = () => setShowSettings(false);  const handleExit = () => {
     // Force a page reload when navigating to main menu
-    window.location.href = '/';
-  };
-
-  // Handle item usage
-  const handleUseItem = useCallback((item) => {
-    if (item.type === 'consumable') {
-      // Show eating animation
-      setShowEatAnimation(true);
-      setTimeout(() => setShowEatAnimation(false), 1000); // Hide after 1 second
-
-      // Apply item effects
-      if (item.effect.health) {
-        setHealth(prev => Math.min(100, prev + item.effect.health));
-      }
-      if (item.effect.energy) {
-        setEnergy(prev => Math.min(100, prev + item.effect.energy));
-      }
-      if (item.effect.hunger) {
-        setHunger(prev => Math.min(100, prev + item.effect.hunger));
-      }
-      
-      // Update item quantity or remove if last one
-      setInventory(prev => {
-        const newInventory = prev.map(invItem => {
-          if (invItem.id === item.id) {
-            return {
-              ...invItem,
-              quantity: invItem.quantity - 1
-            };
-          }
-          return invItem;
-        });
-        
-        // Remove items with quantity 0
-        return newInventory.filter(invItem => invItem.quantity > 0);
-      });
-    }
-  }, []);
+    window.location.href = '/';  };
 
   // Add state to track pressed keys
   const [pressedKeys, setPressedKeys] = useState(new Set());
@@ -1211,7 +1170,6 @@ const Game = () => {
     console.log('Player position (grid):', { x: playerGridX, y: playerGridY });
     console.log('Is at blackjack table:', isAtBlackjackTable());
   }, [position]);
-
   // Handle key press
   useEffect(() => {
     const handleKeyPress = (e) => {
@@ -1229,7 +1187,20 @@ const Game = () => {
             handleBlackjackInteraction();
             return;
           }
-          checkShopTrigger(position.x, position.y);
+          // Always check if player is at shop and trigger interaction
+          const playerGridPos = getGridPosition(position.x, position.y);
+          console.log('Player position:', playerGridPos);
+          console.log('Shop points:', shopPoints);
+          const isAtShop = shopPoints.some(point =>
+            point.x === playerGridPos.gridX && point.y === playerGridPos.gridY
+          );
+          console.log('Is at shop:', isAtShop);
+          if (isAtShop) {
+            setShowShopConfirm(true);
+          } else {
+            console.log('Not at shop point, checking with normal trigger');
+            checkShopTrigger(position.x, position.y);
+          }
           break;
         // ... rest of the cases ...
       }
@@ -1275,9 +1246,17 @@ const Game = () => {
           handleUseItem(item);
         }
         return;
-      }
-
-      switch (e.key.toLowerCase()) {
+      }      switch (e.key.toLowerCase()) {
+        case 'b': // 'B' key for direct shop access
+          console.log("B key pressed - Opening shop directly");
+          setShowShopConfirm(true);
+          break;
+        case 'g': // 'G' key to teleport to shop location
+          console.log("G key pressed - Teleporting to shop");
+          const shopX = shopPoints[0].x * GRID_SIZE;
+          const shopY = shopPoints[0].y * GRID_SIZE;
+          setPosition({ x: shopX, y: shopY });
+          break;
         case 'w':
         case 'arrowup':
           newY -= MOVEMENT_SPEED;
@@ -1600,41 +1579,6 @@ const Game = () => {
       </div>
     );  };
 
-  // Function to add item to inventory
-  const addItemToInventory = (itemId, quantity = 1) => {
-    setInventory(prev => {
-      const existingItemIndex = prev.findIndex(item => item.id === itemId);
-
-      if (existingItemIndex > -1) {
-        // Update quantity if item exists
-        const newInventory = [...prev];
-        newInventory[existingItemIndex] = {
-          ...newInventory[existingItemIndex],
-          quantity: newInventory[existingItemIndex].quantity + quantity
-        };
-        return newInventory;
-      } else {
-        // Add new item if it doesn't exist
-        const itemDetails = getItemById(itemId);
-        if (itemDetails) {
-          // Ensure icon and other necessary properties are included
-          return [...prev, { 
-            id: itemDetails.id,
-            name: itemDetails.name,
-            icon: itemDetails.icon, // Explicitly include the icon
-            type: itemDetails.type,
-            description: itemDetails.description,
-            quantity: quantity,
-            // Include price/sellPrice if needed for inventory display later
-            price: itemDetails.price,
-            sellPrice: itemDetails.sellPrice           }];
-        } else {
-          return prev; // Return previous state if item ID is invalid
-        }
-      }
-    });
-  };
-
   // Add a function to check proximity to plantable spots and update showHoeIcon state
   const checkPlantableProximity = useMemo(() => (playerX, playerY) => {
     const playerGridPos = getGridPosition(playerX, playerY);
@@ -1752,110 +1696,8 @@ const Game = () => {
 
   // Add onTimeUpdate function
   const onTimeUpdate = (newTime) => {
-    setGameTime(newTime);
-  };
-
-  // Format time for display
-  const formatTime = (time) => {
-    let hours = time.hours;
-    const minutes = time.minutes.toString().padStart(2, '0');
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    
-    // Convert to 12-hour format
-    hours = hours % 12;
-    hours = hours ? hours : 12; // Convert 0 to 12
-    
-    return `Day ${currentDay} - ${hours}:${minutes} ${ampm}`;
-  };
-
-  // Calculate darkness level based on time
-  const getDarknessLevel = (time) => {
-    const hour = time.hours;
-    const minute = time.minutes;
-    const totalMinutes = hour * 60 + minute;
-
-    // Define time periods
-    const sunriseStart = 5 * 60; // 5:00 AM
-    const sunriseEnd = 7 * 60;   // 7:00 AM
-    const sunsetStart = 17 * 60; // 5:00 PM
-    const sunsetEnd = 19 * 60;   // 7:00 PM
-    const nightStart = 20 * 60;  // 8:00 PM
-    const nightEnd = 4 * 60;     // 4:00 AM
-
-    // Calculate darkness level with smoother transitions
-    if (totalMinutes >= nightStart || totalMinutes < nightEnd) {
-      // Night time - very dark
-      return 0.8;
-    } else if (totalMinutes >= sunsetStart && totalMinutes < sunsetEnd) {
-      // Sunset transition - smooth gradient from day to dusk
-      const progress = (totalMinutes - sunsetStart) / (sunsetEnd - sunsetStart);
-      // Use a smooth easing function (cubic)
-      const easedProgress = progress * progress * (3 - 2 * progress);
-      return 0.4 + (easedProgress * 0.4);
-    } else if (totalMinutes >= sunriseStart && totalMinutes < sunriseEnd) {
-      // Sunrise transition - smooth gradient from night to day
-      const progress = (totalMinutes - sunriseStart) / (sunriseEnd - sunriseStart);
-      // Use a smooth easing function (cubic)
-      const easedProgress = progress * progress * (3 - 2 * progress);
-      return 0.8 - (easedProgress * 0.4);
-    } else if (totalMinutes >= sunsetEnd && totalMinutes < nightStart) {
-      // Dusk - moderately dark
-      return 0.4;    } else {
-      // Day time - no darkness
-      return 0;
-    }
-  };
-
-  // Add this before the return statement
-  const handleTimeSkip = (hours) => {
-    const hoursToSkip = parseInt(hours);
-    if (isNaN(hoursToSkip) || hoursToSkip <= 0) {
-      alert('Please enter a valid number of hours');
-        return;
-    }    const totalMinutesToSkip = hoursToSkip * 60;
-    
-    setGameTime(prevTime => {
-      let currentTotalMinutes = prevTime.hours * 60 + prevTime.minutes;
-      let newTotalMinutes = currentTotalMinutes + totalMinutesToSkip;
-
-      let daysToAdd = Math.floor(newTotalMinutes / (24 * 60)) - Math.floor(currentTotalMinutes / (24 * 60));      // Only update day and simulate crop growth if at least one full day has passed
-      if (daysToAdd > 0) {
-        setCurrentDay(prevDay => {
-          const newDay = prevDay + daysToAdd;
-
-          // Simulate daily growth and watering needs for each skipped day
-          setPlantedCrops(prevCrops => {
-            let updatedCrops = [...prevCrops];
-            for (let i = 0; i < daysToAdd; i++) {
-              updatedCrops = updatedCrops.map(crop => {
-                if (crop.stage < 3) {
-                  const grewToday = !crop.needsWatering;
-                  const nextStage = grewToday ? Math.min(3, crop.stage + 1) : crop.stage;                  const needsWateringForNewDay = nextStage < 3;
-                  return { ...crop, stage: nextStage, needsWatering: needsWateringForNewDay };
-                }
-                return crop;
-              });
-            }
-            return updatedCrops;
-          });
-
-          return newDay;
-        });
-      }
-
-      // Calculate the final time within the day
-      newTotalMinutes = newTotalMinutes % (24 * 60);
-      const finalHours = Math.floor(newTotalMinutes / 60);
-      const finalMinutes = newTotalMinutes % 60;
-
-      return { hours: finalHours, minutes: finalMinutes };
-    });
-
-    setTimeSkipHours('');
-    setShowTimeSkipPopup(false);
-  };
-
-  // Add effect to handle music transition
+    setGameTime(newTime);  };
+  // Add this before the return statement  // Add effect to handle music transition
   useEffect(() => {
     // Stop current music
     setMusicEnabled(false);
@@ -1992,13 +1834,11 @@ useEffect(() => {
   }
 
   return (
-    <div className="relative w-full h-screen bg-black overflow-hidden">
-      {/* Styled Status Bar (HP, Hunger, Hygiene, Happiness) */}
-      {!isDialogActive && !isLoading && !showCutscene && !showShop && !isSleeping && (
-        <>
+    <div className="relative w-full h-screen bg-black overflow-hidden">      {/* Styled Status Bar (HP, Hunger, Hygiene, Happiness) */}      {!isDialogActive && !isLoading && !showCutscene && !showShop && !isSleeping && (
+        <>          {/* Single Statbar Container with Fixed Layout like HouseInterior */}
           <div className="absolute top-4 left-4 z-50 text-white flex items-center border-8 border-[#D2B48C]" style={{ backgroundColor: '#8B4513', padding: '10px', borderRadius: '10px' }}>
             {/* Character Portrait */}
-            <div className="w-16 h-16 rounded-full border-2 border-yellow-500 overflow-hidden flex items-center justify-center bg-gray-700">
+            <div className="w-35 h-40 rounded-lg border-2 border-yellow-500 overflow-hidden flex items-center justify-center bg-gray-700 shadow-lg">
               <img
                 src={getCharacterPortrait()}
                 alt={`${character?.name || character} Portrait`}
@@ -2011,67 +1851,72 @@ useEffect(() => {
               {/* Character Name */}
               <span className="text-base font-bold mb-1">{character?.name || 'Character Name'}</span>
 
-              {/* Stat Bars */}
-              <div className="flex items-center gap-3 mb-1">
-                <span className="text-sm flex items-center">
-                  <img src={heartIcon} alt="HP" className="w-6 h-6 mr-1" /> {Math.round(health)}/100
-                </span>
-                <div className="w-28 h-4 bg-gray-700 rounded overflow-hidden">
-                  <div className="h-full bg-red-500" style={{ width: `${health}%` }}></div>
+              {/* Stat Bars - Left-aligned Inverted Pyramid Layout */}
+              <div className="flex flex-col gap-1">
+                {/* Health - Longest bar (top) */}
+                <div className="flex items-center gap-1">
+                  <span className="text-sm flex items-center w-24">
+                    <img src={heartIcon} alt="HP" className="w-6 h-6 mr-1" /> {Math.round(health)}/100
+                  </span>
+                  <div className="w-32 h-4 bg-gray-700 rounded overflow-hidden">
+                    <div className="h-full bg-red-500" style={{ width: `${health}%` }}></div>
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-3 mb-1">
-                <span className="text-sm flex items-center">
-                  <img src={hungerIcon} alt="Hunger" className="w-6 h-a6 mr-1" /> {Math.round(hunger)}/100
-                </span>
-                <div className="w-28 h-4 bg-gray-700 rounded overflow-hidden">
-                  <div className="h-full bg-yellow-500" style={{ width: `${hunger}%` }}></div>
+                {/* Hunger - Second longest */}
+                <div className="flex items-center gap-1">
+                  <span className="text-sm flex items-center w-24">
+                    <img src={hungerIcon} alt="Hunger" className="w-6 h-6 mr-1" /> {Math.round(hunger)}/100
+                  </span>
+                  <div className="w-28 h-4 bg-gray-700 rounded overflow-hidden">
+                    <div className="h-full bg-yellow-500" style={{ width: `${hunger}%` }}></div>
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-3 mb-1">
-                <span className="text-sm flex items-center">
-                  <img src={hygieneIcon} alt="Cleanliness" className="w-6 h-6 mr-1" /> {Math.round(cleanliness)}/100
-                </span>
-                <div className="w-28 h-4 bg-gray-700 rounded overflow-hidden">
-                  <div className="h-full bg-cyan-500" style={{ width: `${cleanliness}%` }}></div>
+                {/* Cleanliness - Third longest */}
+                <div className="flex items-center gap-1">
+                  <span className="text-sm flex items-center w-24">
+                    <img src={hygieneIcon} alt="Cleanliness" className="w-6 h-6 mr-1" /> {Math.round(cleanliness)}/100
+                  </span>
+                  <div className="w-24 h-4 bg-gray-700 rounded overflow-hidden">
+                    <div className="h-full bg-cyan-500" style={{ width: `${cleanliness}%` }}></div>
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-3 mb-1">
-                <span className="text-sm flex items-center">
-                  <img src={happinessIcon} alt="Happiness" className="w-6 h-6 mr-1" /> {Math.round(happiness)}/100
-                </span>
-                <div className="w-28 h-4 bg-gray-700 rounded overflow-hidden">
-                  <div className="h-full bg-green-500" style={{ width: `${happiness}%` }}></div>
+                {/* Happiness - Fourth longest */}
+                <div className="flex items-center gap-1">
+                  <span className="text-sm flex items-center w-24">
+                    <img src={happinessIcon} alt="Happiness" className="w-6 h-6 mr-1" /> {Math.round(happiness)}/100
+                  </span>
+                  <div className="w-20 h-4 bg-gray-700 rounded overflow-hidden">
+                    <div className="h-full bg-green-500" style={{ width: `${happiness}%` }}></div>
+                  </div>
                 </div>
-              </div>
 
-              {/* Energy Stat Bar */}
-              <div className="flex items-center gap-3 mt-1">
-                <span className="text-sm flex items-center">
-                  <img src={energyIcon} alt="Energy" className="w-6 h-6 mr-1" /> {Math.round(energy)}/100
-                </span>
-                <div className="w-28 h-4 bg-gray-700 rounded overflow-hidden">
-                  <div className="h-full bg-blue-500" style={{ width: `${energy}%` }}></div>
+                {/* Energy - Shortest bar (bottom) */}
+                <div className="flex items-center gap-1">
+                  <span className="text-sm flex items-center w-24">
+                    <img src={energyIcon} alt="Energy" className="w-6 h-6 mr-1" /> {Math.round(energy)}/100
+                  </span>
+                  <div className="w-16 h-4 bg-gray-700 rounded overflow-hidden">
+                    <div className="h-full bg-blue-500" style={{ width: `${energy}%` }}></div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          </div>          {/* Time and Money Display - Side by side under stat bar */}
+          <div className="absolute top-[211px] left-4 z-50 text-white text-sm">
+            <div className="flex items-center gap-49">
+              {/* Time */}
+              <div className="flex items-center gap-2 px-3 py-2 border-4 border-[#D2B48C] rounded-lg" style={{ backgroundColor: '#8B4513' }}>
+                <span className="font-bold">{formatTime(gameTime)}</span>
+              </div>
 
-          {/* Money stat below the styled bar */}
-          <div className="absolute top-[180px] left-4 z-50 flex flex-col gap-1 text-white text-xs border-4 border-[#D2B48C]" style={{ backgroundColor: '#8B4513', padding: '5px', borderRadius: '5px' }}>
-            <div className="flex items-center gap-2">
-              <img src={moneyIcon} alt="Money" className="w-6 h-6 mr-1" />
-              <span>{money}</span>
-            </div>
-          </div>
-
-          {/* Time Display */}
-          <div className="absolute top-[220px] left-4 z-50 text-white text-xs border-4 border-[#D2B48C]" style={{ backgroundColor: '#8B4513', padding: '5px', borderRadius: '5px' }}>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold">{formatTime(gameTime)}</span>
+              {/* Money */}
+              <div className="flex items-center gap-2 px-3 py-2">
+                <img src={moneyIcon} alt="Money" className="w-8 h-8" />
+                <span className="font-bold text-lg">{money}</span>
+              </div>
             </div>
           </div>
 

@@ -42,14 +42,14 @@ export default function Credits({ onClose }) {
           
           <div className="text-center">
             <h3 className="text-xl font-semibold mb-2 text-[#F5DEB3]">Art & Design</h3>
-            <p>Gading Kelana Putra</p>
+            <p>Gading Kelana Putra - 00000111323</p>
           </div>
           
           <div className="text-center">
             <h3 className="text-xl font-semibold mb-2 text-[#F5DEB3]">Programming</h3>
-            <p>Naufal Rabbani</p>
-            <p>Abid Irsyad Dinejad</p>
-            <p>Rafael Romelo Gibran</p>
+            <p>Naufal Rabbani - 00000108931</p>
+            <p>Abid Irsyad Dinejad - 00000111284</p>
+            <p>Rafael Romelo Gibran - 00000111248</p>
           </div>
           
           <div className="text-center">
