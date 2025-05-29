@@ -35,7 +35,7 @@
   pointer-events: none;
 }
 
-.grid {
+/* .grid {
   position: relative;
   width: 2400px;
   height: 1800px;
@@ -103,7 +103,7 @@
 .grid-cell.teleport {
   background-color: rgba(0, 0, 255, 0.3);
   border: 1px solid rgba(0, 0, 255, 0.5);
-}
+} */
 
 .player {
   position: absolute;

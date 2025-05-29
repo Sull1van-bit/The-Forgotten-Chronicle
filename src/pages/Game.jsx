@@ -104,8 +104,9 @@ const COLLISION_MAP = [
     // ...Array.from({ length: 8 }, (_, i) => ({ x: 31, y: i, type: 'full' })),
     // ...Array.from({ length: 3 }, (_, i) => ({ x: 32, y: i, type: 'full' })),
     
-    // pagar
-    ...Array.from({ length: 4 }, (_, i) => ({ x: i+1, y: 2, type: 'half-bottom' })),
+    // pagar (modified to leave spawn point clear)
+    ...Array.from({ length: 3 }, (_, i) => ({ x: i+1, y: 2, type: 'half-bottom' })), // Reduced length to 3
+    ...Array.from({ length: 2 }, (_, i) => ({ x: i+8, y: 2, type: 'half-bottom' })), // Added fence after spawn point
     ...Array.from({ length: 4 }, (_, i) => ({ x: i+2, y: 4, type: 'half-bottom' })),
     ...Array.from({ length: 2 }, (_, i) => ({ x: 6, y: i+3, type: 'half-left' })),
     {x: 1, y: 3, type: 'full'},
@@ -1110,6 +1111,7 @@ const Game = () => {
   // Handle exit from interior
   const handleExitInterior = (spawnPoint) => {
     setIsInInterior(false);
+    // Use the spawn point coordinates received from HouseInterior
     setPosition({ 
       x: spawnPoint.x * GRID_SIZE, 
       y: spawnPoint.y * GRID_SIZE 
