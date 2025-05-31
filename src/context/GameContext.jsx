@@ -235,7 +235,6 @@ export const GameProvider = ({ children }) => {
       return 0;
     }
   }, []);
-
   // Handle time skip
   const handleTimeSkip = useCallback((hours) => {
     const hoursToSkip = parseInt(hours);
@@ -261,6 +260,32 @@ export const GameProvider = ({ children }) => {
       
       if (daysToAdd > 0) {
         setCurrentDay(prev => prev + daysToAdd);
+        
+        // Handle crop growth for each day that passes
+        for (let daysPassed = 0; daysPassed < daysToAdd; daysPassed++) {
+          setPlantedCrops(prevCrops => {
+            console.log("Time skip: advancing crops for day", daysPassed + 1, "of", daysToAdd);
+            return prevCrops.map(crop => {
+              // Only process non-mature crops
+              if (crop.stage < 3) {
+                // Check if the crop was watered on the previous day
+                const grewToday = !crop.needsWatering;
+                console.log(`Time skip crop at (${crop.x},${crop.y}): stage ${crop.stage}, needsWatering: ${crop.needsWatering}, grewToday: ${grewToday}`);
+                
+                // Advance stage if it grew today, otherwise keep current stage
+                const nextStage = grewToday ? Math.min(3, crop.stage + 1) : crop.stage;
+                
+                // All non-mature crops need watering at the start of a new day
+                const needsWateringForNewDay = nextStage < 3;
+                
+                console.log(`Time skip updated crop: stage ${nextStage}, needsWatering: ${needsWateringForNewDay}`);
+                return { ...crop, stage: nextStage, needsWatering: needsWateringForNewDay };
+              }
+              // Mature crops (stage 3) don't need watering and are ready for harvest
+              return crop;
+            });
+          });
+        }
       }
 
       return { hours: newHours, minutes: newMinutes };

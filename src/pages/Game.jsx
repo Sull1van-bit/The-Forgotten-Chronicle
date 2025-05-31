@@ -93,8 +93,59 @@ import happinessIcon from '../assets/statbar/happiness.png';
 import energyIcon from '../assets/statbar/energy.png';
 import moneyIcon from '../assets/statbar/money.png';
 
+// Import mobile image
+import mobileImage from '../assets/mobile/why-dont-you-5c3c17.jpg';
+
 // Import Counter component
 import Counter from '../components/Counter';
+
+// Phone detection utility (excluding tablets)
+const isMobileDevice = () => {
+  const userAgent = navigator.userAgent;
+  
+  // Check for phone-specific user agents (excluding tablets)
+  const isPhone = /iPhone|Android.*Mobile|webOS|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+  
+  // Exclude iPads and Android tablets explicitly
+  const isTablet = /iPad|Android(?!.*Mobile)|Tablet/i.test(userAgent);
+  
+  // Return true only for phones, not tablets - removed screen size check to avoid catching tablets
+  return isPhone && !isTablet;
+};
+
+// Mobile Screen Component
+const MobileScreen = () => {
+  const navigate = useNavigate();
+  
+  const handleBackToMenu = () => {
+    navigate('/', { replace: true });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black">
+      <div className="w-full h-full flex flex-col items-center justify-center p-4">
+        <img 
+          src={mobileImage} 
+          alt="This game is for PC only" 
+          className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-2xl"
+        />        <div className="mt-6 text-center">
+          <h2 className="text-2xl font-bold text-white mb-4">
+            This Game is Designed for PC Only
+          </h2>
+          <p className="text-gray-300 mb-6 text-lg">
+            Phone screens are too small for the optimal gaming experience. Please play on a desktop, laptop, or tablet.
+          </p>
+          <button
+            onClick={handleBackToMenu}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-bold text-lg"
+          >
+            Back to Main Menu
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Define collision points using grid coordinates
 const COLLISION_MAP = [
@@ -498,13 +549,25 @@ const Game = () => {
     { x: 32, y: 30 },
     { x: 33, y: 30 }
   ];
-
   // If no character is selected, redirect to main menu
   useEffect(() => {
     if (!character) {
       navigate('/');
-    }
-  }, [character, navigate]);
+    }  }, [character, navigate]);
+
+  // Mobile detection - show mobile screen if on mobile device
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(isMobileDevice());
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Load save files when user is authenticated
   useEffect(() => {
@@ -1312,7 +1375,9 @@ const Game = () => {
                   y: playerGridPos.gridY,
                   type: 'potato',
                   stage: 1,
-                  plantTime: Date.now() // Track planting time for growth
+                  plantTime: Date.now(), // Not strictly needed for day-based growth, but good to keep
+                  plantDay: currentDay, // Record the day it was planted
+                  needsWatering: true, // Needs watering immediately on day 1
                 }]);
                 
                 // Show objective popup
@@ -1839,12 +1904,17 @@ useEffect(() => {
           currentDay={currentDay}
           setCurrentDay={setCurrentDay}
         />
-      </DialogProvider>
+    </DialogProvider>
     );
   }
 
+  // If mobile user, show mobile screen instead of the game
+  if (isMobile) {
+    return <MobileScreen />;
+  }
+
   return (
-    <div className="relative w-full h-screen bg-black overflow-hidden">      {/* Styled Status Bar (HP, Hunger, Hygiene, Happiness) */}      {!isDialogActive && !isLoading && !showCutscene && !showShop && !isSleeping && (
+    <div className="relative w-full h-screen bg-black overflow-hidden">{/* Styled Status Bar (HP, Hunger, Hygiene, Happiness) */}      {!isDialogActive && !isLoading && !showCutscene && !showShop && !isSleeping && (
         <>          {/* Single Statbar Container with Fixed Layout like HouseInterior */}
           <div className="absolute top-4 left-4 z-50 text-white flex items-center border-8 border-[#D2B48C]" style={{ backgroundColor: '#8B4513', padding: '10px', borderRadius: '10px' }}>
             {/* Character Portrait */}
@@ -2789,11 +2859,9 @@ useEffect(() => {
                           }}
                           onClick={() => {
                             const playerGridPos = getGridPosition(position.x, position.y);
-                            const isCurrentlyPlanted = plantedCrops.find(crop => crop.x === spot.x && crop.y === spot.y);
-
-                            if (iconType === 'hoe') {
+                            const isCurrentlyPlanted = plantedCrops.find(crop => crop.x === spot.x && crop.y === spot.y);                            if (iconType === 'hoe') {
                               // Planting logic
-                              const isCurrentlyPlantable = PLANTABLE_SPOTS.some(p => p.x === playerGridPos.gridX && p.y === playerGridPos.gridY);                              if (isCurrentlyPlantable && !isCurrentlyPlanted) {
+                              const isCurrentlyPlantable = PLANTABLE_SPOTS.some(p => p.x === spot.x && p.y === spot.y);                              if (isCurrentlyPlantable && !isCurrentlyPlanted) {
                                 const seedItem = inventory.find(item => item.name === 'Seeds');
                                 if (seedItem && seedItem.quantity > 0) {
                                   // Check if the objective is already completed before showing popup
@@ -2806,8 +2874,8 @@ useEffect(() => {
                                   ).filter(item => item.quantity > 0));
 
                                   setPlantedCrops(prev => [...prev, {
-                                    x: playerGridPos.gridX,
-                                    y: playerGridPos.gridY,
+                                    x: spot.x,
+                                    y: spot.y,
                                     type: 'potato',
                                     stage: 1,
                                     plantTime: Date.now(), // Not strictly needed for day-based growth, but good to keep
@@ -3252,11 +3320,14 @@ useEffect(() => {
                 <p className="text-lg">Press E to play Blackjack</p>
               </div>
             </div>
-          )}
-        </>
-      )}
+          )}        </>      )}
     </div>
   );
+
+  // If mobile user, show mobile screen instead of the game
+  if (isMobile) {
+    return <MobileScreen />;
+  }
 };
 
 export default Game;
