@@ -64,7 +64,6 @@ import { saveFileService } from '../services/saveFileService';
 import { createSaveFileData, loadSaveFileData } from '../utils/saveFileUtils';
 
 import pauseButton from '../assets/menu/pause.png';
-import pauseMenuBg from '../assets/menu/pauseMenu.png';
 
 import Inventory from '../components/Inventory';
 import QuestFolder from '../components/QuestFolder';
@@ -105,8 +104,7 @@ const COLLISION_MAP = [
     // ...Array.from({ length: 3 }, (_, i) => ({ x: 32, y: i, type: 'full' })),
     
     // pagar (modified to leave spawn point clear)
-    ...Array.from({ length: 3 }, (_, i) => ({ x: i+1, y: 2, type: 'half-bottom' })), // Reduced length to 3
-    ...Array.from({ length: 2 }, (_, i) => ({ x: i+8, y: 2, type: 'half-bottom' })), // Added fence after spawn point
+    ...Array.from({ length: 4 }, (_, i) => ({ x: i+1, y: 2, type: 'half-bottom' })), // Reduced length to 3
     ...Array.from({ length: 4 }, (_, i) => ({ x: i+2, y: 4, type: 'half-bottom' })),
     ...Array.from({ length: 2 }, (_, i) => ({ x: 6, y: i+3, type: 'half-left' })),
     {x: 1, y: 3, type: 'full'},
@@ -362,11 +360,10 @@ const COLLISION_MAP = [
     ...Array.from({ length: 2}, (_, i) => ({ x:8 , y: 31+i , type: 'full' })),
     
 
-
   ];
-  
-  // Define plantable points using grid coordinates
-  const PLANTABLE_SPOTS = [
+
+// Define plantable points using grid coordinates
+const PLANTABLE_SPOTS = [
   { x: 2, y: 3 },
   { x: 3, y: 3 },
   { x: 4, y: 3 },
@@ -388,97 +385,8 @@ const monologueScript = [
   "The air carries the scent of damp earth and firewood, familiar yet distant. This place… it should feel like home. But does it?",
   "The cottage stands behind me, quiet and worn. My inheritance—though it is more a burden than a gift. Once, hands worked this land, voices filled these walls. Now, only I remain.",
   "The village elder watches from afar, eyes filled with something unspoken. They remember my family, their deeds, their fall. I have returned, but for what purpose?",
-  "Will I mend what was broken, rebuild what was lost? Or will I carve a new path, unshackled from their legacy?",
-  "The village calls, the fields await, and somewhere, beneath stone and memory, a forgotten truth lingers. Today, my story begins."
+  "Will I mend what was broken, rebuild what was lost? Or will I carve a new path, unshackled from their legacy?",  "The village calls, the fields await, and somewhere, beneath stone and memory, a forgotten truth lingers. Today, my story begins."
 ];
-
-// Define all possible items
-const ITEMS = {
-  seeds: {
-    id: 1,
-    name: 'Seeds',
-    icon: seedsIcon,
-    type: 'material',
-    description: 'Plant these to grow crops',
-    price: 10, // Buy price
-    sellPrice: 5 // Placeholder sell price
-  },
-  potato: {
-    id: 2,
-    name: 'Potato',
-    icon: potatoIcon,
-    type: 'material',
-    description: 'Raw potato, can be eaten or sell it to get money',
-    price: 1, // Buy price
-    sellPrice: 13 // Increased sell price
-  },
-  bread: {
-    id: 3,
-    name: 'Bread',
-    icon: breadIcon,
-    type: 'consumable',
-    description: 'Freshly baked bread',
-    effect: { hunger: 30, energy: 10 },
-    price: 15, // Buy price
-    sellPrice: 7 // Placeholder sell price
-  },
-  stew: {
-    id: 4,
-    name: 'Stew',
-    icon: stewIcon,
-    type: 'quest',
-    description: 'A special stew that holds significance in the village\'s history',
-    // price: -1, // Not buyable - removed
-    // sellPrice: -1 // Not sellable - removed
-  },
-  ledger: {
-    id: 5,
-    name: 'Ledger',
-    icon: ledgerIcon,
-    type: 'quest',
-    description: 'An old ledger containing important information',
-    // price: -1, // Not buyable - removed
-    // sellPrice: -1 // Not sellable - removed
-  },
-  royalDocument: {
-    id: 6,
-    name: 'Royal Document',
-    icon: royalDocumentIcon,
-    type: 'quest',
-    description: 'An official document from the royal family',
-
-  },
-  meat: {
-    id: 7,
-    name: 'Meat',
-    icon: meatIcon,
-    type: 'material',
-    description: 'Raw meat, can be cooked',
-    // price: 20, // Placeholder buy price - removed
-    sellPrice: 10 // Placeholder sell price
-  },
-  mushroom: {
-    id: 8,
-    name: 'Mushroom',
-    icon: mushroomIcon,
-    type: 'material',
-    description: 'A wild mushroom, can be used in cooking',
-    // price: 12, // Placeholder buy price - removed
-    sellPrice: 6 // Placeholder sell price
-  }
-};
-
-// Helper function to get item details by ID
-const getItemById = (id) => {
-  const itemKeys = Object.keys(ITEMS);
-  for (let i = 0; i < itemKeys.length; i++) {
-    const item = ITEMS[itemKeys[i]];
-    if (item.id === id) {
-      return item;
-    }
-  }
-  return undefined; // Return undefined if item not found
-};
 
 // Helper function to check if a grid position is a plantable spot
 const isPlantableSpot = (gridX, gridY) => {
@@ -1132,11 +1040,11 @@ const Game = () => {
   // Add state for movement
   const [isMoving, setIsMoving] = useState(false);
   const [lastDirection, setLastDirection] = useState('down');
-  const moveSpeed = 100; // Reduced speed for smoother movement
+  const moveSpeed = 5; // Reduced speed for smoother movement
   const moveTimeoutRef = useRef(null);
 
   // Movement constants
-  const MOVEMENT_SPEED = 8; // Reduced speed for smoother movement
+  const MOVEMENT_SPEED = 5; // Reduced speed for smoother movement
 
   // Check if player is at blackjack coordinates
   const isAtBlackjackTable = () => {
@@ -1211,6 +1119,47 @@ const Game = () => {
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [isSleeping, isPaused, isDialogActive, showShop, showElderTalkPopup, position]);
+
+  // Add effect to track pressed keys for diagonal movement
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (isSleeping || isPaused || isDialogActive || showShop || showElderTalkPopup || isInInterior) return;
+
+      const movementKeys = ['w', 's', 'a', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
+      if (movementKeys.includes(e.key.toLowerCase())) {
+        setPressedKeys(prev => new Set([...prev, e.key.toLowerCase()]));
+      }
+    };
+
+    const handleKeyUp = (e) => {
+      const movementKeys = ['w', 's', 'a', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
+      if (movementKeys.includes(e.key.toLowerCase())) {
+        setPressedKeys(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(e.key.toLowerCase());
+          return newSet;
+        });
+        
+        // Only set facing to 'stand' if no movement keys are pressed
+        setTimeout(() => {
+          setPressedKeys(current => {
+            if (current.size === 0) {
+              setFacing('stand');
+            }
+            return current;
+          });
+        }, 50);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [isSleeping, isPaused, isDialogActive, showShop, showElderTalkPopup, isInInterior]);
 
   // Movement handler
   useEffect(() => {
@@ -1390,9 +1339,7 @@ const Game = () => {
       if (checkElderProximity(newX, newY)) {
         setShowElderTalkPopup(true);
       }
-    };
-
-    const handleKeyUp = (e) => {
+    };    const handleKeyUp = (e) => {
       const movementKeys = ['w', 's', 'a', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
       if (movementKeys.includes(e.key.toLowerCase())) {
         setFacing('stand');
@@ -1421,7 +1368,49 @@ const Game = () => {
     checkTeleport,
     checkShopTrigger,
     checkElderProximity,
-    hasCollision  ]);
+    hasCollision
+  ]);
+
+  // Add effect to track pressed keys for diagonal movement
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (isSleeping || isPaused || isDialogActive || showShop || showElderTalkPopup || isInInterior) return;
+
+      const movementKeys = ['w', 's', 'a', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
+      if (movementKeys.includes(e.key.toLowerCase())) {
+        setPressedKeys(prev => new Set([...prev, e.key.toLowerCase()]));
+      }
+    };
+
+    const handleKeyUp = (e) => {
+      const movementKeys = ['w', 's', 'a', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
+      if (movementKeys.includes(e.key.toLowerCase())) {
+        setPressedKeys(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(e.key.toLowerCase());
+          return newSet;
+        });
+        
+        // Only set facing to 'stand' if no movement keys are pressed
+        setTimeout(() => {
+          setPressedKeys(current => {
+            if (current.size === 0) {
+              setFacing('stand');
+            }
+            return current;
+          });
+        }, 50);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [isSleeping, isPaused, isDialogActive, showShop, showElderTalkPopup, isInInterior]);
 
   // Handle continuous movement
   useEffect(() => {
@@ -1432,32 +1421,45 @@ const Game = () => {
       let newY = position.y;
       let hasMoved = false;
       const energyCost = 0.1;
-      const cleanlinessCost = 0.1;
-
-      // Handle diagonal movement with normalized speed
+      const cleanlinessCost = 0.1;      // Handle diagonal movement with normalized speed
       const moveDiagonal = pressedKeys.size > 1;
       const speedMultiplier = moveDiagonal ? 0.707 : 1; // 1/√2 for diagonal movement
       const currentSpeed = moveSpeed * speedMultiplier;
 
-      if (pressedKeys.has('w') || pressedKeys.has('arrowup')) {
+      // Check for movement directions
+      const movingUp = pressedKeys.has('w') || pressedKeys.has('arrowup');
+      const movingDown = pressedKeys.has('s') || pressedKeys.has('arrowdown');
+      const movingLeft = pressedKeys.has('a') || pressedKeys.has('arrowleft');
+      const movingRight = pressedKeys.has('d') || pressedKeys.has('arrowright');
+
+      if (movingUp) {
         newY -= currentSpeed;
-        setFacing('up');
         hasMoved = true;
       }
-      if (pressedKeys.has('s') || pressedKeys.has('arrowdown')) {
+      if (movingDown) {
         newY += currentSpeed;
-        setFacing('down');
         hasMoved = true;
       }
-      if (pressedKeys.has('a') || pressedKeys.has('arrowleft')) {
+      if (movingLeft) {
         newX -= currentSpeed;
-        setFacing('left');
         hasMoved = true;
       }
-      if (pressedKeys.has('d') || pressedKeys.has('arrowright')) {
+      if (movingRight) {
         newX += currentSpeed;
-        setFacing('right');
         hasMoved = true;
+      }
+
+      // Set facing direction, prioritizing left/right for diagonal movement
+      if (hasMoved) {
+        if (movingLeft) {
+          setFacing('left');
+        } else if (movingRight) {
+          setFacing('right');
+        } else if (movingUp) {
+          setFacing('up');
+        } else if (movingDown) {
+          setFacing('down');
+        }
       }
 
       // Check collision and boundaries
@@ -1623,10 +1625,12 @@ const Game = () => {
           iconsToShow[`${spot.x},${spot.y}`] = 'hoe';
                                                          } else if (isPlanted.stage === 3) {
           // Show sickle icon if crop is mature (stage 3)
-          iconsToShow[`${spot.x},${spot.y}`] = 'sickle';
-        } else if (isPlanted.needsWatering) {
+          iconsToShow[`${spot.x},${spot.y}`] = 'sickle';        } else if (isPlanted.needsWatering) {
           // Show watering can icon if spot has a crop that needs watering and is near
+          console.log(`Showing watering can for crop at (${spot.x},${spot.y}):`, isPlanted);
           iconsToShow[`${spot.x},${spot.y}`] = 'wateringCan';
+        } else {
+          console.log(`Crop at (${spot.x},${spot.y}) doesn't need watering:`, isPlanted);
         }
       }
     });
@@ -1666,23 +1670,27 @@ const Game = () => {
             setCurrentDay(prevDay => {
               const newDay = prevDay + 1;
 
-             
-              // Update crop state based on watering and day progression
-              setPlantedCrops(prevCrops => prevCrops.map(crop => {
-                // Only process non-mature crops
-                if (crop.stage < 3) {
-                  // Check if the crop was watered on the previous day
-                  const grewToday = !crop.needsWatering;
+               // Update crop state based on watering and day progression
+              setPlantedCrops(prevCrops => {
+                console.log("Day changed to:", newDay, "Previous crops:", prevCrops);
+                return prevCrops.map(crop => {
+                  // Only process non-mature crops
+                  if (crop.stage < 3) {
+                    // Check if the crop was watered on the previous day
+                    const grewToday = !crop.needsWatering;
+                    console.log(`Crop at (${crop.x},${crop.y}): stage ${crop.stage}, needsWatering: ${crop.needsWatering}, grewToday: ${grewToday}`);
 
-                  // Advance stage if it grew today, otherwise keep current stage
-                  const nextStage = grewToday ? Math.min(3, crop.stage + 1) : crop.stage;                  // All non-mature crops need watering at the start of a new simulated day
-                  const needsWateringForNewDay = nextStage < 3; // Needs watering only if not mature after growth
+                    // Advance stage if it grew today, otherwise keep current stage
+                    const nextStage = grewToday ? Math.min(3, crop.stage + 1) : crop.stage;                  // All non-mature crops need watering at the start of a new simulated day
+                    const needsWateringForNewDay = nextStage < 3; // Needs watering only if not mature after growth
 
-                  return { ...crop, stage: nextStage, needsWatering: needsWateringForNewDay };
-                }
-                // Mature crops (stage 3) don't need watering and are ready for harvest
-                return crop; // Keep mature crops as they are, waiting for harvest
-              }));
+                    console.log(`Updated crop: stage ${nextStage}, needsWatering: ${needsWateringForNewDay}`);
+                    return { ...crop, stage: nextStage, needsWatering: needsWateringForNewDay };
+                  }
+                  // Mature crops (stage 3) don't need watering and are ready for harvest
+                  return crop; // Keep mature crops as they are, waiting for harvest
+                });
+              });
 
               return newDay;
             });
@@ -1851,11 +1859,9 @@ useEffect(() => {
             {/* Character Info and Stats */}
             <div className="ml-4 flex flex-col justify-center">
               {/* Character Name */}
-              <span className="text-base font-bold mb-1">{character?.name || 'Character Name'}</span>
-
-              {/* Stat Bars - Left-aligned Inverted Pyramid Layout */}
+              <span className="text-base font-bold mb-1">{character?.name || 'Character Name'}</span>              {/* Stat Bars - Uniform width layout */}
               <div className="flex flex-col gap-1">
-                {/* Health - Longest bar (top) */}
+                {/* Health */}
                 <div className="flex items-center gap-1">
                   <span className="text-sm flex items-center w-24">
                     <img src={heartIcon} alt="HP" className="w-6 h-6 mr-1" /> {Math.round(health)}/100
@@ -1865,42 +1871,42 @@ useEffect(() => {
                   </div>
                 </div>
 
-                {/* Hunger - Second longest */}
+                {/* Hunger */}
                 <div className="flex items-center gap-1">
                   <span className="text-sm flex items-center w-24">
                     <img src={hungerIcon} alt="Hunger" className="w-6 h-6 mr-1" /> {Math.round(hunger)}/100
                   </span>
-                  <div className="w-28 h-4 bg-gray-700 rounded overflow-hidden">
+                  <div className="w-32 h-4 bg-gray-700 rounded overflow-hidden">
                     <div className="h-full bg-yellow-500" style={{ width: `${hunger}%` }}></div>
                   </div>
                 </div>
 
-                {/* Cleanliness - Third longest */}
+                {/* Cleanliness */}
                 <div className="flex items-center gap-1">
                   <span className="text-sm flex items-center w-24">
                     <img src={hygieneIcon} alt="Cleanliness" className="w-6 h-6 mr-1" /> {Math.round(cleanliness)}/100
                   </span>
-                  <div className="w-24 h-4 bg-gray-700 rounded overflow-hidden">
+                  <div className="w-32 h-4 bg-gray-700 rounded overflow-hidden">
                     <div className="h-full bg-cyan-500" style={{ width: `${cleanliness}%` }}></div>
                   </div>
                 </div>
 
-                {/* Happiness - Fourth longest */}
+                {/* Happiness */}
                 <div className="flex items-center gap-1">
                   <span className="text-sm flex items-center w-24">
                     <img src={happinessIcon} alt="Happiness" className="w-6 h-6 mr-1" /> {Math.round(happiness)}/100
                   </span>
-                  <div className="w-20 h-4 bg-gray-700 rounded overflow-hidden">
+                  <div className="w-32 h-4 bg-gray-700 rounded overflow-hidden">
                     <div className="h-full bg-green-500" style={{ width: `${happiness}%` }}></div>
                   </div>
                 </div>
 
-                {/* Energy - Shortest bar (bottom) */}
+                {/* Energy */}
                 <div className="flex items-center gap-1">
                   <span className="text-sm flex items-center w-24">
                     <img src={energyIcon} alt="Energy" className="w-6 h-6 mr-1" /> {Math.round(energy)}/100
                   </span>
-                  <div className="w-16 h-4 bg-gray-700 rounded overflow-hidden">
+                  <div className="w-32 h-4 bg-gray-700 rounded overflow-hidden">
                     <div className="h-full bg-blue-500" style={{ width: `${energy}%` }}></div>
                   </div>
                 </div>
@@ -2150,19 +2156,18 @@ useEffect(() => {
                             return quest;
                           });
                           return updatedQuests;
-                        });
-
-                      } else if (seedItem) {
-
+                        });                      } else if (seedItem) {
+                        // Not enough money
+                        showObjective("Not enough money! Seeds cost " + seedItem.price + " coins.");
                       } else {
-
+                        // Item not found
+                        showObjective("Seeds are currently unavailable.");
                       }
                     }}
-                  >
-                    <img src={seedsIcon} alt="Seeds" className="w-8 h-8 object-contain" />
+                  >                    <img src={seedsIcon} alt="Seeds" className="w-8 h-8 object-contain" />
                     <div className="flex-grow">
                       <p className="text-sm font-bold text-[#F5DEB3]">Seeds</p>
-                      <p className="text-xs">Price: {ITEMS.seeds.price}</p>
+                      <p className="text-xs">Price: {getItemById(1)?.price || 10}</p>
                     </div>
                   </div>
 
@@ -2176,19 +2181,18 @@ useEffect(() => {
                         addItemToInventory(breadItem.id, 1);
                         
                         // Show objective popup
-                        showObjective("Bread purchased! Food will restore your energy.");
-
-                      } else if (breadItem) {
-
+                        showObjective("Bread purchased! Food will restore your energy.");                      } else if (breadItem) {
+                        // Not enough money
+                        showObjective("Not enough money! Bread costs " + breadItem.price + " coins.");
                       } else {
-
+                        // Item not found
+                        showObjective("Bread is currently unavailable.");
                       }
                     }}
-                  >
-                    <img src={breadIcon} alt="Bread" className="w-8 h-8 object-contain" />
+                  >                    <img src={breadIcon} alt="Bread" className="w-8 h-8 object-contain" />
                     <div className="flex-grow">
                       <p className="text-sm font-bold text-[#F5DEB3]">Bread</p>
-                      <p className="text-xs">Price: 15</p>
+                      <p className="text-xs">Price: {getItemById(3)?.price || 15}</p>
                     </div>
                   </div>
 
@@ -2802,8 +2806,8 @@ useEffect(() => {
                                   ).filter(item => item.quantity > 0));
 
                                   setPlantedCrops(prev => [...prev, {
-                                    x: spot.x,
-                                    y: spot.y,
+                                    x: playerGridPos.gridX,
+                                    y: playerGridPos.gridY,
                                     type: 'potato',
                                     stage: 1,
                                     plantTime: Date.now(), // Not strictly needed for day-based growth, but good to keep
@@ -3122,6 +3126,7 @@ useEffect(() => {
             <h2 className="text-2xl font-bold text-center text-[#F5DEB3]">Shop</h2>
             <div className="flex flex-col gap-2">
               <button 
+ 
                 className="bg-[#8B4513] text-[#F5DEB3] px-6 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 w-32"
                 onClick={() => {
                   playClick();

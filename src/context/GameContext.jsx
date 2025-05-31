@@ -1,15 +1,82 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
-// Import item data - you'll need to adjust these imports based on your actual item structure
+// Import item images
+import breadIcon from '../assets/items/bread.png';
+import seedsIcon from '../assets/items/seeds.png';
+import potatoIcon from '../assets/items/potato.png';
+import stewIcon from '../assets/items/stew.png';
+import ledgerIcon from '../assets/items/royal-document.png';
+import royalDocumentIcon from '../assets/items/royal-document.png';
+import meatIcon from '../assets/items/meat.png';
+import mushroomIcon from '../assets/items/mushroom.png';
+
+// Import item data - complete ITEMS object
 const ITEMS = {
-  bread: {
+  seeds: {
     id: 1,
+    name: 'Seeds',
+    icon: seedsIcon,
+    type: 'material',
+    description: 'Plant these to grow crops',
+    price: 10, // Buy price
+    sellPrice: 5 // Placeholder sell price
+  },
+  potato: {
+    id: 2,
+    name: 'Potato',
+    icon: potatoIcon,
+    type: 'material',
+    description: 'Raw potato, can be eaten or sell it to get money',
+    price: 1, // Buy price
+    sellPrice: 13 // Increased sell price
+  },
+  bread: {
+    id: 3,
     name: 'Bread',
+    icon: breadIcon,
     type: 'consumable',
-    effect: { health: 10, hunger: 25 },
-    quantity: 1
+    description: 'Freshly baked bread',
+    effect: { hunger: 30, energy: 10 },
+    price: 15, // Buy price
+    sellPrice: 7 // Placeholder sell price
+  },
+  stew: {
+    id: 4,
+    name: 'Stew',
+    icon: stewIcon,
+    type: 'quest',
+    description: 'A special stew that holds significance in the village\'s history',
+  },
+  ledger: {
+    id: 5,
+    name: 'Ledger',
+    icon: ledgerIcon,
+    type: 'quest',
+    description: 'An old ledger containing important information',
+  },
+  royalDocument: {
+    id: 6,
+    name: 'Royal Document',
+    icon: royalDocumentIcon,
+    type: 'quest',
+    description: 'An official document from the royal family',
+  },
+  meat: {
+    id: 7,
+    name: 'Meat',
+    icon: meatIcon,
+    type: 'material',
+    description: 'Raw meat, can be cooked',
+    sellPrice: 10 // Placeholder sell price
+  },
+  mushroom: {
+    id: 8,
+    name: 'Mushroom',
+    icon: mushroomIcon,
+    type: 'material',
+    description: 'A wild mushroom, can be used in cooking',
+    sellPrice: 6 // Placeholder sell price
   }
-  // Add other items as needed
 };
 
 const GameContext = createContext();
@@ -34,7 +101,6 @@ export const GameProvider = ({ children }) => {
   // Game time and day
   const [gameTime, setGameTime] = useState({ hours: 6, minutes: 0 });
   const [currentDay, setCurrentDay] = useState(1);
-
   // Inventory and items
   const [inventory, setInventory] = useState([
     { ...ITEMS.bread, quantity: 2 } // Initialize with 2 bread like in original

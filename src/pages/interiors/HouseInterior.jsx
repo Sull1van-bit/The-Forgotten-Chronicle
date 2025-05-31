@@ -125,6 +125,12 @@ const HouseInterior = ({
   const GRID_COLS = Math.floor(INTERIOR_WIDTH / GRID_SIZE);
   const GRID_ROWS = Math.floor(INTERIOR_HEIGHT / GRID_SIZE);
 
+  // Add state to track pressed keys for diagonal movement
+  const [pressedKeys, setPressedKeys] = useState(new Set());
+  const [isMoving, setIsMoving] = useState(false);
+  const moveSpeed = 2; // Movement speed for smooth diagonal movement
+  const moveTimeoutRef = useRef(null);
+
   // Define the sleep area
   const SLEEP_AREA = { x: 2, y: 2 };
   const SLEEP_AREA_PIXEL = { x: SLEEP_AREA.x * GRID_SIZE, y: SLEEP_AREA.y * GRID_SIZE };
@@ -555,9 +561,7 @@ const HouseInterior = ({
     const playerGridPos = {
       x: Math.floor(x / GRID_SIZE),
       y: Math.floor(y / GRID_SIZE)
-    };
-
-    if (playerGridPos.x === exitPoint.x && playerGridPos.y === exitPoint.y) {
+    };    if (playerGridPos.x === exitPoint.x && playerGridPos.y === exitPoint.y) {
       // Convert coordinates to match Game.jsx's grid size (40)
       const gameGridSize = 40;
       const adjustedX = Math.round((7 * gameGridSize) / GRID_SIZE * GRID_SIZE / gameGridSize);
@@ -585,12 +589,18 @@ const HouseInterior = ({
               width: GRID_SIZE,
               height: GRID_SIZE,
               position: 'absolute',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              color: 'rgba(255, 255, 255, 0.3)',
-              fontSize: '8px',
+              border: '1px solid rgba(255, 255, 255, 0.5)', // Increased opacity for better visibility
+              color: 'rgba(255, 255, 255, 0.8)', // Increased opacity for better visibility
+              fontSize: '12px', // Increased font size
+              fontWeight: 'bold', // Added bold for better readability
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              backgroundColor: isExitPoint ? 'rgba(0, 255, 0, 0.3)' : 
+                               isSleepArea ? 'rgba(0, 0, 255, 0.3)' : 
+                               collisionPoint ? 'rgba(255, 0, 0, 0.3)' : 
+                               'rgba(0, 0, 0, 0.1)', // Added background colors for different areas
+              textShadow: '1px 1px 2px rgba(0, 0, 0, 0.8)', // Added text shadow for better readability
             }}
             title={`${col},${row}`}
           >
@@ -598,98 +608,156 @@ const HouseInterior = ({
           </div>
         );
       }
-    }
-
-    return cells;
+    }    return cells;
   };
 
-  // Handle movement with collision check
-  const handleKeyPress = (e) => {
-    if (isSleeping || isPaused || isDialogActive) return; // Prevent action if sleeping, paused, or dialog is active
-
-    let newX = position.x;
-    let newY = position.y;
-    const speed = 20;
-    const energyCost = 0.5;
-    const cleanlinessCost = 0.5;
-
-    // Handle number keys for item slots (1-9)
-    if (e.key >= '1' && e.key <= '9') {
-      const slotIndex = parseInt(e.key) - 1;
-      const item = inventory[slotIndex];
-      if (item && onUseItem) {
-        console.log(`Using item from slot ${e.key}:`, item);
-        onUseItem(item);
-        // Prevent default behavior if an item is used
-        e.preventDefault();
-      }
-      return; // Stop processing other keys if a number key was pressed
-    }
-
-    switch (e.key.toLowerCase()) {
-      case 'w':
-      case 'arrowup':
-        newY = Math.max(0, position.y - speed);
-        setFacing('up');
-        setEnergy(prev => Math.max(0, prev - energyCost));
-        setCleanliness(prev => Math.max(0, prev - cleanlinessCost));
-        break;
-      case 's':
-      case 'arrowdown':
-        newY = Math.min(INTERIOR_HEIGHT - PLAYER_SIZE, position.y + speed);
-        setFacing('down');
-        setEnergy(prev => Math.max(0, prev - energyCost));
-        setCleanliness(prev => Math.max(0, prev - cleanlinessCost));
-        break;
-      case 'a':
-      case 'arrowleft':
-        newX = Math.max(0, position.x - speed);
-        setFacing('left');
-        setEnergy(prev => Math.max(0, prev - energyCost));
-        setCleanliness(prev => Math.max(0, prev - cleanlinessCost));
-        break;
-      case 'd':
-      case 'arrowright':
-        newX = Math.min(INTERIOR_WIDTH - PLAYER_SIZE, position.x + speed);
-        setFacing('right');
-        setEnergy(prev => Math.max(0, prev - energyCost));
-        setCleanliness(prev => Math.max(0, prev - cleanlinessCost));
-        break;
-      default:
-        return;
-    }
-
-    if (!hasCollision(newX, newY)) {
-      checkExitPoint(newX, newY);
-      setPosition({ x: newX, y: newY });
-      checkSleepProximity(newX, newY);
-    }
-  };
-
-  const handleKeyUp = (e) => {
-    const movementKeys = ['w', 's', 'a', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
-    if (movementKeys.includes(e.key.toLowerCase())) {
-      setFacing('stand');
-    }
-  };
-
-  // Update the useEffect for keyboard events
+  // Add effect to track pressed keys for diagonal movement
   useEffect(() => {
     const handleKeyDown = (e) => {
-      handleKeyPress(e);
+      if (isSleeping || isPaused || isDialogActive) return;
+
+      // Handle number keys for item slots (1-9)
+      if (e.key >= '1' && e.key <= '9') {
+        const slotIndex = parseInt(e.key) - 1;
+        const item = inventory[slotIndex];
+        if (item && onUseItem) {
+          console.log(`Using item from slot ${e.key}:`, item);
+          onUseItem(item);
+          // Prevent default behavior if an item is used
+          e.preventDefault();
+        }
+        return; // Stop processing other keys if a number key was pressed
+      }
+
+      const movementKeys = ['w', 's', 'a', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
+      if (movementKeys.includes(e.key.toLowerCase())) {
+        setPressedKeys(prev => new Set([...prev, e.key.toLowerCase()]));
+      }
     };
 
-    const handleKeyUpEvent = (e) => {
-      handleKeyUp(e);
+    const handleKeyUp = (e) => {
+      const movementKeys = ['w', 's', 'a', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
+      if (movementKeys.includes(e.key.toLowerCase())) {
+        setPressedKeys(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(e.key.toLowerCase());
+          return newSet;
+        });
+        
+        // Only set facing to 'stand' if no movement keys are pressed
+        setTimeout(() => {
+          setPressedKeys(current => {
+            if (current.size === 0) {
+              setFacing('stand');
+            }
+            return current;
+          });
+        }, 50);
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUpEvent);
-
+    window.addEventListener('keyup', handleKeyUp);
+    
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUpEvent);
-    };  }, [position, energy, cleanliness, isSleeping, isPaused, isDialogActive, inventory, onUseItem]); // Add all dependencies
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [isSleeping, isPaused, isDialogActive]);
+
+  // Handle continuous movement
+  useEffect(() => {
+    const movePlayer = () => {
+      if (isSleeping || isPaused || isDialogActive) return;
+
+      let newX = position.x;
+      let newY = position.y;
+      let hasMoved = false;
+      const energyCost = 0.1;
+      const cleanlinessCost = 0.1;
+
+      // Handle diagonal movement with normalized speed
+      const moveDiagonal = pressedKeys.size > 1;
+      const speedMultiplier = moveDiagonal ? 0.707 : 1; // 1/√2 for diagonal movement
+      const currentSpeed = moveSpeed * speedMultiplier;
+
+      // Check for movement directions
+      const movingUp = pressedKeys.has('w') || pressedKeys.has('arrowup');
+      const movingDown = pressedKeys.has('s') || pressedKeys.has('arrowdown');
+      const movingLeft = pressedKeys.has('a') || pressedKeys.has('arrowleft');
+      const movingRight = pressedKeys.has('d') || pressedKeys.has('arrowright');
+
+      if (movingUp) {
+        newY -= currentSpeed;
+        hasMoved = true;
+      }
+      if (movingDown) {
+        newY += currentSpeed;
+        hasMoved = true;
+      }
+      if (movingLeft) {
+        newX -= currentSpeed;
+        hasMoved = true;
+      }
+      if (movingRight) {
+        newX += currentSpeed;
+        hasMoved = true;
+      }
+
+      // Set facing direction, prioritizing left/right for diagonal movement
+      if (hasMoved) {
+        if (movingLeft) {
+          setFacing('left');
+        } else if (movingRight) {
+          setFacing('right');
+        } else if (movingUp) {
+          setFacing('up');
+        } else if (movingDown) {
+          setFacing('down');
+        }
+      }
+
+      // Check collision and boundaries
+      if (hasMoved && !hasCollision(newX, newY)) {
+        newX = Math.max(0, Math.min(INTERIOR_WIDTH - PLAYER_SIZE, newX));
+        newY = Math.max(0, Math.min(INTERIOR_HEIGHT - PLAYER_SIZE, newY));
+        
+        setPosition({ x: newX, y: newY });
+        setIsMoving(true);
+        
+        // Apply costs only when actually moving
+        setEnergy(prev => Math.max(0, prev - energyCost));
+        setCleanliness(prev => Math.max(0, prev - cleanlinessCost));
+        
+        // Check interactions
+        checkExitPoint(newX, newY);
+        checkSleepProximity(newX, newY);
+      } else if (!hasMoved) {
+        setIsMoving(false);
+      }
+
+      moveTimeoutRef.current = requestAnimationFrame(movePlayer);
+    };
+
+    moveTimeoutRef.current = requestAnimationFrame(movePlayer);
+
+    return () => {
+      if (moveTimeoutRef.current) {
+        cancelAnimationFrame(moveTimeoutRef.current);
+      }
+    };
+  }, [
+    position,
+    pressedKeys,
+    isSleeping,
+    isPaused,
+    isDialogActive,
+    hasCollision,
+    checkExitPoint,
+    checkSleepProximity,
+    INTERIOR_WIDTH,
+    INTERIOR_HEIGHT,
+    PLAYER_SIZE  ]);
 
   // Add getCharacterPortrait function
   const getCharacterPortrait = () => {
@@ -778,7 +846,7 @@ const HouseInterior = ({
       {!isDialogActive && !isSleeping && (
         <>          <div className="absolute top-4 left-4 z-50 text-white flex items-center border-8 border-[#D2B48C]" style={{ backgroundColor: '#8B4513', padding: '10px', borderRadius: '10px' }}>
             {/* Character Portrait */}
-            <div className="w-24 h-28 rounded-lg border-2 border-yellow-500 overflow-hidden flex items-center justify-center bg-gray-700 shadow-lg">
+            <div className="w-35 h-40 rounded-lg border-2 border-yellow-500 overflow-hidden flex items-center justify-center bg-gray-700 shadow-lg">
               <img
                 src={getCharacterPortrait()}
                 alt={`${character?.name || character} Portrait`}
@@ -787,13 +855,12 @@ const HouseInterior = ({
             </div>
 
             {/* Character Info and Stats */}
-            <div className="ml-4 flex flex-col justify-center">              {/* Character Name */}
-              <span className="text-base font-bold mb-1">{character?.name || 'Character Name'}</span>
-
-              {/* Stat Bars - Left-aligned Inverted Pyramid Layout */}
+            <div className="ml-4 flex flex-col justify-center">
+              {/* Character Name */}
+              <span className="text-base font-bold mb-1">{character?.name || 'Character Name'}</span>              {/* Stat Bars - Uniform width layout */}
               <div className="flex flex-col gap-1">
-                {/* Health - Longest bar (top) */}
-                <div className="flex items-center gap-3">
+                {/* Health */}
+                <div className="flex items-center gap-1">
                   <span className="text-sm flex items-center w-24">
                     <img src={heartIcon} alt="HP" className="w-6 h-6 mr-1" /> {Math.round(health)}/100
                   </span>
@@ -802,59 +869,60 @@ const HouseInterior = ({
                   </div>
                 </div>
 
-                {/* Hunger - Second longest */}
-                <div className="flex items-center gap-3">
+                {/* Hunger */}
+                <div className="flex items-center gap-1">
                   <span className="text-sm flex items-center w-24">
                     <img src={hungerIcon} alt="Hunger" className="w-6 h-6 mr-1" /> {Math.round(hunger)}/100
                   </span>
-                  <div className="w-28 h-4 bg-gray-700 rounded overflow-hidden">
+                  <div className="w-32 h-4 bg-gray-700 rounded overflow-hidden">
                     <div className="h-full bg-yellow-500" style={{ width: `${hunger}%` }}></div>
                   </div>
                 </div>
 
-                {/* Cleanliness - Third longest */}
-                <div className="flex items-center gap-3">
+                {/* Cleanliness */}
+                <div className="flex items-center gap-1">
                   <span className="text-sm flex items-center w-24">
                     <img src={hygieneIcon} alt="Cleanliness" className="w-6 h-6 mr-1" /> {Math.round(cleanliness)}/100
                   </span>
-                  <div className="w-24 h-4 bg-gray-700 rounded overflow-hidden">
+                  <div className="w-32 h-4 bg-gray-700 rounded overflow-hidden">
                     <div className="h-full bg-cyan-500" style={{ width: `${cleanliness}%` }}></div>
                   </div>
                 </div>
 
-                {/* Happiness - Fourth longest */}
-                <div className="flex items-center gap-3">
+                {/* Happiness */}
+                <div className="flex items-center gap-1">
                   <span className="text-sm flex items-center w-24">
                     <img src={happinessIcon} alt="Happiness" className="w-6 h-6 mr-1" /> {Math.round(happiness)}/100
                   </span>
-                  <div className="w-20 h-4 bg-gray-700 rounded overflow-hidden">
+                  <div className="w-32 h-4 bg-gray-700 rounded overflow-hidden">
                     <div className="h-full bg-green-500" style={{ width: `${happiness}%` }}></div>
                   </div>
                 </div>
 
-                {/* Energy - Shortest bar (bottom) */}
-                <div className="flex items-center gap-3">
+                {/* Energy */}
+                <div className="flex items-center gap-1">
                   <span className="text-sm flex items-center w-24">
                     <img src={energyIcon} alt="Energy" className="w-6 h-6 mr-1" /> {Math.round(energy)}/100
                   </span>
-                  <div className="w-16 h-4 bg-gray-700 rounded overflow-hidden">
+                  <div className="w-32 h-4 bg-gray-700 rounded overflow-hidden">
                     <div className="h-full bg-blue-500" style={{ width: `${energy}%` }}></div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>          {/* Money stat */}
-          <div className="absolute top-[180px] left-4 z-50 flex flex-col gap-1 text-white text-xs">
-            <div className="flex items-center gap-2 px-3 py-2">
-              <img src={moneyIcon} alt="Money" className="w-8 h-8" />
-              <span className="text-lg font-bold">{money}</span>
-            </div>
-          </div>
+          </div>          {/* Time and Money Display - Side by side under stat bar */}
+          <div className="absolute top-[211px] left-4 z-50 text-white text-sm">
+            <div className="flex items-center gap-49">
+              {/* Time */}
+              <div className="flex items-center gap-2 px-3 py-2 border-4 border-[#D2B48C] rounded-lg" style={{ backgroundColor: '#8B4513' }}>
+                <span className="font-bold">{formatTime(gameTime)}</span>
+              </div>
 
-          {/* Time Display */}
-          <div className="absolute top-[220px] left-4 z-50 text-white text-xs border-4 border-[#D2B48C]" style={{ backgroundColor: '#8B4513', padding: '5px', borderRadius: '5px' }}>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold">{formatTime(gameTime)}</span>
+              {/* Money */}
+              <div className="flex items-center gap-2 px-3 py-2">
+                <img src={moneyIcon} alt="Money" className="w-8 h-8" />
+                <span className="font-bold text-lg">{money}</span>
+              </div>
             </div>
           </div>
 
