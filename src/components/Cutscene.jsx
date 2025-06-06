@@ -16,36 +16,34 @@ const scenes = [
   {
     text: "Once, your family name held meaning. A lineage of artisans, traders, and dreamers who shaped the land. But time erases all things… Now, only whispers remain.",
     image: slide1,
-    duration: 9000
+    duration: 5000
   },
   {
     text: "The cottage is yours now. A humble inheritance. A chance to rebuild, to find purpose, to carve your own path in this world.",
     image: slide2,
-    duration: 9000
+    duration: 5000
   },
   {
     text: "The village welcomes you—some with kindness, others with suspicion. Every choice you make will shape your standing among them. Will you thrive, or merely survive?",
     image: slide3,
-    duration: 9000
+    duration: 5000
   },
   {
     text: "An old ledger… forgotten records… a connection to the castle itself? Fate beckons. What was lost might yet be reclaimed.",
     image: slide4,
-    duration: 9000
+    duration: 5000
   },
   {
     text: "Farmer, merchant, scholar, or something more? The road ahead is yours to walk. Will you honor your ancestors—or forge a new legacy of your own?",
     image: slide5,
-    duration: 9000
+    duration: 5000
   }
 ];
 
 const Cutscene = ({ onComplete }) => {
   const [currentScene, setCurrentScene] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
-  const { playClick } = useSound();
-
-  useEffect(() => {
+  const { playClick } = useSound();  useEffect(() => {
     if (currentScene < scenes.length) {
       const timer = setTimeout(() => {
         if (currentScene === scenes.length - 1) {
@@ -60,7 +58,7 @@ const Cutscene = ({ onComplete }) => {
 
       return () => clearTimeout(timer);
     }
-  }, [currentScene, onComplete]);
+  }, [currentScene]);
 
   const handleSkip = () => {
     playClick();

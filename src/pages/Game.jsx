@@ -99,18 +99,32 @@ import mobileImage from '../assets/mobile/why-dont-you-5c3c17.jpg';
 // Import Counter component
 import Counter from '../components/Counter';
 
-// Phone detection utility (excluding tablets)
+// Mobile detection utility - targets phones only, not tablets or laptops
 const isMobileDevice = () => {
   const userAgent = navigator.userAgent;
   
-  // Check for phone-specific user agents (excluding tablets)
-  const isPhone = /iPhone|Android.*Mobile|webOS|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+  // Check for mobile-specific user agents (phones only)
+  const isMobileUA = /iPhone|Android.*Mobile|webOS|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
   
-  // Exclude iPads and Android tablets explicitly
+  // Exclude tablets and desktops explicitly
   const isTablet = /iPad|Android(?!.*Mobile)|Tablet/i.test(userAgent);
+  const isDesktop = /Windows NT|Macintosh|Linux.*X11/i.test(userAgent);
   
-  // Return true only for phones, not tablets - removed screen size check to avoid catching tablets
-  return isPhone && !isTablet;
+  const isMobileSize = window.innerWidth < 768;
+  
+  // Debug logging - remove this later
+  const result = (isMobileUA || (isMobileSize && !isDesktop)) && !isTablet;
+  console.log('Mobile Detection Debug:', {
+    userAgent,
+    width: window.innerWidth,
+    isMobileUA,
+    isTablet,
+    isDesktop,
+    isMobileSize,
+    result
+  });
+  
+  return result;
 };
 
 // Mobile Screen Component
@@ -520,12 +534,15 @@ const Game = () => {
 
   // Add state to control visibility of hoe icons on plantable spots
   const [showHoeIcon, setShowHoeIcon] = useState({});
-
   // Add state for elder talk popup
   const [showElderTalkPopup, setShowElderTalkPopup] = useState(false);
 
   // Add state for blacksmith talk popup
   const [showBlacksmithTalkPopup, setShowBlacksmithTalkPopup] = useState(false);
+
+  // Add state for NPC interaction prompts
+  const [nearElder, setNearElder] = useState(false);
+  const [nearBlacksmith, setNearBlacksmith] = useState(false);
 
   // Add state for shop confirmation and mode
   const [shopMode, setShopMode] = useState('buy'); // 'buy' or 'sell'
@@ -824,8 +841,7 @@ const Game = () => {
   const BLACKSMITH_POSITION_GRID = { x: 9, y: 32 };
   // Calculate Blacksmith pixel position
   const BLACKSMITH_POSITION_PIXEL = { x: BLACKSMITH_POSITION_GRID.x * GRID_SIZE, y: BLACKSMITH_POSITION_GRID.y * GRID_SIZE };
-  const BLACKSMITH_SIZE = 32; // Similar size to other NPCs
-  // Check proximity to Elder
+  const BLACKSMITH_SIZE = 32; // Similar size to other NPCs  // Check proximity to Elder
   const checkElderProximity = useCallback((playerX, playerY) => {
     const playerCenterX = playerX + (PLAYER_SIZE / 2);
     const playerCenterY = playerY + (PLAYER_SIZE / 2);
@@ -836,9 +852,9 @@ const Game = () => {
     );
     const proximityThreshold = GRID_SIZE * 1.5; // Increased threshold for easier interaction
     
-
-    
-    return distance < proximityThreshold;
+    const isNear = distance < proximityThreshold;
+    setNearElder(isNear);
+    return isNear;
   }, [ELDER_POSITION_PIXEL.x, ELDER_POSITION_PIXEL.y, ELDER_SIZE, PLAYER_SIZE, GRID_SIZE]);
 
   // Check proximity to Blacksmith
@@ -852,7 +868,9 @@ const Game = () => {
     );
     const proximityThreshold = GRID_SIZE * 1.5; // Same threshold as elder
     
-    return distance < proximityThreshold;
+    const isNear = distance < proximityThreshold;
+    setNearBlacksmith(isNear);
+    return isNear;
   }, [BLACKSMITH_POSITION_PIXEL.x, BLACKSMITH_POSITION_PIXEL.y, BLACKSMITH_SIZE, PLAYER_SIZE, GRID_SIZE]);
 
   // Update save game function
@@ -1103,7 +1121,7 @@ const Game = () => {
   // Add state for movement
   const [isMoving, setIsMoving] = useState(false);
   const [lastDirection, setLastDirection] = useState('down');
-  const moveSpeed = 5; // Reduced speed for smoother movement
+  const moveSpeed = 20; // Reduced speed for smoother movement
   const moveTimeoutRef = useRef(null);
 
   // Movement constants
@@ -1154,12 +1172,23 @@ const Game = () => {
       const energyCost = 0.15;
       const cleanlinessCost = 0.15;
 
-      switch (e.key.toLowerCase()) {
-        case 'e':
+      switch (e.key.toLowerCase()) {        case 'e':
           if (isAtBlackjackTable()) {
             handleBlackjackInteraction();
             return;
           }
+          
+          // Check for NPC interactions first
+          if (nearElder) {
+            setShowElderTalkPopup(true);
+            return;
+          }
+          
+          if (nearBlacksmith) {
+            setShowBlacksmithTalkPopup(true);
+            return;
+          }
+          
           // Always check if player is at shop and trigger interaction
           const playerGridPos = getGridPosition(position.x, position.y);
           console.log('Player position:', playerGridPos);
@@ -1282,19 +1311,14 @@ const Game = () => {
             }));
             setEnergy((prev) => Math.max(0, prev - energyCost));
             setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));
-            
-            const isAtSavePoint = checkSavePoint(newX, newY);
+              const isAtSavePoint = checkSavePoint(newX, newY);
             setCanSave(isAtSavePoint);
             setShowSavePrompt(isAtSavePoint);
               checkTeleport(newX, newY);
             checkShopTrigger(newX, newY);
             
-            if (checkElderProximity(newX, newY)) {
-              setShowElderTalkPopup(true);
-            }
-            if (checkBlacksmithProximity(newX, newY)) {
-              setShowBlacksmithTalkPopup(true);
-            }
+            checkElderProximity(newX, newY);
+            checkBlacksmithProximity(newX, newY);
           }
           break;
         case 's':
@@ -1305,16 +1329,11 @@ const Game = () => {
             setPosition((prev) => ({
               ...prev,
               y: Math.min(MAP_HEIGHT - PLAYER_SIZE, newY),
-            }));
-            setEnergy((prev) => Math.max(0, prev - energyCost));
+            }));            setEnergy((prev) => Math.max(0, prev - energyCost));
             setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));            checkTeleport(newX, newY);
             checkShopTrigger(newX, newY);
-            if (checkElderProximity(newX, newY)) {
-              setShowElderTalkPopup(true);
-            }
-            if (checkBlacksmithProximity(newX, newY)) {
-              setShowBlacksmithTalkPopup(true);
-            }
+            checkElderProximity(newX, newY);
+            checkBlacksmithProximity(newX, newY);
           }
           break;
         case 'a':
@@ -1325,16 +1344,11 @@ const Game = () => {
             setPosition((prev) => ({
               ...prev,
               x: Math.max(0, newX),
-            }));
-            setEnergy((prev) => Math.max(0, prev - energyCost));
+            }));            setEnergy((prev) => Math.max(0, prev - energyCost));
             setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));            checkTeleport(newX, newY);
             checkShopTrigger(newX, newY);
-            if (checkElderProximity(newX, newY)) {
-              setShowElderTalkPopup(true);
-            }
-            if (checkBlacksmithProximity(newX, newY)) {
-              setShowBlacksmithTalkPopup(true);
-            }
+            checkElderProximity(newX, newY);
+            checkBlacksmithProximity(newX, newY);
           }
           break;
         case 'd':
@@ -1345,16 +1359,11 @@ const Game = () => {
             setPosition((prev) => ({
               ...prev,
               x: Math.min(MAP_WIDTH - PLAYER_SIZE, newX),
-            }));
-            setEnergy((prev) => Math.max(0, prev - energyCost));
+            }));            setEnergy((prev) => Math.max(0, prev - energyCost));
             setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));            checkTeleport(newX, newY);
             checkShopTrigger(newX, newY);
-            if (checkElderProximity(newX, newY)) {
-              setShowElderTalkPopup(true);
-            }
-            if (checkBlacksmithProximity(newX, newY)) {
-              setShowBlacksmithTalkPopup(true);
-            }
+            checkElderProximity(newX, newY);
+            checkBlacksmithProximity(newX, newY);
           }
           break;
         case 'p': // Handle planting
@@ -1399,12 +1408,9 @@ const Game = () => {
       const isAtSavePoint = checkSavePoint(newX, newY);
       setCanSave(isAtSavePoint);
       setShowSavePrompt(isAtSavePoint);
-      
-      checkTeleport(newX, newY);
-      if (checkElderProximity(newX, newY)) {
-        setShowElderTalkPopup(true);
-      }
-    };    const handleKeyUp = (e) => {
+        checkTeleport(newX, newY);
+      checkElderProximity(newX, newY);
+    };const handleKeyUp = (e) => {
       const movementKeys = ['w', 's', 'a', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
       if (movementKeys.includes(e.key.toLowerCase())) {
         setFacing('stand');
@@ -1543,13 +1549,10 @@ const Game = () => {
         const isAtSavePoint = checkSavePoint(newX, newY);
         setCanSave(isAtSavePoint);
         setShowSavePrompt(isAtSavePoint);
-        
-        checkTeleport(newX, newY);
+          checkTeleport(newX, newY);
         checkShopTrigger(newX, newY);
         
-        if (checkElderProximity(newX, newY)) {
-          setShowElderTalkPopup(true);
-        }
+        checkElderProximity(newX, newY);
       } else if (!hasMoved) {
         setIsMoving(false);
       }
@@ -2992,9 +2995,9 @@ useEffect(() => {
                                     "Ah… my first harvest. It may not be much, but it's mine.",
                                     "Time to see if these are worth anything at the market."
                                   ]
-                                });
-                                setHasHarvestedFirstCrop(true);
-                              }// Update quest objective: Harvest the mature potato - only if not already completed
+                                });                                setHarvestedFirstCrop(true);
+                              }
+                              // Update quest objective: Harvest the mature potato - only if not already completed
                               setQuests(prevQuests => {
                                 // Don't update if already marked as completed
                                 if (isObjectiveAlreadyCompleted) {
@@ -3120,9 +3123,7 @@ useEffect(() => {
                         zIndex: 2, // Ensure merchant is above background
                       }}
                     />
-                  )}
-
-                  {/* Blacksmith NPC Sprite */}
+                  )}                  {/* Blacksmith NPC Sprite */}
                   {!isLoading && !showCutscene && (
                     <img
                       src={blacksmithStand}
@@ -3136,6 +3137,41 @@ useEffect(() => {
                         zIndex: 2, // Ensure blacksmith is above background
                       }}
                     />
+                  )}                  {/* Elder Interaction Prompt */}                  {nearElder && !isDialogActive && !showCutscene && !showShop && !isSleeping && !isPaused && (
+                    <div 
+                      className="absolute z-10 pointer-events-none"
+                      style={{
+                        left: `${ELDER_POSITION_PIXEL.x + (ELDER_SIZE / 2)}px`,
+                        top: `${ELDER_POSITION_PIXEL.y - 20}px`,
+                        transform: 'translateX(-50%)'
+                      }}
+                    >
+                      <div 
+                        className="text-white px-1 py-0.5 rounded text-center"
+                        style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
+                      >
+                        <p className="text-xs">Press E</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Blacksmith Interaction Prompt */}
+                  {nearBlacksmith && !isDialogActive && !showCutscene && !showShop && !isSleeping && !isPaused && (
+                    <div 
+                      className="absolute z-10 pointer-events-none"
+                      style={{
+                        left: `${BLACKSMITH_POSITION_PIXEL.x + (BLACKSMITH_SIZE / 2)}px`,
+                        top: `${BLACKSMITH_POSITION_PIXEL.y - 20}px`,
+                        transform: 'translateX(-50%)'
+                      }}
+                    >
+                      <div 
+                        className="text-white px-1 py-0.5 rounded text-center"
+                        style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
+                      >
+                        <p className="text-xs">Press E</p>
+                      </div>
+                    </div>
                   )}
                   <div
                     className="map-foreground"
@@ -3308,9 +3344,7 @@ useEffect(() => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Interaction Prompts */}
+      )}      {/* Interaction Prompts */}
       {!isDialogActive && !showCutscene && !showShop && !isSleeping && !isPaused && !showBlackjack && (
         <>
           {/* Blackjack Table Prompt */}
@@ -3320,7 +3354,9 @@ useEffect(() => {
                 <p className="text-lg">Press E to play Blackjack</p>
               </div>
             </div>
-          )}        </>      )}
+          )}
+        </>
+      )}
     </div>
   );
 
