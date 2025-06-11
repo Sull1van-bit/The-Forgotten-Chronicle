@@ -13,6 +13,9 @@ import Minimap from '../components/Minimap';
 import '../styles/Game.css';
 import { DialogProvider, useDialog } from '../context/DialogContext';
 import BlackjackGame from '../components/BlackjackGame';
+import SabungGame from '../components/SabungGame';
+import ChessGame from '../components/ChessGame';
+import GlareHover from '../components/GlareHover';
 
 // Import character sprites
 import louiseStand from '../assets/characters/louise/stand.gif';
@@ -470,7 +473,7 @@ const Game = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume, playClick, playHover, playCash, playNewQuest } = useSound();
+  const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume, playClick, playHover, playCash, playNewQuest, playPlant, playHarvest, playWatering } = useSound();
   const { musicEnabled, setMusicEnabled, musicVolume, setMusicVolume, startMusicPlayback } = useMusic();
   const { startDialog, advanceDialog, endDialog, isDialogActive, currentDialog, dialogIndex } = useDialog();
   
@@ -512,8 +515,10 @@ const Game = () => {
   const [showSavePrompt, setShowSavePrompt] = useState(false);
   const [isSleeping, setIsSleeping] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showBlackjack, setShowBlackjack] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);  const [showBlackjack, setShowBlackjack] = useState(false);
+  const [showSabung, setShowSabung] = useState(false);
+  const [showChess, setShowChess] = useState(false);
+  const [showMinigameSelection, setShowMinigameSelection] = useState(false);
   const [showShop, setShowShop] = useState(false);
   const [showShopConfirm, setShowShopConfirm] = useState(false);
   const [showTimeSkipPopup, setShowTimeSkipPopup] = useState(false);
@@ -531,18 +536,12 @@ const Game = () => {
 
   // Ref to store previous quests state for comparison
   const prevQuestsRef = useRef([]);
-
   // Add state to control visibility of hoe icons on plantable spots
   const [showHoeIcon, setShowHoeIcon] = useState({});
-  // Add state for elder talk popup
-  const [showElderTalkPopup, setShowElderTalkPopup] = useState(false);
-
-  // Add state for blacksmith talk popup
-  const [showBlacksmithTalkPopup, setShowBlacksmithTalkPopup] = useState(false);
-
   // Add state for NPC interaction prompts
   const [nearElder, setNearElder] = useState(false);
   const [nearBlacksmith, setNearBlacksmith] = useState(false);
+  const [nearShop, setNearShop] = useState(false);
 
   // Add state for shop confirmation and mode
   const [shopMode, setShopMode] = useState('buy'); // 'buy' or 'sell'
@@ -856,7 +855,6 @@ const Game = () => {
     setNearElder(isNear);
     return isNear;
   }, [ELDER_POSITION_PIXEL.x, ELDER_POSITION_PIXEL.y, ELDER_SIZE, PLAYER_SIZE, GRID_SIZE]);
-
   // Check proximity to Blacksmith
   const checkBlacksmithProximity = useCallback((playerX, playerY) => {
     const playerCenterX = playerX + (PLAYER_SIZE / 2);
@@ -872,6 +870,20 @@ const Game = () => {
     setNearBlacksmith(isNear);
     return isNear;
   }, [BLACKSMITH_POSITION_PIXEL.x, BLACKSMITH_POSITION_PIXEL.y, BLACKSMITH_SIZE, PLAYER_SIZE, GRID_SIZE]);
+
+  // Check proximity to Shop
+  const checkShopProximity = useCallback((playerX, playerY) => {
+    const playerGridPos = getGridPosition(playerX, playerY);
+    const isNearShop = shopPoints.some(point => {
+      const distance = Math.sqrt(
+        Math.pow(playerGridPos.gridX - point.x, 2) + Math.pow(playerGridPos.gridY - point.y, 2)
+      );
+      return distance <= 1.5; // Same threshold as NPCs
+    });
+    
+    setNearShop(isNearShop);
+    return isNearShop;
+  }, [shopPoints, getGridPosition]);
 
   // Update save game function
   const saveGame = async () => {
@@ -1083,7 +1095,6 @@ const Game = () => {
       setPosition(teleportPoint.spawnPoint);
     }
   }, [getGridPosition]);
-
   // Check if player is at a shop trigger point
   const checkShopTrigger = useMemo(() => (x, y, justCheck = false) => {
     const playerGridPos = getGridPosition(x, y);
@@ -1091,9 +1102,7 @@ const Game = () => {
       point.x === playerGridPos.gridX && point.y === playerGridPos.gridY
     );
 
-    if (!justCheck && isAtShop) {
-      setShowShopConfirm(true);
-    }
+    // Remove automatic popup triggering - now only used for position checking
     return isAtShop;
   }, [shopPoints, getGridPosition]);
 
@@ -1121,7 +1130,7 @@ const Game = () => {
   // Add state for movement
   const [isMoving, setIsMoving] = useState(false);
   const [lastDirection, setLastDirection] = useState('down');
-  const moveSpeed = 20; // Reduced speed for smoother movement
+  const moveSpeed = 10; // Reduced speed for smoother movement
   const moveTimeoutRef = useRef(null);
 
   // Movement constants
@@ -1137,23 +1146,94 @@ const Game = () => {
     const isNearY = Math.abs(playerGridY - 28) <= 1;
     
     return isNearX && isNearY;
-  };
-
-  // Handle interaction with blackjack table
-  const handleBlackjackInteraction = () => {
-    console.log('Blackjack interaction triggered');
+  };  // Handle interaction with minigame table
+  const handleMinigameTableInteraction = () => {
+    console.log('Minigame table interaction triggered');
     if (isAtBlackjackTable()) {
-      console.log('Opening Blackjack game');
-      setShowBlackjack(true);
-      playSound('success');
+      console.log('Opening minigame selection');
+      setShowMinigameSelection(true);
+      playClick();
     }
+  };  // Helper function to cleanly close game center and open specific game
+  const openGameFromCenter = (gameType) => {
+    console.log('openGameFromCenter called with gameType:', gameType);
+    playClick();
+    
+    // Immediately close the minigame selection and any other open games
+    setShowMinigameSelection(false);
+    setShowBlackjack(false);
+    setShowChess(false);
+    setShowSabung(false);
+    
+    // Use requestAnimationFrame to ensure state updates are processed before opening new game
+    requestAnimationFrame(() => {
+      console.log('Opening game after state cleanup:', gameType);
+      switch (gameType) {
+        case 'blackjack':
+          console.log('Setting showBlackjack to true');
+          setShowBlackjack(true);
+          break;
+        case 'chess':
+          console.log('Setting showChess to true');
+          setShowChess(true);
+          break;
+        case 'sabung':
+          console.log('Setting showSabung to true');
+          setShowSabung(true);
+          break;
+        default:
+          console.warn('Unknown game type:', gameType);
+      }
+    });
   };
-
   // Add effect to track showBlackjack changes
   useEffect(() => {
     console.log('showBlackjack state changed:', showBlackjack);
   }, [showBlackjack]);
 
+  // Add effect to track showSabung changes
+  useEffect(() => {
+    console.log('showSabung state changed:', showSabung);
+  }, [showSabung]);
+
+  // Add effect to track showChess changes
+  useEffect(() => {
+    console.log('showChess state changed:', showChess);
+  }, [showChess]);
+  // Effect to ensure only one game modal is open at a time
+  useEffect(() => {
+    const gameModalsOpen = [showBlackjack, showChess, showSabung, showMinigameSelection].filter(Boolean).length;
+    
+    if (gameModalsOpen > 1) {
+      console.warn('Multiple game modals detected, cleaning up...');
+      // Force close all modals and let the most recent one re-open via the component logic
+      const currentStates = {
+        blackjack: showBlackjack,
+        chess: showChess,
+        sabung: showSabung,
+        selection: showMinigameSelection
+      };
+      
+      // Close all immediately
+      setShowMinigameSelection(false);
+      setShowBlackjack(false);
+      setShowChess(false);
+      setShowSabung(false);
+      
+      // Re-open the most recently requested individual game (prioritize actual games over selection)
+      requestAnimationFrame(() => {
+        if (currentStates.blackjack && !currentStates.selection) {
+          setShowBlackjack(true);
+        } else if (currentStates.chess && !currentStates.selection) {
+          setShowChess(true);
+        } else if (currentStates.sabung && !currentStates.selection) {
+          setShowSabung(true);
+        } else if (currentStates.selection && !currentStates.blackjack && !currentStates.chess && !currentStates.sabung) {
+          setShowMinigameSelection(true);
+        }
+      });
+    }
+  }, [showBlackjack, showChess, showSabung, showMinigameSelection]);
   // Add effect to track position changes for blackjack table proximity
   useEffect(() => {
     const playerGridX = Math.floor(position.x / GRID_SIZE);
@@ -1161,10 +1241,11 @@ const Game = () => {
     console.log('Player position (grid):', { x: playerGridX, y: playerGridY });
     console.log('Is at blackjack table:', isAtBlackjackTable());
   }, [position]);
+
   // Handle key press
   useEffect(() => {
     const handleKeyPress = (e) => {
-      if (isSleeping || isPaused || isDialogActive || showShop || showElderTalkPopup) return;
+      if (isSleeping || isPaused || isDialogActive || showShop || showSabung || showChess || showMinigameSelection) return;
       if (isInInterior) return;
 
       let newX = position.x;
@@ -1174,22 +1255,192 @@ const Game = () => {
 
       switch (e.key.toLowerCase()) {        case 'e':
           if (isAtBlackjackTable()) {
-            handleBlackjackInteraction();
+            handleMinigameTableInteraction();
             return;
           }
           
-          // Check for NPC interactions first
+          // Check for NPC interactions first - directly start dialogs
           if (nearElder) {
-            setShowElderTalkPopup(true);
+            startDialog({
+              characterName: "Village Elder",
+              expression: "neutral",
+              dialogue: [
+                "Ah… so you have returned.",
+                "Your family's cottage still stands, though time has not been kind to it. Much like the land… and its people.",
+                "The village remembers your name, but memories fade. If you wish to stay, you must build more than a home—you must build trust.",
+                "The fields need tending. The forge waits for skillful hands. And somewhere in the shadows of this land, echoes of your past linger still.",
+                "Will you work the soil, forge your own tools, or seek the knowledge buried beneath stone and dust?"
+              ],
+              onComplete: () => {
+                // Check if the objective is already completed before showing popup
+                const currentQuest = quests.find(quest => quest.title === "Welcome Home");
+                const elderObjective = currentQuest?.objectives.find(obj => obj.description === "Meet the village elder");
+                const isObjectiveAlreadyCompleted = elderObjective?.completed;
+
+                // Only show objective popup if this is the first time completing the objective
+                if (!isObjectiveAlreadyCompleted) {
+                  showChainedObjective("Meet the village elder", "Quest completed: Welcome Home");
+                }
+                
+                // Add new quest after dialogue ends
+                setQuests(prevQuests => {
+                  // First update the Welcome Home quest
+                  const updatedQuests = prevQuests.map(quest => {
+                    if (quest.title === "Welcome Home") {
+                      return {
+                        ...quest,
+                        objectives: quest.objectives.map(objective => {
+                          if (objective.description === "Meet the village elder") {
+                            return { ...objective, completed: true };
+                          }
+                          return objective;
+                        })
+                      };
+                    }
+                    return quest;
+                  });
+                  
+                  // Check if The First Harvest quest already exists
+                  const hasFirstHarvestQuest = updatedQuests.some(quest => quest.title === "The First Harvest");
+                  
+                  if (!hasFirstHarvestQuest) {
+                    // Add The First Harvest quest if it doesn't exist
+                    return [
+                      ...updatedQuests,
+                      {
+                        title: "The First Harvest",
+                        description: "Start your new life by planting and harvesting your first crop.",
+                        objectives: [
+                          {
+                            description: "Buy seeds from the shop",
+                            completed: false
+                          },
+                          {
+                            description: "Plant seeds in your field",
+                            completed: false
+                          },                          {
+                            description: "Water your planted crops for 2 day (0/2)",
+                            completed: false
+                          },                          {
+                            description: "Harvest your first crop",
+                            completed: false
+                          },
+                          {
+                            description: "Sell the potato at the shop",
+                            completed: false
+                          }
+                        ]
+                      }
+                    ];
+                  } else {
+                    // If quest already exists, just return updated quests (Welcome Home)
+
+                    return updatedQuests;
+                  }
+                });
+                
+                // Show new quest popup
+                setNewQuestTitle("The First Harvest");
+                setShowNewQuestPopup(true);
+              }
+            });
             return;
           }
           
           if (nearBlacksmith) {
-            setShowBlacksmithTalkPopup(true);
+            startDialog({
+              characterName: "Village Blacksmith",
+              expression: "neutral",
+              dialogue: [
+                "Ah, a new face! Or perhaps... an old one returned?",
+                "I am the village blacksmith. These hands have forged tools for generations of farmers and workers.",
+                "But times have been hard. My supplies are running low, and I need help gathering materials.",
+                "If you could bring me some metal ore from the old mines, I could craft better tools for the village.",
+                "What say you? Will you help an old smith restore his craft?"
+              ],
+              onComplete: () => {
+                // Check if the blacksmith quest already exists
+                const blacksmithQuestExists = quests.some(quest => quest.title === "The Blacksmith's Request");
+                
+                if (blacksmithQuestExists) {
+                  // Quest exists, check if it only has the "talk to blacksmith" objective
+                  const blacksmithQuest = quests.find(quest => quest.title === "The Blacksmith's Request");
+                  const hasOnlyTalkObjective = blacksmithQuest.objectives.length === 1 && 
+                    blacksmithQuest.objectives[0].description === "Talk to the village blacksmith";
+                  
+                  if (hasOnlyTalkObjective) {
+                    // Update the existing quest to add the mining objectives
+                    setQuests(prevQuests => {
+                      return prevQuests.map(quest => {
+                        if (quest.title === "The Blacksmith's Request") {
+                          return {
+                            ...quest,
+                            description: "Help the village blacksmith by gathering metal ore from the old mines.",
+                            objectives: [
+                              {
+                                description: "Talk to the village blacksmith",
+                                completed: true
+                              },
+                              {
+                                description: "Find the old mines",
+                                completed: false
+                              },
+                              {
+                                description: "Collect metal ore (0/3)",
+                                completed: false
+                              },
+                              {
+                                description: "Return to the blacksmith",
+                                completed: false
+                              }
+                            ]
+                          };
+                        }
+                        return quest;
+                      });
+                    });
+                    
+                    // Show objective completion for talking to blacksmith
+                    showChainedObjective("Talk to the village blacksmith", "Find the old mines");
+                  }
+                } else {
+                  // Add new blacksmith quest (fallback if quest doesn't exist yet)
+                  setQuests(prevQuests => [
+                    ...prevQuests,
+                    {
+                      title: "The Blacksmith's Request",
+                      description: "Help the village blacksmith by gathering metal ore from the old mines.",
+                      objectives: [
+                        {
+                          description: "Find the old mines",
+                          completed: false
+                        },
+                        {
+                          description: "Collect metal ore (0/3)",
+                          completed: false
+                        },
+                        {
+                          description: "Return to the blacksmith",
+                          completed: false
+                        }
+                      ]
+                    }
+                  ]);
+                  
+                  // Show new quest popup
+                  setNewQuestTitle("The Blacksmith's Request");
+                  setShowNewQuestPopup(true);
+                }
+              }
+            });
+            return;
+          }
+            // Always check if player is at shop and trigger interaction
+          if (nearShop) {
+            setShowShopConfirm(true);
             return;
           }
           
-          // Always check if player is at shop and trigger interaction
           const playerGridPos = getGridPosition(position.x, position.y);
           console.log('Player position:', playerGridPos);
           console.log('Shop points:', shopPoints);
@@ -1206,16 +1457,12 @@ const Game = () => {
           break;
         // ... rest of the cases ...
       }
-    };
-
-    window.addEventListener('keydown', handleKeyPress);
+    };    window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [isSleeping, isPaused, isDialogActive, showShop, showElderTalkPopup, position]);
-
+  }, [isSleeping, isPaused, isDialogActive, showShop, showSabung, showChess, showMinigameSelection, position]);
   // Add effect to track pressed keys for diagonal movement
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (isSleeping || isPaused || isDialogActive || showShop || showElderTalkPopup || isInInterior) return;
+  useEffect(() => {    const handleKeyDown = (e) => {
+      if (isSleeping || isPaused || isDialogActive || showShop || showSabung || showChess || showMinigameSelection || isInInterior) return;
 
       const movementKeys = ['w', 's', 'a', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
       if (movementKeys.includes(e.key.toLowerCase())) {
@@ -1247,32 +1494,29 @@ const Game = () => {
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
     
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
+    return () => {      window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [isSleeping, isPaused, isDialogActive, showShop, showElderTalkPopup, isInInterior]);
+  }, [isSleeping, isPaused, isDialogActive, showShop, showSabung, showChess, showMinigameSelection, isInInterior]);
 
   // Movement handler
   useEffect(() => {
     const handleKeyPress = (e) => {
       // Handle special keys that don't require movement (checked before early returns)
-      if (e.key.toLowerCase() === 't') {
-        console.log('T key pressed! Conditions:', {
+      if (e.key.toLowerCase() === 't') {        console.log('T key pressed! Conditions:', {
           isDialogActive,
           isPaused,
           showShop,
-          showElderTalkPopup,
-          canActivate: !isDialogActive && !isPaused && !showShop && !showElderTalkPopup
+          canActivate: !isDialogActive && !isPaused && !showShop
         });
-        if (!isDialogActive && !isPaused && !showShop && !showElderTalkPopup) {
+        if (!isDialogActive && !isPaused && !showShop) {
           console.log('Activating time skip popup...');
           setShowTimeSkipPopup(true);
         }
         return;
       }
       
-      if (isSleeping || isPaused || isDialogActive || showShop || showElderTalkPopup) return;
+      if (isSleeping || isPaused || isDialogActive || showShop || showSabung || showChess) return;
       if (isInInterior) return;
 
       let newX = position.x;
@@ -1313,15 +1557,13 @@ const Game = () => {
             setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));
               const isAtSavePoint = checkSavePoint(newX, newY);
             setCanSave(isAtSavePoint);
-            setShowSavePrompt(isAtSavePoint);
-              checkTeleport(newX, newY);
-            checkShopTrigger(newX, newY);
+            setShowSavePrompt(isAtSavePoint);            checkTeleport(newX, newY);
             
             checkElderProximity(newX, newY);
             checkBlacksmithProximity(newX, newY);
+            checkShopProximity(newX, newY);
           }
-          break;
-        case 's':
+          break;        case 's':
         case 'arrowdown':
           newY += MOVEMENT_SPEED;
           if (!hasCollision(newX, newY)) {
@@ -1331,12 +1573,11 @@ const Game = () => {
               y: Math.min(MAP_HEIGHT - PLAYER_SIZE, newY),
             }));            setEnergy((prev) => Math.max(0, prev - energyCost));
             setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));            checkTeleport(newX, newY);
-            checkShopTrigger(newX, newY);
             checkElderProximity(newX, newY);
             checkBlacksmithProximity(newX, newY);
+            checkShopProximity(newX, newY);
           }
-          break;
-        case 'a':
+          break;        case 'a':
         case 'arrowleft':
           newX -= MOVEMENT_SPEED;
           if (!hasCollision(newX, newY)) {
@@ -1346,12 +1587,11 @@ const Game = () => {
               x: Math.max(0, newX),
             }));            setEnergy((prev) => Math.max(0, prev - energyCost));
             setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));            checkTeleport(newX, newY);
-            checkShopTrigger(newX, newY);
             checkElderProximity(newX, newY);
             checkBlacksmithProximity(newX, newY);
+            checkShopProximity(newX, newY);
           }
-          break;
-        case 'd':
+          break;        case 'd':
         case 'arrowright':
           newX += MOVEMENT_SPEED;
           if (!hasCollision(newX, newY)) {
@@ -1361,9 +1601,9 @@ const Game = () => {
               x: Math.min(MAP_WIDTH - PLAYER_SIZE, newX),
             }));            setEnergy((prev) => Math.max(0, prev - energyCost));
             setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));            checkTeleport(newX, newY);
-            checkShopTrigger(newX, newY);
             checkElderProximity(newX, newY);
             checkBlacksmithProximity(newX, newY);
+            checkShopProximity(newX, newY);
           }
           break;
         case 'p': // Handle planting
@@ -1374,11 +1614,14 @@ const Game = () => {
             if (seedItem && seedItem.quantity > 0) {
               // Check if a crop is already planted here
               const existingCrop = plantedCrops.find(crop => crop.x === playerGridPos.gridX && crop.y === playerGridPos.gridY);
-              if (!existingCrop) {
-                               // Consume one seed
+              if (!existingCrop) {                // Consume one seed
                 setInventory(prev => prev.map(item => 
                   item.name === 'Seeds' ? { ...item, quantity: item.quantity - 1 } : item
-                ).filter(item => item.quantity > 0));                // Add new planted crop (start at stage 1)
+                ).filter(item => item.quantity > 0));
+
+                // Play planting sound
+                playPlant();
+                  // Add new planted crop (start at stage 1)
                 setPlantedCrops(prev => [...prev, {
                   x: playerGridPos.gridX,
                   y: playerGridPos.gridY,
@@ -1391,6 +1634,34 @@ const Game = () => {
                 
                 // Show objective popup
                 showObjective("Seed planted! Water it to help it grow.");
+                
+                // Update quest objective: Plant seeds in your field
+                const currentQuest = quests.find(quest => quest.title === "The First Harvest");
+                const plantSeedObjective = currentQuest?.objectives.find(obj => obj.description === "Plant seeds in your field");
+                const isObjectiveAlreadyCompleted = plantSeedObjective?.completed;
+                
+                // Only show objective popup if this is the first time completing the objective
+                if (!isObjectiveAlreadyCompleted) {
+                  showChainedObjective("Plant seeds in your field", "Water your planted crops for 2 day (0/2)");
+                }
+                
+                // Update quest
+                setQuests(prevQuests => {
+                  return prevQuests.map(quest => {
+                    if (quest.title === "The First Harvest") {
+                      return {
+                        ...quest,
+                        objectives: quest.objectives.map(objective => {
+                          if (objective.description === "Plant seeds in your field") {
+                            return { ...objective, completed: true };
+                          }
+                          return objective;
+                        })
+                      };
+                    }
+                    return quest;
+                  });
+                });
               }
             }
           }
@@ -1399,8 +1670,6 @@ const Game = () => {
           if (canSave && !isDialogActive) {
             saveGame();
           }
-          break;        case 'e':
-          checkShopTrigger(position.x, position.y);
           break;
       }
 
@@ -1424,69 +1693,22 @@ const Game = () => {
       window.removeEventListener('keydown', handleKeyPress);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [
-    position,
-    isSleeping,
+  }, [    position,    isSleeping,
     isPaused,
     isDialogActive,
     showShop,
-    showElderTalkPopup,
     isInInterior,
     MAP_HEIGHT,
     MAP_WIDTH,
     PLAYER_SIZE,
     checkSavePoint,
     checkTeleport,
-    checkShopTrigger,
+    checkShopProximity,
     checkElderProximity,
-    hasCollision
-  ]);
-
-  // Add effect to track pressed keys for diagonal movement
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (isSleeping || isPaused || isDialogActive || showShop || showElderTalkPopup || isInInterior) return;
-
-      const movementKeys = ['w', 's', 'a', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
-      if (movementKeys.includes(e.key.toLowerCase())) {
-        setPressedKeys(prev => new Set([...prev, e.key.toLowerCase()]));
-      }
-    };
-
-    const handleKeyUp = (e) => {
-      const movementKeys = ['w', 's', 'a', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
-      if (movementKeys.includes(e.key.toLowerCase())) {
-        setPressedKeys(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(e.key.toLowerCase());
-          return newSet;
-        });
-        
-        // Only set facing to 'stand' if no movement keys are pressed
-        setTimeout(() => {
-          setPressedKeys(current => {
-            if (current.size === 0) {
-              setFacing('stand');
-            }
-            return current;
-          });
-        }, 50);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, [isSleeping, isPaused, isDialogActive, showShop, showElderTalkPopup, isInInterior]);
-
+    hasCollision]);
   // Handle continuous movement
   useEffect(() => {
-    const movePlayer = () => {
-      if (isSleeping || isPaused || isDialogActive || showShop || showElderTalkPopup || isInInterior) return;
+    const movePlayer = () => {      if (isSleeping || isPaused || isDialogActive || showShop || showSabung || showChess || showMinigameSelection || isInInterior) return;
 
       let newX = position.x;
       let newY = position.y;
@@ -1544,15 +1766,15 @@ const Game = () => {
         // Apply costs only when actually moving
         setEnergy(prev => Math.max(0, prev - energyCost));
         setCleanliness(prev => Math.max(0, prev - cleanlinessCost));
-        
-        // Check various interactions
+          // Check various interactions
         const isAtSavePoint = checkSavePoint(newX, newY);
         setCanSave(isAtSavePoint);
         setShowSavePrompt(isAtSavePoint);
           checkTeleport(newX, newY);
-        checkShopTrigger(newX, newY);
         
         checkElderProximity(newX, newY);
+        checkBlacksmithProximity(newX, newY);
+        checkShopProximity(newX, newY);
       } else if (!hasMoved) {
         setIsMoving(false);
       }
@@ -1566,15 +1788,15 @@ const Game = () => {
       if (moveTimeoutRef.current) {
         cancelAnimationFrame(moveTimeoutRef.current);
       }
-    };
-  }, [
+    };  }, [
     position,
     pressedKeys,
     isSleeping,
-    isPaused,
-    isDialogActive,
+    isPaused,    isDialogActive,
     showShop,
-    showElderTalkPopup,
+    showSabung,
+    showChess,
+    showMinigameSelection,
     isInInterior,
     checkSavePoint,
     checkTeleport,
@@ -1651,7 +1873,7 @@ const Game = () => {
       </div>
     );  };
 
-  // Add a function to check proximity to plantable spots and update showHoeIcon state
+  // Add a function to check proximity to plantable spots
   const checkPlantableProximity = useMemo(() => (playerX, playerY) => {
     const playerGridPos = getGridPosition(playerX, playerY);
     const proximityThreshold = 1.5; // Show icon when player is within 1.5 grid cells
@@ -1809,13 +2031,12 @@ const isOnBathTile = () => {
 const [showBathPopup, setShowBathPopup] = useState(false);
 
 // Show/hide bath popup based on player position
-useEffect(() => {
-  if (!isPaused && !isDialogActive && !showShop && !isSleeping && isOnBathTile()) {
+useEffect(() => {  if (!isPaused && !isDialogActive && !showShop && !showSabung && !showChess && !showBlackjack && !showMinigameSelection && !isSleeping && isOnBathTile()) {
     setShowBathPopup(true);
   } else {
     setShowBathPopup(false);
   }
-}, [position, isPaused, isDialogActive, showShop, isSleeping]);
+}, [position, isPaused, isDialogActive, showShop, showSabung, showChess, showBlackjack, showMinigameSelection, isSleeping]);
 
 // Bath action handler
 const handleBath = () => {
@@ -1917,7 +2138,8 @@ useEffect(() => {
   }
 
   return (
-    <div className="relative w-full h-screen bg-black overflow-hidden">{/* Styled Status Bar (HP, Hunger, Hygiene, Happiness) */}      {!isDialogActive && !isLoading && !showCutscene && !showShop && !isSleeping && (
+    <div className="relative w-full h-screen bg-black overflow-hidden">      {/* Styled Status Bar (HP, Hunger, Hygiene, Happiness) */}
+      {!isDialogActive && !isLoading && !showCutscene && !showShop && !showBlackjack && !showSabung && !showChess && !showMinigameSelection && !isSleeping && (
         <>          {/* Single Statbar Container with Fixed Layout like HouseInterior */}
           <div className="absolute top-4 left-4 z-50 text-white flex items-center border-8 border-[#D2B48C]" style={{ backgroundColor: '#8B4513', padding: '10px', borderRadius: '10px' }}>
             {/* Character Portrait */}
@@ -1999,16 +2221,13 @@ useEffect(() => {
                 <span className="font-bold text-lg">{money}</span>
               </div>
             </div>
+          </div>          {/* Wrap ActiveQuestFolderUI for positioning */}          <div className="fixed right-8 top-[25%] transform -translate-y-1/2 z-[90] scale-125">
+            {!isDialogActive && !isLoading && !showCutscene && !showShop && !showBlackjack && !showSabung && !showChess && !showMinigameSelection && !isSleeping && <ActiveQuestFolderUI quests={quests} />}
           </div>
-
-          {/* Wrap ActiveQuestFolderUI for positioning */}
-          <div className="fixed right-8 top-[25%] transform -translate-y-1/2 z-[90] scale-125">
-            {!isDialogActive && !isLoading && !showCutscene && !showShop && !isSleeping && <ActiveQuestFolderUI quests={quests} />}
-          </div>
-          {!isDialogActive && !isLoading && !showCutscene && !showShop && !isSleeping && <QuestFolder quests={quests} />}
+          {!isDialogActive && !isLoading && !showCutscene && !showShop && !showBlackjack && !showSabung && !showChess && !showMinigameSelection && !isSleeping && <QuestFolder quests={quests} />}
 
           {/* Minimap */}
-          {!isLoading && !showCutscene && !showShop && !isSleeping && (
+          {!isLoading && !showCutscene && !showShop && !showBlackjack && !showSabung && !showChess && !showMinigameSelection && !isSleeping && (
             <div className="z-[50]"> {/* Added wrapper with higher z-index */}
               <Minimap position={position} shopPoints={shopPoints} />
             </div>
@@ -2067,33 +2286,161 @@ useEffect(() => {
             </div>
           </div>
         </>
-      )}
-
-      {/* Game UI Elements */}
-      {!isDialogActive && !showCutscene && !showShop && !isSleeping && !isPaused && !showBlackjack && (
+      )}      {/* Game UI Elements */}
+      {!isDialogActive && !showCutscene && !showShop && !isSleeping && !isPaused && !showBlackjack && !showSabung && !showChess && !showMinigameSelection && (
         <>
-          {/* Blackjack Table Prompt */}
+          {/* Minigame Table Prompt */}
           {isAtBlackjackTable() && (
             <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-24 z-50">
               <div className="bg-black bg-opacity-75 text-white px-4 py-2 rounded-lg shadow-lg text-center">
-                <p className="text-lg">Press E to play Blackjack</p>
+                <p className="text-lg">Press E to play Games</p>
               </div>
             </div>
           )}
         </>
-      )}
-
-      {/* Blackjack Game */}
+      )}      {/* Blackjack Game */}
       {showBlackjack && (
         <BlackjackGame
           onClose={() => setShowBlackjack(false)}
           money={money}
           setMoney={setMoney}
         />
+      )}      {/* Sabung Game */}
+      {showSabung && (
+        <SabungGame
+          onClose={() => setShowSabung(false)}
+          money={money}
+          setMoney={setMoney}
+        />
       )}
 
-      {/* Pause Button */}
-      {!isPaused && !isLoading && !showCutscene && !isDialogActive && !showShop && !isInInterior && (
+      {/* Chess Game */}
+      {showChess && (
+        <ChessGame
+          onClose={() => setShowChess(false)}
+          money={money}
+          setMoney={setMoney}
+        />
+      )}      {/* Minigame Selection Popup */}
+      <AnimatePresence mode="wait">
+        {showMinigameSelection && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-md flex items-center justify-center z-[55]"
+          >
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="bg-gradient-to-br from-[#8B4513] to-[#A0522D] p-6 rounded-2xl shadow-2xl max-w-4xl w-full mx-4 border-4 border-[#D2B48C] relative overflow-hidden"
+            >
+            {/* Decorative background pattern */}
+            <div className="absolute inset-0 opacity-5">
+              <div className="w-full h-full bg-repeat" style={{
+                backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(245, 222, 179, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(245, 222, 179, 0.1) 0%, transparent 50%)',
+                backgroundSize: '100px 100px'
+              }}></div>
+            </div>
+            
+            {/* Header */}            <div className="flex justify-between items-center mb-6 relative z-10">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-[#FFD700] to-[#FFA500] rounded-full flex items-center justify-center shadow-lg">
+                  <span className="text-2xl">🎮</span>
+                </div>                <div>
+                  <h2 className="text-3xl text-[#F5DEB3] font-bold tracking-wider">Game Selection</h2>
+                  <p className="text-[#D2B48C] text-sm opacity-80">Choose your adventure</p>
+                </div>
+              </div>              <button 
+                className="text-[#F5DEB3] hover:text-red-400 text-2xl font-bold transition-all duration-200 hover:scale-110 bg-black bg-opacity-20 w-10 h-10 rounded-full flex items-center justify-center hover:bg-opacity-30"
+                onClick={() => {
+                  playClick();
+                  // Clean close of minigame selection
+                  setShowMinigameSelection(false);
+                  // Ensure no other game modals are accidentally left open
+                  setShowBlackjack(false);
+                  setShowChess(false);
+                  setShowSabung(false);
+                }}
+                onMouseEnter={playHover}
+              >
+                ✕
+              </button>
+            </div>            {/* Games Grid - Classic Portrait Layout */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
+              {/* Blackjack */}
+              <motion.div
+                whileHover={{ scale: 1.05, y: -10 }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ duration: 0.3 }}
+                className="bg-gradient-to-b from-[#1a472a] to-[#2d5a3f] rounded-lg border-4 border-[#FFD700] hover:border-[#FFA500] shadow-2xl cursor-pointer flex flex-col items-center justify-center p-6 h-64"
+                onClick={() => openGameFromCenter('blackjack')}
+              >
+                <div className="text-8xl mb-4 filter drop-shadow-lg">🂠</div>
+                <h3 className="text-[#FFD700] text-2xl font-bold mb-2 text-center">Blackjack</h3>
+                <p className="text-[#F5DEB3] text-sm text-center opacity-90 mb-4">Beat the dealer! Get as close to 21 as possible</p>
+                <button className="bg-[#FFD700] text-black px-6 py-2 rounded-full font-bold hover:bg-[#FFA500] transition-all duration-200 hover:scale-110">
+                  PLAY NOW
+                </button>
+              </motion.div>
+
+              {/* Chess */}
+              <motion.div
+                whileHover={{ scale: 1.05, y: -10 }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ duration: 0.3 }}
+                className="bg-gradient-to-b from-[#4a1a1a] to-[#6b2c2c] rounded-lg border-4 border-[#8B4513] hover:border-[#D2B48C] shadow-2xl cursor-pointer flex flex-col items-center justify-center p-6 h-64"
+                onClick={() => openGameFromCenter('chess')}
+              >
+                <div className="text-8xl mb-4 filter drop-shadow-lg">♛</div>
+                <h3 className="text-[#D2B48C] text-2xl font-bold mb-2 text-center">Chess</h3>
+                <p className="text-[#F5DEB3] text-sm text-center opacity-90 mb-4">Strategic board game against AI opponents</p>
+                <button className="bg-[#D2B48C] text-[#4a1a1a] px-6 py-2 rounded-full font-bold hover:bg-[#F5DEB3] transition-all duration-200 hover:scale-110">
+                  PLAY NOW
+                </button>
+              </motion.div>
+
+              {/* Sabung (Cockfighting) */}
+              <motion.div
+                whileHover={{ scale: 1.05, y: -10 }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ duration: 0.3 }}
+                className="bg-gradient-to-b from-[#8B4513] to-[#A0522D] rounded-lg border-4 border-[#D2B48C] hover:border-[#F5DEB3] shadow-2xl cursor-pointer flex flex-col items-center justify-center p-6 h-64"
+                onClick={() => openGameFromCenter('sabung')}
+              >
+                <div className="text-8xl mb-4 filter drop-shadow-lg">🐓</div>
+                <h3 className="text-[#F5DEB3] text-2xl font-bold mb-2 text-center">Sabung Ayam</h3>
+                <p className="text-[#F5DEB3] text-sm text-center opacity-90 mb-4">Traditional cockfighting. Choose your fighter!</p>
+                <button className="bg-[#F5DEB3] text-[#8B4513] px-6 py-2 rounded-full font-bold hover:bg-white transition-all duration-200 hover:scale-110">
+                  PLAY NOW
+                </button>
+              </motion.div>
+            </div>{/* Footer */}
+            <div className="mt-6 text-center relative z-10">              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="bg-gradient-to-r from-[#8B4513] to-[#A0522D] text-[#F5DEB3] px-6 py-2 rounded-xl border-2 border-[#D2B48C] hover:border-[#F5DEB3] transition-all duration-200 font-bold shadow-lg"
+                onClick={() => {
+                  playClick();
+                  // Clean close of minigame selection
+                  setShowMinigameSelection(false);
+                  // Ensure no other game modals are accidentally left open
+                  setShowBlackjack(false);
+                  setShowChess(false);
+                  setShowSabung(false);
+                }}
+                onMouseEnter={playHover}              >
+                Close Game Selection
+              </motion.button>
+              <p className="text-[#D2B48C] text-xs mt-2 opacity-70">Tip: Press 'E' near the game table to open Game Selection</p></div>
+          </motion.div>
+        </motion.div>
+        )}
+      </AnimatePresence>{/* Pause Button */}
+      {!isPaused && !isLoading && !showCutscene && !isDialogActive && !showShop && !showBlackjack && !showSabung && !showChess && !showMinigameSelection && !isInInterior && (
         <img
           src={pauseButton}
           alt="Pause"
@@ -2209,7 +2556,7 @@ useEffect(() => {
                         setMoney(prevMoney => prevMoney - seedItem.price);
                         addItemToInventory(seedItem.id, 1);                        // Only show objective popup if this is the first time completing the objective
                         if (!isObjectiveAlreadyCompleted) {
-                          showChainedObjective("Buy seeds from the shop", "Plant the seed");
+                          showChainedObjective("Buy seeds from the shop", "Plant seeds in your field");
                         }
 
                         // Update quest objective: Buy seeds from the shop
@@ -2398,10 +2745,8 @@ useEffect(() => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Add Inventory */}
-      {!isDialogActive && !isPaused && !isLoading && !showCutscene && !showShop && !isSleeping && (
+      )}      {/* Add Inventory */}
+      {!isDialogActive && !isPaused && !isLoading && !showCutscene && !showShop && !showBlackjack && !showSabung && !showChess && !showMinigameSelection && !isSleeping && (
         <Inventory 
           items={inventory} 
           onUseItem={handleUseItem}
@@ -2579,221 +2924,6 @@ useEffect(() => {
           />
         </DialogProvider>
       ) : (        <>
-          {/* Elder Talk Confirmation Popup */}
-          {showElderTalkPopup && !isPaused && !isDialogActive && !showShop && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}>
-              <div className="bg-[#8B4513] p-8 rounded-lg max-w-md w-full mx-4 relative border-8 border-[#D2B48C] shadow-lg flex flex-col items-center gap-4">
-                <h2 className="text-2xl font-bold text-center text-[#F5DEB3]">Talk to Elder?</h2>
-                <div className="flex flex-col gap-2">
-                  <button 
-                    className="bg-[#8B4513] text-[#F5DEB3] px-6 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 w-32"
-                    onClick={() => {
-                      // Start elder dialog
-                      startDialog({
-                        characterName: "Village Elder",
-                        expression: "neutral",
-                        dialogue: [
-                          "Ah… so you have returned.",
-                          "Your family's cottage still stands, though time has not been kind to it. Much like the land… and its people.",
-                          "The village remembers your name, but memories fade. If you wish to stay, you must build more than a home—you must build trust.",
-                          "The fields need tending. The forge waits for skillful hands. And somewhere in the shadows of this land, echoes of your past linger still.",
-                          "Will you work the soil, forge your own tools, or seek the knowledge buried beneath stone and dust?"                        ],                        onComplete: () => {
-                          // Check if the objective is already completed before showing popup
-                          const currentQuest = quests.find(quest => quest.title === "Welcome Home");
-                          const elderObjective = currentQuest?.objectives.find(obj => obj.description === "Meet the village elder");
-                          const isObjectiveAlreadyCompleted = elderObjective?.completed;
-
-                          // Only show objective popup if this is the first time completing the objective
-                          if (!isObjectiveAlreadyCompleted) {
-                            showChainedObjective("Meet the village elder", "Quest completed: Welcome Home");
-                          }
-                          
-                          // Add new quest after dialogue ends
-                          setQuests(prevQuests => {
-                            // First update the Welcome Home quest
-                            const updatedQuests = prevQuests.map(quest => {
-                              if (quest.title === "Welcome Home") {
-                                return {
-                                  ...quest,
-                                  objectives: quest.objectives.map(objective => {
-                                    if (objective.description === "Meet the village elder") {
-                                      return { ...objective, completed: true };
-                                    }
-                                    return objective;
-                                  })
-                                };
-                              }
-                              return quest;
-                            });
-                            
-                            // Then add the new quest
-                            const firstHarvestQuestExists = updatedQuests.some(quest => quest.title === "The First Harvest");
-                            if (!firstHarvestQuestExists) {
-                              return [
-                                ...updatedQuests,
-                                {
-                                  title: "The First Harvest",
-                                  description: "Begin your farming journey by purchasing seeds from the shop.",
-                                  objectives: [
-                                    {
-                                      description: "Buy seeds from the shop",
-                                      completed: false
-                                    },
-                                    {
-                                      description: "Plant the seed",
-                                      completed: false                                    },
-                                    {
-                                      description: "Water your planted crops for 2 day (0/2)",
-                                      completed: false                                    },
-                                    {
-                                      description: "Harvest the mature potato",
-                                      completed: false
-                                    },
-                                    {
-                                      description: "Sell the potato at the shop",
-                                      completed: false
-                                    }
-                                  ]
-                                }
-                              ];
-                            } else {
-                              // If quest already exists, just return updated quests (Welcome Home)
-                              return updatedQuests;
-                            }
-                          });
-                          
-                          // Show new quest popup
-                          setNewQuestTitle("The First Harvest");
-                          setShowNewQuestPopup(true);
-                        }
-                      });
-                      
-                      setShowElderTalkPopup(false);
-                    }}
-                  >
-                    Yes
-                  </button>
-                  <button 
-                    className="bg-[#8B4513] text-[#F5DEB3] px-6 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 w-32"
-                    onClick={() => setShowElderTalkPopup(false)}
-                  >
-                    No
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Blacksmith Talk Confirmation Popup */}
-          {showBlacksmithTalkPopup && !isPaused && !isDialogActive && !showShop && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}>
-              <div className="bg-[#8B4513] p-8 rounded-lg max-w-md w-full mx-4 relative border-8 border-[#D2B48C] shadow-lg flex flex-col items-center gap-4">
-                <h2 className="text-2xl font-bold text-center text-[#F5DEB3]">Talk to Blacksmith?</h2>
-                <div className="flex flex-col gap-2">
-                  <button 
-                    className="bg-[#8B4513] text-[#F5DEB3] px-6 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 w-32"
-                    onClick={() => {
-                      // Start blacksmith dialog
-                      startDialog({
-                        characterName: "Village Blacksmith",
-                        expression: "neutral",
-                        dialogue: [
-                          "Ah, a new face! Or perhaps... an old one returned?",
-                          "I am the village blacksmith. These hands have forged tools for generations of farmers and workers.",
-                          "But times have been hard. My supplies are running low, and I need help gathering materials.",
-                          "If you could bring me some metal ore from the old mines, I could craft better tools for the village.",
-                          "What say you? Will you help an old smith restore his craft?"
-                        ],                        onComplete: () => {
-                          // Check if the blacksmith quest already exists
-                          const blacksmithQuestExists = quests.some(quest => quest.title === "The Blacksmith's Request");
-                          
-                          if (blacksmithQuestExists) {
-                            // Quest exists, check if it only has the "talk to blacksmith" objective
-                            const blacksmithQuest = quests.find(quest => quest.title === "The Blacksmith's Request");
-                            const hasOnlyTalkObjective = blacksmithQuest.objectives.length === 1 && 
-                              blacksmithQuest.objectives[0].description === "Talk to the village blacksmith";
-                            
-                            if (hasOnlyTalkObjective) {
-                              // Update the existing quest to add the mining objectives
-                              setQuests(prevQuests => {
-                                return prevQuests.map(quest => {
-                                  if (quest.title === "The Blacksmith's Request") {
-                                    return {
-                                      ...quest,
-                                      description: "Help the village blacksmith by gathering metal ore from the old mines.",
-                                      objectives: [
-                                        {
-                                          description: "Talk to the village blacksmith",
-                                          completed: true
-                                        },
-                                        {
-                                          description: "Find the old mines",
-                                          completed: false
-                                        },
-                                        {
-                                          description: "Collect metal ore (0/3)",
-                                          completed: false
-                                        },
-                                        {
-                                          description: "Return to the blacksmith",
-                                          completed: false
-                                        }
-                                      ]
-                                    };
-                                  }
-                                  return quest;
-                                });
-                              });
-                              
-                              // Show objective completion for talking to blacksmith
-                              showChainedObjective("Talk to the village blacksmith", "Find the old mines");
-                            }
-                          } else {
-                            // Add new blacksmith quest (fallback if quest doesn't exist yet)
-                            setQuests(prevQuests => [
-                              ...prevQuests,
-                              {
-                                title: "The Blacksmith's Request",
-                                description: "Help the village blacksmith by gathering metal ore from the old mines.",
-                                objectives: [
-                                  {
-                                    description: "Find the old mines",
-                                    completed: false
-                                  },
-                                  {
-                                    description: "Collect metal ore (0/3)",
-                                    completed: false
-                                  },
-                                  {
-                                    description: "Return to the blacksmith",
-                                    completed: false
-                                  }
-                                ]
-                              }
-                            ]);
-                            
-                            // Show new quest popup
-                            setNewQuestTitle("The Blacksmith's Request");
-                            setShowNewQuestPopup(true);
-                          }
-                        }
-                      });
-                      
-                      setShowBlacksmithTalkPopup(false);
-                    }}
-                  >
-                    Yes
-                  </button>                  <button 
-                    className="bg-[#8B4513] text-[#F5DEB3] px-6 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 w-32"
-                    onClick={() => setShowBlacksmithTalkPopup(false)}
-                  >
-                    No
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Rest of your game content (excluding UI moved to HouseInterior) */}
           {!isLoading && !showCutscene && (
             <div className="game-container">
@@ -2869,34 +2999,24 @@ useEffect(() => {
                                 if (seedItem && seedItem.quantity > 0) {
                                   // Check if the objective is already completed before showing popup
                                   const currentQuest = quests.find(quest => quest.title === "The First Harvest");
-                                  const plantSeedObjective = currentQuest?.objectives.find(obj => obj.description === "Plant the seed");
+                                  const plantSeedObjective = currentQuest?.objectives.find(obj => obj.description === "Plant seeds in your field");
                                   const isObjectiveAlreadyCompleted = plantSeedObjective?.completed;
 
-                                  setInventory(prev => prev.map(item => 
-                                    item.name === 'Seeds' ? { ...item, quantity: item.quantity - 1 } : item
-                                  ).filter(item => item.quantity > 0));
-
-                                  setPlantedCrops(prev => [...prev, {
-                                    x: spot.x,
-                                    y: spot.y,
-                                    type: 'potato',
-                                    stage: 1,
-                                    plantTime: Date.now(), // Not strictly needed for day-based growth, but good to keep
-                                    plantDay: currentDay, // Record the day it was planted
-                                    needsWatering: true, // Needs watering immediately on day 1
-                                  }]);                                  // Only show objective popup if this is the first time completing the objective
+                                  playCash();
+                                  setMoney(prevMoney => prevMoney - seedItem.price);
+                                  addItemToInventory(seedItem.id, 1);                        // Only show objective popup if this is the first time completing the objective
                                   if (!isObjectiveAlreadyCompleted) {
-                                    showChainedObjective("Plant the seed", "Water your planted crops");
+                                    showChainedObjective("Plant seeds in your field", "Water your planted crops for 2 day (0/2)");
                                   }
-
-                                  // Update quest objective: Plant the seed (assuming this quest exists and objective matches)
+                                  
+                                  // Update quest objective: Plant seeds in your field
                                   setQuests(prevQuests => {
-                                    const updatedQuests = prevQuests.map(quest => {
+                                    return prevQuests.map(quest => {
                                       if (quest.title === "The First Harvest") {
                                         return {
                                           ...quest,
                                           objectives: quest.objectives.map(objective => {
-                                            if (objective.description === "Plant the seed") {
+                                            if (objective.description === "Plant seeds in your field") {
                                               return { ...objective, completed: true };
                                             }
                                             return objective;
@@ -2905,16 +3025,15 @@ useEffect(() => {
                                       }
                                       return quest;
                                     });
-                                    return updatedQuests;
                                   });
-
-                                } else {
-
                                 }
                               } else {
 
                               }                            } else if (iconType === 'wateringCan' && isCurrentlyPlanted && isCurrentlyPlanted.needsWatering) {
                               // Watering logic
+                              // Play watering sound
+                              playWatering();
+                              
                               setPlantedCrops(prevCrops => prevCrops.map(crop => {
                                 if (crop.x === spot.x && crop.y === spot.y) {
                                   return { ...crop, needsWatering: false }; // Mark as watered for the current day
@@ -2959,10 +3078,9 @@ useEffect(() => {
                                   });
                                 });
                               }                            } else if (iconType === 'sickle' && isCurrentlyPlanted && isCurrentlyPlanted.stage === 3) {
-                              // Harvest logic
-                              // Check if the objective is already completed before showing popup
+                              // Harvest logic                              // Check if the objective is already completed before showing popup
                               const currentQuest = quests.find(quest => quest.title === "The First Harvest");
-                              const harvestObjective = currentQuest?.objectives.find(obj => obj.description === "Harvest the mature potato");
+                              const harvestObjective = currentQuest?.objectives.find(obj => obj.description === "Harvest your first crop");
                               const isObjectiveAlreadyCompleted = harvestObjective?.completed;
                               
                               // Track this for debugging
@@ -2970,17 +3088,17 @@ useEffect(() => {
                                 isObjectiveAlreadyCompleted, 
                                 questExists: !!currentQuest,
                                 objectiveExists: !!harvestObjective 
-                              });
-
-                              // Add harvested item (Potato) to inventory
+                              });                              // Add harvested item (Potato) to inventory
                               addItemToInventory(2); // Assuming Potato has ID 2 based on ITEMS definition
                               
-                              // Only show objective popup if this is the first time completing the objective
+                              // Play harvest sound
+                              playHarvest();
+                                // Only show objective popup if this is the first time completing the objective
                               // Also check if a popup with the same text is currently displayed to avoid duplicates
                               if (!isObjectiveAlreadyCompleted && 
-                                  !completedObjectives.some(obj => obj.text === "Harvest the mature potato")) {
+                                  !completedObjectives.some(obj => obj.text === "Harvest your first crop")) {
                                 console.log("Showing harvest objective popup");
-                                showChainedObjective("Harvest the mature potato", "Sell the potato at the shop");
+                                showChainedObjective("Harvest your first crop", "Sell the potato at the shop");
                               }
                               
                               // Remove the crop from plantedCrops
@@ -3005,13 +3123,12 @@ useEffect(() => {
                                   return prevQuests;
                                 }
                                 
-                                console.log("Updating quest objective to completed state");
-                                return prevQuests.map(quest => {
+                                console.log("Updating quest objective to completed state");                                return prevQuests.map(quest => {
                                   if (quest.title === "The First Harvest") {
                                     return {
                                       ...quest,
                                       objectives: quest.objectives.map(objective => {
-                                        if (objective.description === "Harvest the mature potato") {
+                                        if (objective.description === "Harvest your first crop") {
                                           return { ...objective, completed: true };
                                         }
                                         return objective;
@@ -3173,6 +3290,26 @@ useEffect(() => {
                       </div>
                     </div>
                   )}
+
+                  {/* Shop Interaction Prompt */}
+                  {nearShop && !isDialogActive && !showCutscene && !showShop && !isSleeping && !isPaused && (
+                    <div 
+                      className="absolute z-10 pointer-events-none"
+                      style={{
+                        left: `${MERCHANT_POSITION_PIXEL.x + (MERCHANT_SIZE / 2)}px`,
+                        top: `${MERCHANT_POSITION_PIXEL.y - 20}px`,
+                        transform: 'translateX(-50%)'
+                      }}
+                    >
+                      <div 
+                        className="text-white px-1 py-0.5 rounded text-center"
+                        style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
+                      >
+                        <p className="text-xs">Press E</p>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div
                     className="map-foreground"
                     style={{
@@ -3230,7 +3367,6 @@ useEffect(() => {
             <h2 className="text-2xl font-bold text-center text-[#F5DEB3]">Shop</h2>
             <div className="flex flex-col gap-2">
               <button 
- 
                 className="bg-[#8B4513] text-[#F5DEB3] px-6 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 w-32"
                 onClick={() => {
                   playClick();
@@ -3253,7 +3389,8 @@ useEffect(() => {
                 onMouseEnter={playHover}
               >
                 Sell
-              </button>              <button 
+              </button>
+              <button 
                 className="bg-[#8B4513] text-[#F5DEB3] px-6 py-2 rounded border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200 w-32"
                 onClick={() => {
                   playClick();
@@ -3345,13 +3482,13 @@ useEffect(() => {
           </div>
         </div>
       )}      {/* Interaction Prompts */}
-      {!isDialogActive && !showCutscene && !showShop && !isSleeping && !isPaused && !showBlackjack && (
+      {!isDialogActive && !showCutscene && !showShop && !isSleeping && !isPaused && !showBlackjack && !showSabung && !showChess && !showMinigameSelection && (
         <>
-          {/* Blackjack Table Prompt */}
+          {/* Minigame Table Prompt */}
           {isAtBlackjackTable() && (
             <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-24 z-50">
               <div className="bg-black bg-opacity-75 text-white px-4 py-2 rounded-lg shadow-lg text-center">
-                <p className="text-lg">Press E to play Blackjack</p>
+                <p className="text-lg">Press E to play Games</p>
               </div>
             </div>
           )}

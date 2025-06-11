@@ -44,7 +44,7 @@ export default function CharacterSelection({ onSelect, onClose }) {
       name: "Alex", 
       background: alexBackground,
       character: alexCharacter,
-      description: "This character is created as a tribute for pak wawo",
+      description: "This character is created as a tribute for pak wawo himself",
       bend: "water"
     },
     { 

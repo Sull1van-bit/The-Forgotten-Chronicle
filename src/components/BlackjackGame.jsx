@@ -142,9 +142,8 @@ const BlackjackGame = ({ onClose, money, setMoney }) => {
       dealerPlay();
     }
   }, [gameState, dealerHand, deck]);
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm flex items-center justify-center z-50 blackjack-overlay">
+    <div className="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm flex items-center justify-center z-[60] blackjack-overlay">
       <div className="p-8 rounded-lg shadow-lg max-w-2xl w-full blackjack-table">
         <div className="flex justify-between mb-4">
           <h2 className="text-2xl text-yellow-300 font-bold tracking-wider">Blackjack</h2>
