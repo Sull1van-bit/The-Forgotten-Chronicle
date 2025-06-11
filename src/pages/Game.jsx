@@ -3357,6 +3357,32 @@ useEffect(() => {
           )}
         </>
       )}
+
+      {/* Tutorial Button */}
+      {!isDialogActive && !showCutscene && !showShop && !isSleeping && !isPaused && !showBlackjack && (
+        <div className="fixed left-4 top-[280px] z-50">
+          <button
+            className="bg-[#8B4513] text-[#F5DEB3] px-4 py-2 rounded-lg border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200"
+            onClick={() => {
+              playClick();
+              startDialog({
+                characterName: "Tutorial",
+                expression: "neutral",
+                dialogue: [
+                    'Welcome to The Forgotten Chronicle! Use WASD or arrow keys to move and E to interact with villagers/objects.',
+                    'Complete quests to progress the story and manage your stats: health, hunger, hygiene, happiness, energy.',
+                    'Maintain hygiene by bathing at the river and restore energy/health by sleeping at your cottage.',
+                    'Buy seeds/food from the merchant, plant crops, water them, and harvest when ready.',
+                    'Sell harvested crops for coins and explore the world to uncover its secrets!'
+                ]
+              });
+            }}
+            onMouseEnter={playHover}
+          >
+            Tutorial
+          </button>
+        </div>
+      )}
     </div>
   );
 
