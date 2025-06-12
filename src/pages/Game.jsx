@@ -522,14 +522,16 @@ const Game = () => {
   const [showShop, setShowShop] = useState(false);
   const [showShopConfirm, setShowShopConfirm] = useState(false);
   const [showTimeSkipPopup, setShowTimeSkipPopup] = useState(false);
-  const [timeSkipHours, setTimeSkipHours] = useState('');
-  // State for new quest pop-up
+  const [timeSkipHours, setTimeSkipHours] = useState('');  // State for new quest pop-up
   const [showNewQuestPopup, setShowNewQuestPopup] = useState(false);
   const [newQuestTitle, setNewQuestTitle] = useState('');
 
   // State for objective pop-up
   const [completedObjectives, setCompletedObjectives] = useState([]);
   const [newObjectives, setNewObjectives] = useState([]);
+
+  // State to track if tutorial has been shown
+  const [hasSeenTutorial, setHasSeenTutorial] = useState(false);
 
   // Add state to control visibility of interactive icons on plantable spots (hoe or watering can)
   const [interactiveIcons, setInteractiveIcons] = useState({});
@@ -632,8 +634,9 @@ const Game = () => {
         setMoney(initialSaveData.stats.money || 0);
         setCleanliness(initialSaveData.stats.cleanliness || 100);
       }        setHasSeenHouseDialog(initialSaveData.hasSeenHouseDialog ?? false);
-      setHasSeenFirstShopDialogue(initialSaveData.hasSeenFirstShopDialogue ?? false);
-      setHasHarvestedFirstCrop(initialSaveData.hasHarvestedFirstCrop ?? false);
+        setHasSeenFirstShopDialogue(initialSaveData.hasSeenFirstShopDialogue ?? false);
+        setHasHarvestedFirstCrop(initialSaveData.hasHarvestedFirstCrop ?? false);
+        setHasSeenTutorial(initialSaveData.hasSeenTutorial ?? false);
     }
   }, [isLoadedGame, initialSaveData]);
   // Effect to auto-hide new quest pop-up
@@ -714,7 +717,153 @@ const Game = () => {
       advanceDialog();
     } else {      // Dialogue ends here
       endDialog();
-      // Add the initial quest after dialogue only if it doesn't exist
+      
+      // Only show tutorial if it hasn't been shown yet
+      if (!hasSeenTutorial) {
+        // Show tutorial dialog after a brief delay
+        setTimeout(() => {
+          setHasSeenTutorial(true); // Mark tutorial as seen
+          startDialog({
+            characterName: "Tutorial",
+            expression: "neutral",
+            dialogue: [
+              'Welcome to The Forgotten Chronicle! Use WASD or arrow keys to move and E to interact with villagers/objects.',
+              'Complete quests to progress the story and manage your stats: health, hunger, hygiene, happiness, energy.',
+              'Maintain hygiene by bathing at the river and restore energy/health by sleeping at your cottage.',
+              'Buy seeds/food from the merchant, plant crops, water them, and harvest when ready.',
+              'Sell harvested crops for coins and explore the world to uncover its secrets!'
+            ],
+            onComplete: () => {
+              // Add the initial quest after tutorial only if it doesn't exist
+              setQuests(prevQuests => {
+                // Check if Welcome Home quest already exists
+                const welcomeHomeExists = prevQuests.some(quest => quest.title === "Welcome Home");
+                if (welcomeHomeExists) {
+                  return prevQuests;
+                }
+                
+                // Quest doesn't exist, so add it and trigger popup outside of setQuests
+                setTimeout(() => {
+                  setNewQuestTitle("Welcome Home");
+                  setShowNewQuestPopup(true);
+                }, 100);
+                
+                // Add the quest
+                return [
+                  ...prevQuests,
+                  {
+                    title: "Welcome Home",
+                    description: "Get settled in your new home and explore the village.",
+                    objectives: [
+                      {
+                        description: "Enter your house",
+                        completed: false
+                      },
+                      {
+                        description: "Meet the village elder",
+                        completed: false
+                      }
+                    ]
+                  }
+                ];
+              });
+            }
+          });
+        }, 500);
+      } else {
+        // Tutorial already seen, just add the quest
+        setQuests(prevQuests => {
+          // Check if Welcome Home quest already exists
+          const welcomeHomeExists = prevQuests.some(quest => quest.title === "Welcome Home");
+          if (welcomeHomeExists) {
+            return prevQuests;
+          }
+          
+          // Quest doesn't exist, so add it and trigger popup outside of setQuests
+          setTimeout(() => {
+            setNewQuestTitle("Welcome Home");
+            setShowNewQuestPopup(true);
+          }, 100);
+          
+          // Add the quest
+          return [
+            ...prevQuests,
+            {
+              title: "Welcome Home",
+              description: "Get settled in your new home and explore the village.",
+              objectives: [
+                {
+                  description: "Enter your house",
+                  completed: false
+                },
+                {
+                  description: "Meet the village elder",
+                  completed: false
+                }
+              ]
+            }
+          ];
+        });
+      }
+    }
+  };// Handle skipping the entire monologue
+  const handleSkipMonologue = () => {
+    endDialog();
+    
+    // Only show tutorial if it hasn't been shown yet
+    if (!hasSeenTutorial) {
+      // Show tutorial dialog after a brief delay even when skipping
+      setTimeout(() => {
+        setHasSeenTutorial(true); // Mark tutorial as seen
+        startDialog({
+          characterName: "Tutorial",
+          expression: "neutral",
+          dialogue: [
+            'Welcome to The Forgotten Chronicle! Use WASD or arrow keys to move and E to interact with villagers/objects.',
+            'Complete quests to progress the story and manage your stats: health, hunger, hygiene, happiness, energy.',
+            'Maintain hygiene by bathing at the river and restore energy/health by sleeping at your cottage.',
+            'Buy seeds/food from the merchant, plant crops, water them, and harvest when ready.',
+            'Sell harvested crops for coins and explore the world to uncover its secrets!'
+          ],
+          onComplete: () => {
+            // Add the initial quest and trigger popup when skipping only if it doesn't exist
+            setQuests(prevQuests => {
+              // Check if Welcome Home quest already exists
+              const welcomeHomeExists = prevQuests.some(quest => quest.title === "Welcome Home");
+              if (welcomeHomeExists) {
+                return prevQuests;
+              }
+              
+              // Quest doesn't exist, so add it and trigger popup outside of setQuests
+              setTimeout(() => {
+                setNewQuestTitle("Welcome Home");
+                setShowNewQuestPopup(true);
+              }, 100);
+              
+              // Add the quest if it doesn't exist
+              return [
+                ...prevQuests,
+                {
+                  title: "Welcome Home",
+                  description: "Get settled in your new home and explore the village.",
+                  objectives: [
+                    {
+                      description: "Enter your house",
+                      completed: false
+                    },
+                    {
+                      description: "Meet the village elder",
+                      completed: false
+                    }
+                  ]
+                }
+              ];
+            });
+          }
+        });
+      }, 500);
+    } else {
+      // Tutorial already seen, just add the quest
       setQuests(prevQuests => {
         // Check if Welcome Home quest already exists
         const welcomeHomeExists = prevQuests.some(quest => quest.title === "Welcome Home");
@@ -728,7 +877,7 @@ const Game = () => {
           setShowNewQuestPopup(true);
         }, 100);
         
-        // Add the quest
+        // Add the quest if it doesn't exist
         return [
           ...prevQuests,
           {
@@ -748,42 +897,6 @@ const Game = () => {
         ];
       });
     }
-  };// Handle skipping the entire monologue
-  const handleSkipMonologue = () => {
-    endDialog();
-    // Add the initial quest and trigger popup when skipping only if it doesn't exist
-    setQuests(prevQuests => {
-      // Check if Welcome Home quest already exists
-      const welcomeHomeExists = prevQuests.some(quest => quest.title === "Welcome Home");
-      if (welcomeHomeExists) {
-        return prevQuests;
-      }
-      
-      // Quest doesn't exist, so add it and trigger popup outside of setQuests
-      setTimeout(() => {
-        setNewQuestTitle("Welcome Home");
-        setShowNewQuestPopup(true);
-      }, 100);
-      
-      // Add the quest if it doesn't exist
-      return [
-        ...prevQuests,
-        {
-          title: "Welcome Home",
-          description: "Get settled in your new home and explore the village.",
-          objectives: [
-            {
-              description: "Enter your house",
-              completed: false
-            },
-            {
-              description: "Meet the village elder",
-              completed: false
-            }
-          ]
-        }
-      ];
-    });
   };
 
   // Convert pixel position to grid coordinates
@@ -914,10 +1027,10 @@ const Game = () => {
           soundEnabled,
           sfxVolume,
           musicEnabled,
-          musicVolume        },
-        hasSeenHouseDialog,
+          musicVolume        },        hasSeenHouseDialog,
         hasSeenFirstShopDialogue,
         hasHarvestedFirstCrop,
+        hasSeenTutorial,
       };
 
       const saveData = createSaveFileData(gameState);
@@ -954,9 +1067,9 @@ const Game = () => {
           setSoundEnabled(gameState.settings.soundEnabled ?? true);
           setSfxVolume(gameState.settings.sfxVolume ?? 0.5);
           setMusicEnabled(gameState.settings.musicEnabled ?? true);
-          setMusicVolume(gameState.settings.musicVolume ?? 0.5);        }
-        setHasSeenHouseDialog(gameState.hasSeenHouseDialog ?? false);
-        setHasSeenFirstShopDialogue(gameState.hasSeenFirstShopDialogue ?? false);}
+          setMusicVolume(gameState.settings.musicVolume ?? 0.5);        }        setHasSeenHouseDialog(gameState.hasSeenHouseDialog ?? false);
+        setHasSeenFirstShopDialogue(gameState.hasSeenFirstShopDialogue ?? false);
+        setHasSeenTutorial(gameState.hasSeenTutorial ?? false);}
     } catch (error) {
     }
   };
@@ -2323,119 +2436,176 @@ useEffect(() => {
         />
       )}      {/* Minigame Selection Popup */}
       <AnimatePresence mode="wait">
-        {showMinigameSelection && (
-          <motion.div 
+        {showMinigameSelection && (          <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-md flex items-center justify-center z-[55]"
+            className="fixed inset-0 flex items-center justify-center z-[55] p-4"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}
+            onClick={(e) => {
+              // Close modal when clicking on backdrop
+              if (e.target === e.currentTarget) {
+                playClick();
+                setShowMinigameSelection(false);
+                setShowBlackjack(false);
+                setShowChess(false);
+                setShowSabung(false);
+              }
+            }}
+            onKeyDown={(e) => {
+              // Close modal when pressing Escape key
+              if (e.key === 'Escape') {
+                playClick();
+                setShowMinigameSelection(false);
+                setShowBlackjack(false);
+                setShowChess(false);
+                setShowSabung(false);
+              }
+            }}
+            tabIndex={0} // Make div focusable for keyboard events
+            autoFocus // Automatically focus when modal opens
           >
             <motion.div 
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
-              className="bg-gradient-to-br from-[#8B4513] to-[#A0522D] p-6 rounded-2xl shadow-2xl max-w-4xl w-full mx-4 border-4 border-[#D2B48C] relative overflow-hidden"
+              className="bg-gradient-to-br from-[#8B4513] to-[#A0522D] p-8 rounded-2xl shadow-2xl max-w-5xl w-full border-4 border-[#D2B48C] relative overflow-hidden max-h-[90vh] overflow-y-auto"
             >
-            {/* Decorative background pattern */}
-            <div className="absolute inset-0 opacity-5">
-              <div className="w-full h-full bg-repeat" style={{
-                backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(245, 222, 179, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(245, 222, 179, 0.1) 0%, transparent 50%)',
-                backgroundSize: '100px 100px'
-              }}></div>
-            </div>
-            
-            {/* Header */}            <div className="flex justify-between items-center mb-6 relative z-10">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#FFD700] to-[#FFA500] rounded-full flex items-center justify-center shadow-lg">
-                  <span className="text-2xl">🎮</span>
-                </div>                <div>
-                  <h2 className="text-3xl text-[#F5DEB3] font-bold tracking-wider">Game Selection</h2>
-                  <p className="text-[#D2B48C] text-sm opacity-80">Choose your adventure</p>
+              {/* Decorative background pattern */}
+              <div className="absolute inset-0 opacity-5">
+                <div className="w-full h-full bg-repeat" style={{
+                  backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(245, 222, 179, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(245, 222, 179, 0.1) 0%, transparent 50%)',
+                  backgroundSize: '100px 100px'
+                }}></div>
+              </div>
+              
+              {/* Header */}
+              <div className="flex justify-between items-center mb-8 relative z-10">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-gradient-to-br from-[#FFD700] to-[#FFA500] rounded-full flex items-center justify-center shadow-lg border-2 border-[#F5DEB3]">
+                    <span className="text-3xl">🎮</span>
+                  </div>                  <div>
+                    <h2 className="text-4xl text-[#F5DEB3] font-bold tracking-wider drop-shadow-lg">Game Selection</h2>
+                  </div>
                 </div>
-              </div>              <button 
-                className="text-[#F5DEB3] hover:text-red-400 text-2xl font-bold transition-all duration-200 hover:scale-110 bg-black bg-opacity-20 w-10 h-10 rounded-full flex items-center justify-center hover:bg-opacity-30"
-                onClick={() => {
-                  playClick();
-                  // Clean close of minigame selection
-                  setShowMinigameSelection(false);
-                  // Ensure no other game modals are accidentally left open
-                  setShowBlackjack(false);
-                  setShowChess(false);
-                  setShowSabung(false);
-                }}
-                onMouseEnter={playHover}
-              >
-                ✕
-              </button>
-            </div>            {/* Games Grid - Classic Portrait Layout */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
-              {/* Blackjack */}
-              <motion.div
-                whileHover={{ scale: 1.05, y: -10 }}
-                whileTap={{ scale: 0.95 }}
-                transition={{ duration: 0.3 }}
-                className="bg-gradient-to-b from-[#1a472a] to-[#2d5a3f] rounded-lg border-4 border-[#FFD700] hover:border-[#FFA500] shadow-2xl cursor-pointer flex flex-col items-center justify-center p-6 h-64"
-                onClick={() => openGameFromCenter('blackjack')}
-              >
-                <div className="text-8xl mb-4 filter drop-shadow-lg">🂠</div>
-                <h3 className="text-[#FFD700] text-2xl font-bold mb-2 text-center">Blackjack</h3>
-                <p className="text-[#F5DEB3] text-sm text-center opacity-90 mb-4">Beat the dealer! Get as close to 21 as possible</p>
-                <button className="bg-[#FFD700] text-black px-6 py-2 rounded-full font-bold hover:bg-[#FFA500] transition-all duration-200 hover:scale-110">
-                  PLAY NOW
+                <button 
+                  className="text-[#F5DEB3] hover:text-red-400 text-3xl font-bold transition-all duration-200 hover:scale-110 bg-black bg-opacity-30 w-12 h-12 rounded-full flex items-center justify-center hover:bg-opacity-50 border-2 border-[#D2B48C] hover:border-red-400"
+                  onClick={() => {
+                    playClick();
+                    setShowMinigameSelection(false);
+                    setShowBlackjack(false);
+                    setShowChess(false);
+                    setShowSabung(false);
+                  }}
+                  onMouseEnter={playHover}
+                >
+                  ✕
                 </button>
-              </motion.div>
+              </div>              {/* Games Stack */}
+              <div className="flex flex-col gap-4 relative z-10 mb-6 max-w-2xl mx-auto">
+                {/* Blackjack */}
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ duration: 0.2 }}
+                  onClick={() => {
+                    playClick();
+                    openGameFromCenter('blackjack');
+                  }}
+                  onMouseEnter={playHover}
+                  className="cursor-pointer"
+                >
+                  <GlareHover
+                    width="100%"
+                    height="120px"
+                    background="linear-gradient(135deg, #1a472a 0%, #2d5a3f 100%)"
+                    borderRadius="12px"
+                    borderColor="#FFD700"
+                    glareColor="#FFD700"
+                    glareOpacity={0.3}
+                    glareAngle={45}
+                    glareSize={150}
+                    transitionDuration={600}
+                    className="border-2 hover:border-[#FFA500] shadow-xl hover:shadow-2xl transition-all duration-300"
+                  >                    <div className="flex items-center justify-between w-full px-8 py-4">
+                      <div className="flex items-center gap-6">                        <div className="text-5xl filter drop-shadow-lg">🂠</div>
+                        <div className="flex flex-col">
+                          <h3 className="text-[#FFD700] text-2xl font-bold mb-1">Blackjack</h3>
+                        </div>
+                      </div>
+                    </div>
+                  </GlareHover>
+                </motion.div>
 
-              {/* Chess */}
-              <motion.div
-                whileHover={{ scale: 1.05, y: -10 }}
-                whileTap={{ scale: 0.95 }}
-                transition={{ duration: 0.3 }}
-                className="bg-gradient-to-b from-[#4a1a1a] to-[#6b2c2c] rounded-lg border-4 border-[#8B4513] hover:border-[#D2B48C] shadow-2xl cursor-pointer flex flex-col items-center justify-center p-6 h-64"
-                onClick={() => openGameFromCenter('chess')}
-              >
-                <div className="text-8xl mb-4 filter drop-shadow-lg">♛</div>
-                <h3 className="text-[#D2B48C] text-2xl font-bold mb-2 text-center">Chess</h3>
-                <p className="text-[#F5DEB3] text-sm text-center opacity-90 mb-4">Strategic board game against AI opponents</p>
-                <button className="bg-[#D2B48C] text-[#4a1a1a] px-6 py-2 rounded-full font-bold hover:bg-[#F5DEB3] transition-all duration-200 hover:scale-110">
-                  PLAY NOW
-                </button>
-              </motion.div>
+                {/* Chess */}
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ duration: 0.2 }}
+                  onClick={() => {
+                    playClick();
+                    openGameFromCenter('chess');
+                  }}
+                  onMouseEnter={playHover}
+                  className="cursor-pointer"
+                >
+                  <GlareHover
+                    width="100%"
+                    height="120px"
+                    background="linear-gradient(135deg, #4a1a1a 0%, #6b2c2c 100%)"
+                    borderRadius="12px"
+                    borderColor="#8B4513"
+                    glareColor="#D2B48C"
+                    glareOpacity={0.3}
+                    glareAngle={45}
+                    glareSize={150}
+                    transitionDuration={600}
+                    className="border-2 hover:border-[#D2B48C] shadow-xl hover:shadow-2xl transition-all duration-300"
+                  >                    <div className="flex items-center justify-between w-full px-8 py-4">
+                      <div className="flex items-center gap-6">                        <div className="text-5xl filter drop-shadow-lg">♛</div>
+                        <div className="flex flex-col">
+                          <h3 className="text-[#D2B48C] text-2xl font-bold mb-1">Chess</h3>
+                        </div>
+                      </div>
+                    </div>
+                  </GlareHover>
+                </motion.div>
 
-              {/* Sabung (Cockfighting) */}
-              <motion.div
-                whileHover={{ scale: 1.05, y: -10 }}
-                whileTap={{ scale: 0.95 }}
-                transition={{ duration: 0.3 }}
-                className="bg-gradient-to-b from-[#8B4513] to-[#A0522D] rounded-lg border-4 border-[#D2B48C] hover:border-[#F5DEB3] shadow-2xl cursor-pointer flex flex-col items-center justify-center p-6 h-64"
-                onClick={() => openGameFromCenter('sabung')}
-              >
-                <div className="text-8xl mb-4 filter drop-shadow-lg">🐓</div>
-                <h3 className="text-[#F5DEB3] text-2xl font-bold mb-2 text-center">Sabung Ayam</h3>
-                <p className="text-[#F5DEB3] text-sm text-center opacity-90 mb-4">Traditional cockfighting. Choose your fighter!</p>
-                <button className="bg-[#F5DEB3] text-[#8B4513] px-6 py-2 rounded-full font-bold hover:bg-white transition-all duration-200 hover:scale-110">
-                  PLAY NOW
-                </button>
-              </motion.div>
-            </div>{/* Footer */}
-            <div className="mt-6 text-center relative z-10">              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="bg-gradient-to-r from-[#8B4513] to-[#A0522D] text-[#F5DEB3] px-6 py-2 rounded-xl border-2 border-[#D2B48C] hover:border-[#F5DEB3] transition-all duration-200 font-bold shadow-lg"
-                onClick={() => {
-                  playClick();
-                  // Clean close of minigame selection
-                  setShowMinigameSelection(false);
-                  // Ensure no other game modals are accidentally left open
-                  setShowBlackjack(false);
-                  setShowChess(false);
-                  setShowSabung(false);
-                }}
-                onMouseEnter={playHover}              >
-                Close Game Selection
-              </motion.button>
-              <p className="text-[#D2B48C] text-xs mt-2 opacity-70">Tip: Press 'E' near the game table to open Game Selection</p></div>
+                {/* Sabung (Cockfighting) */}
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ duration: 0.2 }}
+                  onClick={() => {
+                    playClick();
+                    openGameFromCenter('sabung');
+                  }}
+                  onMouseEnter={playHover}
+                  className="cursor-pointer"
+                >
+                  <GlareHover
+                    width="100%"
+                    height="120px"
+                    background="linear-gradient(135deg, #8B4513 0%, #A0522D 100%)"
+                    borderRadius="12px"
+                    borderColor="#D2B48C"
+                    glareColor="#F5DEB3"
+                    glareOpacity={0.3}
+                    glareAngle={45}
+                    glareSize={150}
+                    transitionDuration={600}
+                    className="border-2 hover:border-[#F5DEB3] shadow-xl hover:shadow-2xl transition-all duration-300"
+                  >                    <div className="flex items-center justify-between w-full px-8 py-4">
+                      <div className="flex items-center gap-6">                        <div className="text-5xl filter drop-shadow-lg">🐓</div>
+                        <div className="flex flex-col">
+                          <h3 className="text-[#F5DEB3] text-2xl font-bold mb-1">Sabung Ayam</h3>
+                        </div>
+                      </div>
+                    </div>
+                  </GlareHover>
+                </motion.div>              </div>
           </motion.div>
         </motion.div>
         )}
@@ -3493,32 +3663,6 @@ useEffect(() => {
             </div>
           )}
         </>
-      )}
-
-      {/* Tutorial Button */}
-      {!isDialogActive && !showCutscene && !showShop && !isSleeping && !isPaused && !showBlackjack && (
-        <div className="fixed left-4 top-[280px] z-50">
-          <button
-            className="bg-[#8B4513] text-[#F5DEB3] px-4 py-2 rounded-lg border-4 border-[#D2B48C] hover:bg-[#A0522D] hover:border-[#F5DEB3] hover:scale-105 transition-all duration-200"
-            onClick={() => {
-              playClick();
-              startDialog({
-                characterName: "Tutorial",
-                expression: "neutral",
-                dialogue: [
-                    'Welcome to The Forgotten Chronicle! Use WASD or arrow keys to move and E to interact with villagers/objects.',
-                    'Complete quests to progress the story and manage your stats: health, hunger, hygiene, happiness, energy.',
-                    'Maintain hygiene by bathing at the river and restore energy/health by sleeping at your cottage.',
-                    'Buy seeds/food from the merchant, plant crops, water them, and harvest when ready.',
-                    'Sell harvested crops for coins and explore the world to uncover its secrets!'
-                ]
-              });
-            }}
-            onMouseEnter={playHover}
-          >
-            Tutorial
-          </button>
-        </div>
       )}
     </div>
   );
