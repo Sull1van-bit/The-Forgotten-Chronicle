@@ -535,23 +535,23 @@ const CastleTomb = ({
             Array.from({ length: GRID_COLS }, (_, col) => (
               <div
                 key={`grid-${row}-${col}`}
-                style={{
-                  position: 'absolute',
-                  left: `${col * GRID_SIZE}px`,
-                  top: `${row * GRID_SIZE}px`,
-                  width: `${GRID_SIZE}px`,
-                  height: `${GRID_SIZE}px`,
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  boxSizing: 'border-box',
-                  pointerEvents: 'none',
-                  zIndex: 5,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '10px',
-                  color: 'rgba(255, 255, 255, 0.6)',
-                  textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
-                }}
+                // style={{
+                //   position: 'absolute',
+                //   left: `${col * GRID_SIZE}px`,
+                //   top: `${row * GRID_SIZE}px`,
+                //   width: `${GRID_SIZE}px`,
+                //   height: `${GRID_SIZE}px`,
+                //   border: '1px solid rgba(255, 255, 255, 0.3)',
+                //   boxSizing: 'border-box',
+                //   pointerEvents: 'none',
+                //   zIndex: 5,
+                //   display: 'flex',
+                //   alignItems: 'center',
+                //   justifyContent: 'center',
+                //   fontSize: '10px',
+                //   color: 'rgba(255, 255, 255, 0.6)',
+                //   textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
+                // }}
               >
                 {col},{row}
               </div>
@@ -562,18 +562,7 @@ const CastleTomb = ({
           {TOMB_COLLISION_MAP.map((collision, index) => (
             <div
               key={`collision-${index}`}
-              style={{
-                position: 'absolute',
-                left: `${collision.x * GRID_SIZE}px`,
-                top: `${collision.y * GRID_SIZE}px`,
-                width: `${GRID_SIZE}px`,
-                height: `${GRID_SIZE}px`,
-                backgroundColor: 'rgba(255, 0, 0, 0.3)',
-                border: '2px solid rgba(255, 0, 0, 0.6)',
-                boxSizing: 'border-box',
-                pointerEvents: 'none',
-                zIndex: 6
-              }}
+            s
             />
           ))}          {/* Exit Area Indicators */}
           {EXIT_AREAS.map((exitArea, index) => (
