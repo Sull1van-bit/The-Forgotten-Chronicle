@@ -27,13 +27,11 @@ const portraits = {
   louise: {
     angry: louiseAngry,
     happy: louiseHappy,
-    // Use general portrait for 'smile'
     smile: louisePortrait,
     veryHappy: louiseVeryHappy,
-    // Default portrait if expression is not found
+    neutral: louisePortrait,
     default: louisePortrait,
   },
-  // Alex uses only character.png for all expressions
   alex: {
     angry: alexPortrait,
     happy: alexPortrait,
@@ -45,10 +43,9 @@ const portraits = {
   eugene: {
     angry: eugeneAngry,
     happy: eugeneHappy,
-    // Use general portrait for 'smile'
     smile: eugenePortrait,
     veryHappy: eugeneVeryHappy,
-     // Default portrait if expression is not found
+    neutral: eugenePortrait,
     default: eugenePortrait,
   },
   'village elder': {
@@ -72,12 +69,38 @@ const portraits = {
 const DialogBox = ({ onAdvance }) => {
   const { playExit, playDialog } = useSound();
   const { currentDialog, dialogIndex, advanceDialog, endDialog, isDialogActive } = useDialog();
-  const characterName = currentDialog?.characterName; // Get from context
-  const expression = currentDialog?.expression; // Get from context
-  // Get current line from context with robust checks
-  const dialogue = (currentDialog && currentDialog.dialogue && Array.isArray(currentDialog.dialogue) && currentDialog.dialogue.length > dialogIndex)
-    ? currentDialog.dialogue[dialogIndex]
-    : '';
+  
+  // Handle both old string format and new object format for dialogue
+  const getCurrentDialogData = () => {
+    if (!currentDialog?.dialogue?.[dialogIndex]) return { speaker: '', text: '', expression: 'neutral' };
+    
+    const currentLine = currentDialog.dialogue[dialogIndex];
+    
+    // If it's the new object format with speaker/text
+    if (typeof currentLine === 'object' && currentLine.speaker && currentLine.text) {
+      return {
+        speaker: currentLine.speaker,
+        text: currentLine.text,
+        expression: currentLine.expression || 'neutral'
+      };
+    }
+    
+    // If it's the old string format, use the main character
+    if (typeof currentLine === 'string') {
+      return {
+        speaker: currentDialog.characterName || 'Character',
+        text: currentLine,
+        expression: currentDialog.expression || 'neutral'
+      };
+    }
+    
+    return { speaker: '', text: '', expression: 'neutral' };
+  };
+  
+  const dialogData = getCurrentDialogData();
+  const characterName = dialogData.speaker;
+  const expression = dialogData.expression;
+  const dialogue = dialogData.text;
 
   const [displayText, setDisplayText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -107,7 +130,8 @@ const DialogBox = ({ onAdvance }) => {
 
     // Only start typing if we have valid dialog content
     if (isDialogActive && currentDialog?.dialogue?.[dialogIndex]) {
-      const fullText = currentDialog.dialogue[dialogIndex];
+      const dialogData = getCurrentDialogData();
+      const fullText = dialogData.text;
       console.log('Starting typing for line:', dialogIndex, 'Text:', fullText); // Debug log
       
       // Play dialog sound when dialog appears
@@ -147,7 +171,7 @@ const DialogBox = ({ onAdvance }) => {
     // If currently typing, skip to the end.
     if (isTyping) {
       console.log('Clicking while typing, skipping to end.'); // Debug log
-      const fullText = currentDialog.dialogue[dialogIndex];
+      const fullText = dialogue; // Use the parsed dialogue text
       setDisplayText(fullText);
       setIsTyping(false);
       setShowAdvanceButton(true);
@@ -168,9 +192,37 @@ const DialogBox = ({ onAdvance }) => {
   };
 
   // Get the correct portrait based on character and expression
-  const characterKey = characterName ? String(characterName).toLowerCase() : 'unknown';
-  // Get portrait based on character and expression, default to general if expression not found
-  const portraitSrc = portraits[characterKey] ? (portraits[characterKey][expression] || portraits[characterKey].default) : null;
+  const getCharacterPortrait = (characterName, expression) => {
+    if (!characterName) return null;
+    
+    const characterKey = String(characterName).toLowerCase();
+    
+    // Check direct character name matches first
+    if (portraits[characterKey]) {
+      return portraits[characterKey][expression] || portraits[characterKey].default;
+    }
+    
+    // Handle dynamic character names (Eugene, Alex, Louise)
+    if (characterKey === 'eugene' || characterKey.includes('eugene')) {
+      return portraits.eugene[expression] || portraits.eugene.default;
+    }
+    if (characterKey === 'alex' || characterKey.includes('alex')) {
+      return portraits.alex[expression] || portraits.alex.default;
+    }
+    if (characterKey === 'louise' || characterKey.includes('louise')) {
+      return portraits.louise[expression] || portraits.louise.default;
+    }
+    
+    // Handle common character/player terms
+    if (characterKey === 'character' || characterKey === 'player') {
+      // Default to Eugene portrait for generic character
+      return portraits.eugene[expression] || portraits.eugene.default;
+    }
+    
+    return null;
+  };
+
+  const portraitSrc = getCharacterPortrait(characterName, expression);
 
   return (
     // Only render the dialog box if a dialog is active and currentDialog is set

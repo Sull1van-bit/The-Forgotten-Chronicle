@@ -8,19 +8,21 @@ import newQuestSound from '../assets/sfx/newQuest.mp3';
 import plantSound from '../assets/sfx/plant.mp3';
 import harvestSound from '../assets/sfx/harvest.mp3';
 import wateringSound from '../assets/sfx/watering.mp3';
+import thunderSound from '../assets/sfx/thunder.mp3';
 
 const SoundContext = createContext();
 
 export function SoundProvider({ children }) {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [sfxVolume, setSfxVolume] = useState(100);
-    const clickAudioRef = useRef(new Audio(clickSound));  const hoverAudioRef = useRef(new Audio(hoverSound));
+  const clickAudioRef = useRef(new Audio(clickSound));  const hoverAudioRef = useRef(new Audio(hoverSound));
   const exitAudioRef = useRef(new Audio(exitSound));
   const cashAudioRef = useRef(new Audio(cashSound));
   const dialogAudioRef = useRef(new Audio(dialogSound));  const newQuestAudioRef = useRef(new Audio(newQuestSound));
   const plantAudioRef = useRef(new Audio(plantSound));
   const harvestAudioRef = useRef(new Audio(harvestSound));
   const wateringAudioRef = useRef(new Audio(wateringSound));
+  const thunderAudioRef = useRef(new Audio(thunderSound));
 
   const playClick = () => {
     if (soundEnabled) {
@@ -106,7 +108,6 @@ export function SoundProvider({ children }) {
       });
     }
   };
-
   const playWatering = () => {
     if (soundEnabled) {
       const audio = wateringAudioRef.current;
@@ -117,8 +118,18 @@ export function SoundProvider({ children }) {
       });
     }
   };
-  return (
-    <SoundContext.Provider value={{
+
+  const playThunder = () => {
+    if (soundEnabled) {
+      const audio = thunderAudioRef.current;
+      audio.volume = sfxVolume / 100;
+      audio.currentTime = 0;
+      audio.play().catch(error => {
+        console.error('Error playing thunder sound:', error);
+      });
+    }
+  };
+  return (    <SoundContext.Provider value={{
       soundEnabled,
       setSoundEnabled,
       sfxVolume,      setSfxVolume,
@@ -129,7 +140,8 @@ export function SoundProvider({ children }) {
       playNewQuest,
       playPlant,
       playHarvest,
-      playWatering
+      playWatering,
+      playThunder
     }}>
       {children}
     </SoundContext.Provider>

@@ -17,12 +17,12 @@ export const createSaveFileData = (gameState) => {
     wateringProgress: gameState.wateringProgress || 0,
     wateringDaysCompleted: gameState.wateringDaysCompleted || [],
     currentDay: gameState.currentDay || 1,
-    plantedCrops: gameState.plantedCrops || [],
-    gameTime: gameState.gameTime || { hours: 6, minutes: 0 },
+    plantedCrops: gameState.plantedCrops || [],    gameTime: gameState.gameTime || { hours: 6, minutes: 0 },
     stats: gameState.stats || {},    settings: gameState.settings || {},
-    hasSeenHouseDialog: gameState.hasSeenHouseDialog ?? false,
-    hasSeenFirstShopDialogue: gameState.hasSeenFirstShopDialogue ?? false,
+    hasSeenHouseDialog: gameState.hasSeenHouseDialog ?? false,    hasSeenFirstShopDialogue: gameState.hasSeenFirstShopDialogue ?? false,
+    hasSeenPostHarvestDialog: gameState.hasSeenPostHarvestDialog ?? false,
     hasHarvestedFirstCrop: gameState.hasHarvestedFirstCrop ?? false,
+    specialOreCollected: gameState.specialOreCollected ?? false,
   };
 };
 
@@ -37,14 +37,14 @@ export const loadSaveFileData = async (saveId) => {
       inventory: saveData.inventory || [],
       quests: saveData.quests || [],
       wateringProgress: saveData.wateringProgress || 0,
-      wateringDaysCompleted: saveData.wateringDaysCompleted || [],
-      currentDay: saveData.currentDay || 1,
+      wateringDaysCompleted: saveData.wateringDaysCompleted || [],      currentDay: saveData.currentDay || 1,
       plantedCrops: saveData.plantedCrops || [],
       gameTime: saveData.gameTime || { hours: 6, minutes: 0 },      stats: saveData.stats || {},
       settings: saveData.settings || {},
-      hasSeenHouseDialog: saveData.hasSeenHouseDialog ?? false,
-      hasSeenFirstShopDialogue: saveData.hasSeenFirstShopDialogue ?? false,
+      hasSeenHouseDialog: saveData.hasSeenHouseDialog ?? false,      hasSeenFirstShopDialogue: saveData.hasSeenFirstShopDialogue ?? false,
+      hasSeenPostHarvestDialog: saveData.hasSeenPostHarvestDialog ?? false,
       hasHarvestedFirstCrop: saveData.hasHarvestedFirstCrop ?? false,
+      specialOreCollected: saveData.specialOreCollected ?? false,
     };
   } catch (error) {
     console.error('Error loading save file:', error);

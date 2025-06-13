@@ -5,10 +5,11 @@ import breadIcon from '../assets/items/bread.png';
 import seedsIcon from '../assets/items/seeds.png';
 import potatoIcon from '../assets/items/potato.png';
 import stewIcon from '../assets/items/stew.png';
-import ledgerIcon from '../assets/items/royal-document.png';
+import ledgerIcon from '../assets/items/ledger.png';
 import royalDocumentIcon from '../assets/items/royal-document.png';
 import meatIcon from '../assets/items/meat.png';
 import mushroomIcon from '../assets/items/mushroom.png';
+import specialOreIcon from '../assets/items/specialOre.gif';
 
 // Import item data - complete ITEMS object
 const ITEMS = {
@@ -60,22 +61,30 @@ const ITEMS = {
     icon: royalDocumentIcon,
     type: 'quest',
     description: 'An official document from the royal family',
-  },
-  meat: {
+  },  meat: {
     id: 7,
     name: 'Meat',
     icon: meatIcon,
     type: 'material',
     description: 'Raw meat, can be cooked',
+    price: 20, // Buy price
     sellPrice: 10 // Placeholder sell price
-  },
-  mushroom: {
+  },  mushroom: {
     id: 8,
     name: 'Mushroom',
     icon: mushroomIcon,
     type: 'material',
     description: 'A wild mushroom, can be used in cooking',
+    price: 12, // Buy price
     sellPrice: 6 // Placeholder sell price
+  },
+  specialOre: {
+    id: 9,
+    name: 'Special Ore',
+    icon: specialOreIcon,
+    type: 'quest',
+    description: 'A rare and valuable ore needed by the blacksmith',
+    sellPrice: 50 // High value due to rarity
   }
 };
 
@@ -115,6 +124,7 @@ export const GameProvider = ({ children }) => {
   // Game flags and states
   const [hasSeenHouseDialog, setHasSeenHouseDialog] = useState(false);
   const [hasSeenFirstShopDialogue, setHasSeenFirstShopDialogue] = useState(false);
+  const [hasSeenPostHarvestDialog, setHasSeenPostHarvestDialog] = useState(false);
   const [hasHarvestedFirstCrop, setHarvestedFirstCrop] = useState(false);
 
   // Animations and UI states
@@ -183,6 +193,24 @@ export const GameProvider = ({ children }) => {
         return newInventory.filter(invItem => invItem.quantity > 0);
       });
     }
+  }, []);
+
+  // Remove specific items from inventory (used by cooking game)
+  const removeItemFromInventory = useCallback((itemId, quantity = 1) => {
+    setInventory(prev => {
+      const newInventory = prev.map(invItem => {
+        if (invItem.id === itemId) {
+          return {
+            ...invItem,
+            quantity: Math.max(0, invItem.quantity - quantity)
+          };
+        }
+        return invItem;
+      });
+      
+      // Filter out items with 0 quantity
+      return newInventory.filter(invItem => invItem.quantity > 0);
+    });
   }, []);
 
   // Format time for display
@@ -307,11 +335,11 @@ export const GameProvider = ({ children }) => {
     setCurrentDay(saveData.currentDay || 1);
     setInventory(saveData.inventory || [{ ...ITEMS.bread, quantity: 2 }]);
     setPlantedCrops(saveData.plantedCrops || []);
-    setQuests(saveData.quests || []);
-    setWateringProgress(saveData.wateringProgress || 0);
+    setQuests(saveData.quests || []);    setWateringProgress(saveData.wateringProgress || 0);
     setWateringDaysCompleted(new Set(saveData.wateringDaysCompleted || []));
     setHasSeenHouseDialog(saveData.hasSeenHouseDialog || false);
     setHasSeenFirstShopDialogue(saveData.hasSeenFirstShopDialogue || false);
+    setHasSeenPostHarvestDialog(saveData.hasSeenPostHarvestDialog || false);
     setHarvestedFirstCrop(saveData.hasHarvestedFirstCrop || false);
   }, []);
 
@@ -327,21 +355,21 @@ export const GameProvider = ({ children }) => {
         money
       },
       gameTime,
-      currentDay,
-      inventory,
+      currentDay,      inventory,
       plantedCrops,
       quests,
       wateringProgress,
       wateringDaysCompleted: Array.from(wateringDaysCompleted),
       hasSeenHouseDialog,
       hasSeenFirstShopDialogue,
+      hasSeenPostHarvestDialog,
       hasHarvestedFirstCrop
     };
   }, [
     health, energy, hunger, happiness, cleanliness, money,
     gameTime, currentDay, inventory, plantedCrops, quests,
     wateringProgress, wateringDaysCompleted, hasSeenHouseDialog,
-    hasSeenFirstShopDialogue, hasHarvestedFirstCrop
+    hasSeenFirstShopDialogue, hasSeenPostHarvestDialog, hasHarvestedFirstCrop
   ]);
 
   const value = {
@@ -365,17 +393,17 @@ export const GameProvider = ({ children }) => {
     quests, setQuests,
     wateringProgress, setWateringProgress,
     wateringDaysCompleted, setWateringDaysCompleted,
-    
-    // Flags
+      // Flags
     hasSeenHouseDialog, setHasSeenHouseDialog,
     hasSeenFirstShopDialogue, setHasSeenFirstShopDialogue,
+    hasSeenPostHarvestDialog, setHasSeenPostHarvestDialog,
     hasHarvestedFirstCrop, setHarvestedFirstCrop,
     
     // UI States
     showEatAnimation, setShowEatAnimation,
-    
-    // Utility functions
+      // Utility functions
     addItemToInventory,
+    removeItemFromInventory,
     handleUseItem,
     loadGameState,
     createSaveData,

@@ -16,6 +16,7 @@ import BlackjackGame from '../components/BlackjackGame';
 import SabungGame from '../components/SabungGame';
 import ChessGame from '../components/ChessGame';
 import GlareHover from '../components/GlareHover';
+import CreditScene from '../components/CreditScene';
 
 // Import character sprites
 import louiseStand from '../assets/characters/louise/stand.gif';
@@ -61,6 +62,7 @@ import alexPortrait from '../assets/characters/alex/character.png';
 import allMap from '../assets/Maps/all-map.png';
 import foregroundMap from '../assets/Maps/all-map-foreground.png';
 import HouseInterior from './interiors/HouseInterior';
+import CastleTomb from './interiors/CastleTomb';
 
 import { useAuth } from '../context/AuthContext';
 import { saveFileService } from '../services/saveFileService';
@@ -76,7 +78,7 @@ import ActiveQuestFolderUI from '../components/ActiveQuestFolderUI';
 import seedsIcon from '../assets/items/seeds.png';
 import breadIcon from '../assets/items/bread.png';
 import stewIcon from '../assets/items/stew.png';
-import ledgerIcon from '../assets/items/royal-document.png';
+import ledgerIcon from '../assets/items/ledger.png';
 import royalDocumentIcon from '../assets/items/royal-document.png';
 import meatIcon from '../assets/items/meat.png';
 import mushroomIcon from '../assets/items/mushroom.png';
@@ -87,6 +89,7 @@ import potato3 from '../assets/crops/potato3.png';
 import hoeIcon from '../assets/items/hoe.png';
 import wateringCanIcon from '../assets/items/WateringCan.png'; // Import watering can icon
 import sickleIcon from '../assets/items/sickle.png'; // Import sickle icon
+import specialOreIcon from '../assets/items/specialOre.gif'; // Import special ore icon
 
 // Import UI icons
 import heartIcon from '../assets/statbar/heart.png';
@@ -491,9 +494,9 @@ const Game = () => {
     plantedCrops, setPlantedCrops,
     quests, setQuests,
     wateringProgress, setWateringProgress,
-    wateringDaysCompleted, setWateringDaysCompleted,
-    hasSeenHouseDialog, setHasSeenHouseDialog,
+    wateringDaysCompleted, setWateringDaysCompleted,    hasSeenHouseDialog, setHasSeenHouseDialog,
     hasSeenFirstShopDialogue, setHasSeenFirstShopDialogue,
+    hasSeenPostHarvestDialog, setHasSeenPostHarvestDialog,
     hasHarvestedFirstCrop, setHarvestedFirstCrop,
     showEatAnimation, setShowEatAnimation,
     addItemToInventory,
@@ -512,17 +515,17 @@ const Game = () => {
   const [showCutscene, setShowCutscene] = useState(false);
   const [saveFiles, setSaveFiles] = useState([]);
   const [canSave, setCanSave] = useState(false);
-  const [showSavePrompt, setShowSavePrompt] = useState(false);
-  const [isSleeping, setIsSleeping] = useState(false);
+  const [showSavePrompt, setShowSavePrompt] = useState(false);  const [isSleeping, setIsSleeping] = useState(false);
+  const [isTimeskip, setIsTimeskip] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [showSettings, setShowSettings] = useState(false);  const [showBlackjack, setShowBlackjack] = useState(false);
   const [showSabung, setShowSabung] = useState(false);
   const [showChess, setShowChess] = useState(false);
   const [showMinigameSelection, setShowMinigameSelection] = useState(false);
   const [showShop, setShowShop] = useState(false);
-  const [showShopConfirm, setShowShopConfirm] = useState(false);
-  const [showTimeSkipPopup, setShowTimeSkipPopup] = useState(false);
-  const [timeSkipHours, setTimeSkipHours] = useState('');  // State for new quest pop-up
+  const [showShopConfirm, setShowShopConfirm] = useState(false);  const [showTimeSkipPopup, setShowTimeSkipPopup] = useState(false);
+  const [timeSkipHours, setTimeSkipHours] = useState('');
+  const [showTimeskipOverlay, setShowTimeskipOverlay] = useState(false);// State for new quest pop-up
   const [showNewQuestPopup, setShowNewQuestPopup] = useState(false);
   const [newQuestTitle, setNewQuestTitle] = useState('');
 
@@ -539,11 +542,19 @@ const Game = () => {
   // Ref to store previous quests state for comparison
   const prevQuestsRef = useRef([]);
   // Add state to control visibility of hoe icons on plantable spots
-  const [showHoeIcon, setShowHoeIcon] = useState({});
-  // Add state for NPC interaction prompts
+  const [showHoeIcon, setShowHoeIcon] = useState({});  // Add state for NPC interaction prompts
   const [nearElder, setNearElder] = useState(false);
   const [nearBlacksmith, setNearBlacksmith] = useState(false);
-  const [nearShop, setNearShop] = useState(false);
+  const [nearShop, setNearShop] = useState(false);  // Add state for special ore
+  const [specialOreCollected, setSpecialOreCollected] = useState(false);
+  
+  // State for credit scene
+  const [showCredits, setShowCredits] = useState(false);
+  const [nearSpecialOre, setNearSpecialOre] = useState(false);
+
+  // Add state for mysterious ledger
+  const [mysteriousLedgerCollected, setMysteriousLedgerCollected] = useState(false);
+  const [nearMysteriousLedger, setNearMysteriousLedger] = useState(false);
 
   // Add state for shop confirmation and mode
   const [shopMode, setShopMode] = useState('buy'); // 'buy' or 'sell'
@@ -551,7 +562,8 @@ const Game = () => {
   // Define basic game constants and initial player state
   const [position, setPosition] = useState({ x: 350, y: 150 });
   const [facing, setFacing] = useState('stand');
-  const [isInInterior, setIsInInterior] = useState(false);  const speed = 15;
+  const [isInInterior, setIsInInterior] = useState(false);
+  const [interiorType, setInteriorType] = useState('house'); // 'house' or 'tomb'  const speed = 15;
   const scale = 2;
   const GRID_SIZE = 40;
   const PLAYER_BASE_SIZE = 10;
@@ -635,6 +647,7 @@ const Game = () => {
         setCleanliness(initialSaveData.stats.cleanliness || 100);
       }        setHasSeenHouseDialog(initialSaveData.hasSeenHouseDialog ?? false);
         setHasSeenFirstShopDialogue(initialSaveData.hasSeenFirstShopDialogue ?? false);
+        setHasSeenPostHarvestDialog(initialSaveData.hasSeenPostHarvestDialog ?? false);
         setHasHarvestedFirstCrop(initialSaveData.hasHarvestedFirstCrop ?? false);
         setHasSeenTutorial(initialSaveData.hasSeenTutorial ?? false);
     }
@@ -667,8 +680,43 @@ const Game = () => {
         setNewObjectives([]);
       }, 6000);
       return () => clearTimeout(timer);
+    }  }, [newObjectives]);
+  // Update "Cook a Hearty Stew at your home" quest when stew is in inventory
+  useEffect(() => {
+    const hasStew = inventory.some(item => item.id === 4); // Stew has ID 4
+    const stewQuest = quests.find(quest => quest.title === "Stew for the Elder");
+    const cookingObjective = stewQuest?.objectives.find(obj => obj.description === "Cook a Hearty Stew at your home");
+    
+    if (hasStew && stewQuest && cookingObjective && !cookingObjective.completed) {
+      console.log('Stew detected in inventory, updating quest objective');
+      
+      setQuests(prevQuests => {
+        return prevQuests.map(quest => {
+          if (quest.title === "Stew for the Elder") {
+            return {
+              ...quest,
+              objectives: quest.objectives.map(objective => {
+                if (objective.description === "Cook a Hearty Stew at your home") {
+                  return { ...objective, completed: true };
+                }
+                return objective;
+              })
+            };
+          }
+          return quest;
+        });
+      });
+        // Show objective completion message
+      showCompletedObjective("Cook a Hearty Stew at your home");
+      
+      // Save game state after quest update
+      setTimeout(() => {
+        saveGame();
+        console.log('Game saved after stew quest completion');
+      }, 100);
     }
-  }, [newObjectives]);
+  }, [inventory, quests]);
+  
   // Helper functions for objective popups
   const showCompletedObjective = (text) => {
     setCompletedObjectives(prev => [...prev, { text, id: Date.now() }]);
@@ -948,12 +996,20 @@ const Game = () => {
   // Calculate Merchant pixel position
   const MERCHANT_POSITION_PIXEL = { x: MERCHANT_POSITION_GRID.x * GRID_SIZE, y: MERCHANT_POSITION_GRID.y * GRID_SIZE };
   const MERCHANT_SIZE = 32; // Similar size to other NPCs
-
   // Define Blacksmith position (grid coordinates)
   const BLACKSMITH_POSITION_GRID = { x: 9, y: 32 };
   // Calculate Blacksmith pixel position
   const BLACKSMITH_POSITION_PIXEL = { x: BLACKSMITH_POSITION_GRID.x * GRID_SIZE, y: BLACKSMITH_POSITION_GRID.y * GRID_SIZE };
-  const BLACKSMITH_SIZE = 32; // Similar size to other NPCs  // Check proximity to Elder
+  const BLACKSMITH_SIZE = 32; // Similar size to other NPCs
+  // Define Special Ore position (grid coordinates)
+  const SPECIAL_ORE_POSITION_GRID = { x: 6, y: 13 };
+  // Calculate Special Ore pixel position
+  const SPECIAL_ORE_POSITION_PIXEL = { x: SPECIAL_ORE_POSITION_GRID.x * GRID_SIZE, y: SPECIAL_ORE_POSITION_GRID.y * GRID_SIZE };
+  const SPECIAL_ORE_SIZE = 32; // Similar size to other interactive objects  // Define Mysterious Ledger position (grid coordinates)
+  const MYSTERIOUS_LEDGER_POSITION_GRID = { x: 8, y: 1 };
+  // Calculate Mysterious Ledger pixel position
+  const MYSTERIOUS_LEDGER_POSITION_PIXEL = { x: MYSTERIOUS_LEDGER_POSITION_GRID.x * GRID_SIZE, y: MYSTERIOUS_LEDGER_POSITION_GRID.y * GRID_SIZE };
+  const MYSTERIOUS_LEDGER_SIZE = 32; // Similar size to other interactive objects// Check proximity to Elder
   const checkElderProximity = useCallback((playerX, playerY) => {
     const playerCenterX = playerX + (PLAYER_SIZE / 2);
     const playerCenterY = playerY + (PLAYER_SIZE / 2);
@@ -983,7 +1039,6 @@ const Game = () => {
     setNearBlacksmith(isNear);
     return isNear;
   }, [BLACKSMITH_POSITION_PIXEL.x, BLACKSMITH_POSITION_PIXEL.y, BLACKSMITH_SIZE, PLAYER_SIZE, GRID_SIZE]);
-
   // Check proximity to Shop
   const checkShopProximity = useCallback((playerX, playerY) => {
     const playerGridPos = getGridPosition(playerX, playerY);
@@ -997,6 +1052,53 @@ const Game = () => {
     setNearShop(isNearShop);
     return isNearShop;
   }, [shopPoints, getGridPosition]);
+
+  // Check proximity to Special Ore
+  const checkSpecialOreProximity = useCallback((playerX, playerY) => {
+    if (specialOreCollected) {
+      setNearSpecialOre(false);
+      return false;
+    }
+    
+    const playerCenterX = playerX + (PLAYER_SIZE / 2);
+    const playerCenterY = playerY + (PLAYER_SIZE / 2);
+    const oreCenterX = SPECIAL_ORE_POSITION_PIXEL.x + (SPECIAL_ORE_SIZE / 2);
+    const oreCenterY = SPECIAL_ORE_POSITION_PIXEL.y + (SPECIAL_ORE_SIZE / 2);
+    const distance = Math.sqrt(
+      Math.pow(playerCenterX - oreCenterX, 2) + Math.pow(playerCenterY - oreCenterY, 2)
+    );
+    const proximityThreshold = GRID_SIZE * 1.5; // Same threshold as NPCs
+    
+    const isNear = distance < proximityThreshold;
+    setNearSpecialOre(isNear);
+    return isNear;
+  }, [SPECIAL_ORE_POSITION_PIXEL.x, SPECIAL_ORE_POSITION_PIXEL.y, SPECIAL_ORE_SIZE, PLAYER_SIZE, GRID_SIZE, specialOreCollected]);  // Check proximity to Mysterious Ledger
+  const checkMysteriousLedgerProximity = useCallback((playerX, playerY) => {
+    if (mysteriousLedgerCollected) {
+      setNearMysteriousLedger(false);
+      return false;
+    }
+    
+    // Only allow interaction if "Lost Ledger" quest is active
+    const lostLedgerQuest = quests.find(quest => quest.title === "The Lost Ledger");
+    if (!lostLedgerQuest) {
+      setNearMysteriousLedger(false);
+      return false;
+    }
+    
+    const playerCenterX = playerX + (PLAYER_SIZE / 2);
+    const playerCenterY = playerY + (PLAYER_SIZE / 2);
+    const ledgerCenterX = MYSTERIOUS_LEDGER_POSITION_PIXEL.x + (MYSTERIOUS_LEDGER_SIZE / 2);
+    const ledgerCenterY = MYSTERIOUS_LEDGER_POSITION_PIXEL.y + (MYSTERIOUS_LEDGER_SIZE / 2);
+    const distance = Math.sqrt(
+      Math.pow(playerCenterX - ledgerCenterX, 2) + Math.pow(playerCenterY - ledgerCenterY, 2)
+    );
+    const proximityThreshold = GRID_SIZE * 1.5; // Same threshold as NPCs
+    
+    const isNear = distance < proximityThreshold;
+    setNearMysteriousLedger(isNear);
+    return isNear;
+  }, [MYSTERIOUS_LEDGER_POSITION_PIXEL.x, MYSTERIOUS_LEDGER_POSITION_PIXEL.y, MYSTERIOUS_LEDGER_SIZE, PLAYER_SIZE, GRID_SIZE, mysteriousLedgerCollected, quests]);
 
   // Update save game function
   const saveGame = async () => {
@@ -1029,8 +1131,10 @@ const Game = () => {
           musicEnabled,
           musicVolume        },        hasSeenHouseDialog,
         hasSeenFirstShopDialogue,
-        hasHarvestedFirstCrop,
+        hasSeenPostHarvestDialog,        hasHarvestedFirstCrop,
         hasSeenTutorial,
+        specialOreCollected,
+        mysteriousLedgerCollected,
       };
 
       const saveData = createSaveFileData(gameState);
@@ -1068,8 +1172,10 @@ const Game = () => {
           setSfxVolume(gameState.settings.sfxVolume ?? 0.5);
           setMusicEnabled(gameState.settings.musicEnabled ?? true);
           setMusicVolume(gameState.settings.musicVolume ?? 0.5);        }        setHasSeenHouseDialog(gameState.hasSeenHouseDialog ?? false);
-        setHasSeenFirstShopDialogue(gameState.hasSeenFirstShopDialogue ?? false);
-        setHasSeenTutorial(gameState.hasSeenTutorial ?? false);}
+        setHasSeenFirstShopDialogue(gameState.hasSeenFirstShopDialogue ?? false);        setHasSeenPostHarvestDialog(gameState.hasSeenPostHarvestDialog ?? false);
+        setHasSeenTutorial(gameState.hasSeenTutorial ?? false);
+        setSpecialOreCollected(gameState.specialOreCollected ?? false);
+        setMysteriousLedgerCollected(gameState.mysteriousLedgerCollected ?? false);}
     } catch (error) {
     }
   };
@@ -1183,8 +1289,7 @@ const Game = () => {
   };
 
   // Check if any part of the player collides with a collision point
-  const hasCollision = (x, y) => {
-    return COLLISION_MAP.some(point => checkCollision(x, y, point));
+  const hasCollision = (x, y) => {    return COLLISION_MAP.some(point => checkCollision(x, y, point));
   };
 
   // Teleport points
@@ -1194,18 +1299,35 @@ const Game = () => {
       y: 1, 
       destination: 'house', 
       spawnPoint: { x: 700, y: 300 }  
+    },    { 
+      x: 57, 
+      y: 9, 
+      destination: 'tomb', 
+      spawnPoint: { x: 550, y: 600 }  // Grid position between (5,6) and (6,6)
     }
   ];
+
   // Check if player is on teleport point
   const checkTeleport = useCallback((x, y) => {
     const playerGridPos = getGridPosition(x, y);
+    console.log('checkTeleport called! Player at pixel position:', x, y);
+    console.log('Player at grid position:', playerGridPos.gridX, playerGridPos.gridY);
+    
     const teleportPoint = TELEPORT_POINTS.find(
       point => point.x === playerGridPos.gridX && point.y === playerGridPos.gridY
     );
 
+    console.log('Available teleport points:', TELEPORT_POINTS);
+    console.log('Found teleport point:', teleportPoint);
+
     if (teleportPoint) {
+      console.log('TELEPORTING to:', teleportPoint.destination, 'at grid position:', playerGridPos);
       setIsInInterior(true);
+      setInteriorType(teleportPoint.destination);
       setPosition(teleportPoint.spawnPoint);
+      console.log('Interior type set to:', teleportPoint.destination);
+    } else {
+      console.log('No teleport point found at', playerGridPos.gridX, playerGridPos.gridY);
     }
   }, [getGridPosition]);
   // Check if player is at a shop trigger point
@@ -1218,7 +1340,6 @@ const Game = () => {
     // Remove automatic popup triggering - now only used for position checking
     return isAtShop;
   }, [shopPoints, getGridPosition]);
-
   // Handle exit from interior
   const handleExitInterior = (spawnPoint) => {
     setIsInInterior(false);
@@ -1227,6 +1348,55 @@ const Game = () => {
       x: spawnPoint.x * GRID_SIZE, 
       y: spawnPoint.y * GRID_SIZE 
     });
+      // Update "The Lost Ledger" quest when going outside (only if quest exists)
+    setQuests(prevQuests => {
+      const lostLedgerQuest = prevQuests.find(quest => quest.title === "The Lost Ledger");
+      
+      // Only update if the quest exists
+      if (!lostLedgerQuest) {
+        return prevQuests; // No changes if quest doesn't exist
+      }
+      
+      return prevQuests.map(quest => {
+        if (quest.title === "The Lost Ledger") {
+          const checkOutsideObjective = quest.objectives.find(obj => obj.description === "Check outside");
+          
+          // Only proceed if "Check outside" objective exists and is not completed
+          if (!checkOutsideObjective || checkOutsideObjective.completed) {
+            return quest; // No changes needed
+          }
+          
+          const updatedObjectives = quest.objectives.map(objective => {
+            if (objective.description === "Check outside" && !objective.completed) {
+              return { ...objective, completed: true };
+            }
+            return objective;
+          });
+          
+          // Add new objective to check the mysterious ledger
+          const hasLedgerObjective = quest.objectives.some(obj => obj.description === "Check the mysterious ledger");
+          if (!hasLedgerObjective) {
+            updatedObjectives.push({
+              description: "Check the mysterious ledger",
+              completed: false
+            });
+          }
+          
+          return { ...quest, objectives: updatedObjectives };
+        }
+        return quest;
+      });
+    });
+    
+    // Show objective update message (only if Lost Ledger quest exists and Check outside was incomplete)
+    const lostLedgerQuest = quests.find(quest => quest.title === "The Lost Ledger");
+    const checkOutsideObjective = lostLedgerQuest?.objectives.find(obj => obj.description === "Check outside");
+    
+    if (lostLedgerQuest && checkOutsideObjective && !checkOutsideObjective.completed) {
+      setTimeout(() => {
+        showChainedObjective("You stepped outside...", "New objective: Check the mysterious ledger");
+      }, 1000);
+    }
   };
 
   // Pause logic
@@ -1371,186 +1541,448 @@ const Game = () => {
             handleMinigameTableInteraction();
             return;
           }
-          
-          // Check for NPC interactions first - directly start dialogs
+            // Check for NPC interactions first - directly start dialogs
           if (nearElder) {
-            startDialog({
-              characterName: "Village Elder",
-              expression: "neutral",
-              dialogue: [
-                "Ah… so you have returned.",
-                "Your family's cottage still stands, though time has not been kind to it. Much like the land… and its people.",
-                "The village remembers your name, but memories fade. If you wish to stay, you must build more than a home—you must build trust.",
-                "The fields need tending. The forge waits for skillful hands. And somewhere in the shadows of this land, echoes of your past linger still.",
-                "Will you work the soil, forge your own tools, or seek the knowledge buried beneath stone and dust?"
-              ],
-              onComplete: () => {
-                // Check if the objective is already completed before showing popup
-                const currentQuest = quests.find(quest => quest.title === "Welcome Home");
-                const elderObjective = currentQuest?.objectives.find(obj => obj.description === "Meet the village elder");
-                const isObjectiveAlreadyCompleted = elderObjective?.completed;
-
-                // Only show objective popup if this is the first time completing the objective
-                if (!isObjectiveAlreadyCompleted) {
-                  showChainedObjective("Meet the village elder", "Quest completed: Welcome Home");
+            // Check if player has Hearty Stew for delivery
+            const hasStew = inventory.some(item => item.id === 4); // Stew has ID 4
+            const stewQuest = quests.find(quest => quest.title === "Stew for the Elder");
+            const deliveryObjective = stewQuest?.objectives.find(obj => obj.description === "Deliver the Stew to the Elder");
+            const shouldDeliverStew = hasStew && stewQuest && !deliveryObjective?.completed;
+            
+            if (shouldDeliverStew) {
+              // Show stew delivery dialogue
+              startDialog({
+                characterName: "Village Elder",
+                expression: "neutral",
+                dialogue: [
+                  { speaker: "Village Elder", text: "Ah, welcome, my child. I see you have brought comfort in a bowl—this stew smells as warm as the memories of better days." },
+                  { speaker: character?.name || 'Character', text: "I made it with care. The potatoes from our harvest, along with meat and mushrooms I gathered at the market... I hoped it might brighten your day." },
+                  { speaker: "Village Elder", text: "You have indeed. Each spoonful speaks of hard work and the generous spirit of our community. In this humble meal, I taste not only nourishment but the promise of hope." },
+                  { speaker: character?.name || 'Character', text: "Your guidance has always been a light for us all. Presenting this dish is my way of showing gratitude for all the wisdom you've shared." },
+                  { speaker: "Village Elder", text: "Gratitude, my dear, is like the hearth's fire—it warms even the coldest nights. Today, this stew kindles my heart, reminding me that even small acts of kindness can restore our strength and resolve." },
+                  { speaker: character?.name || 'Character', text: "I'm glad it can comfort you. May this meal be a small start to many better tomorrows." },
+                  { speaker: "Village Elder", text: "Indeed. Now sit and join me by the fire. Let us share this meal together, for in every shared dish lies the seed of a renewed future. Your effort today not only fills my belly but also fortifies the bonds that hold our village together." }
+                ],                onComplete: () => {
+                  // Remove the stew from inventory
+                  setInventory(prevInventory => 
+                    prevInventory.filter(item => item.id !== 4)
+                  );
+                  
+                  // Add new objective to the existing "Stew for the Elder" quest
+                  setQuests(prevQuests => {
+                    return prevQuests.map(quest => {
+                      if (quest.title === "Stew for the Elder") {
+                        return {
+                          ...quest,
+                          objectives: [
+                            ...quest.objectives.map(objective => {
+                              if (objective.description === "Deliver the Stew to the Elder") {
+                                return { ...objective, completed: true };
+                              }
+                              return objective;
+                            }),
+                            // Add new objective to the same quest
+                            {
+                              description: "Go home and sleep",
+                              completed: false
+                            }
+                          ]
+                        };
+                      }
+                      return quest;
+                    });
+                  });
+                    // Show black screen timeskip and advance time to 9:00 PM
+                  setIsTimeskip(true); // Use dedicated timeskip state for full black screen
+                  
+                  setTimeout(() => {
+                    // Advance time to 9:00 PM
+                    setGameTime({ hours: 21, minutes: 0 });
+                    
+                    // End black screen
+                    setIsTimeskip(false);
+                    
+                    // Show objective completion and new objective
+                    showChainedObjective("Stew delivered! The elder was deeply moved.", "New objective: Go home and sleep");
+                  }, 3000); // 3 second black screen
                 }
-                
-                // Add new quest after dialogue ends
-                setQuests(prevQuests => {
-                  // First update the Welcome Home quest
-                  const updatedQuests = prevQuests.map(quest => {
-                    if (quest.title === "Welcome Home") {
-                      return {
-                        ...quest,
-                        objectives: quest.objectives.map(objective => {
-                          if (objective.description === "Meet the village elder") {
-                            return { ...objective, completed: true };
-                          }
-                          return objective;
-                        })
-                      };
+              });
+            } else {
+              // Show default elder dialogue
+              startDialog({
+                characterName: "Village Elder",
+                expression: "neutral",
+                dialogue: [
+                  { speaker: "Village Elder", text: "Ah… so you have returned." },
+                  { speaker: "Village Elder", text: "Your family's cottage still stands, though time has not been kind to it. Much like the land… and its people." },
+                  { speaker: character?.name || 'Character', text: "I've come back to see what remains. This place... it feels both familiar and foreign." },
+                  { speaker: "Village Elder", text: "The village remembers your name, but memories fade. If you wish to stay, you must build more than a home—you must build trust." },
+                  { speaker: character?.name || 'Character', text: "Trust? What happened here after my family left?" },
+                  { speaker: "Village Elder", text: "The fields need tending. The forge waits for skillful hands. And somewhere in the shadows of this land, echoes of your past linger still." },
+                  { speaker: "Village Elder", text: "I understand. I'll prove myself through my actions." },
+                  { speaker: "Village Elder", text: "Will you work the soil, forge your own tools, or seek the knowledge buried beneath stone and dust?" }                ],
+                onComplete: () => {
+                  // Check if the objective is already completed before showing popup
+                  const currentQuest = quests.find(quest => quest.title === "Welcome Home");
+                  const elderObjective = currentQuest?.objectives.find(obj => obj.description === "Meet the village elder");
+                  const isObjectiveAlreadyCompleted = elderObjective?.completed;
+
+                  // Only show objective popup if this is the first time completing the objective
+                  if (!isObjectiveAlreadyCompleted) {
+                    showChainedObjective("Meet the village elder", "Quest completed: Welcome Home");
+                  }
+                  
+                  // Add new quest after dialogue ends
+                  setQuests(prevQuests => {
+                    // First update the Welcome Home quest
+                    const updatedQuests = prevQuests.map(quest => {
+                      if (quest.title === "Welcome Home") {
+                        return {
+                          ...quest,
+                          objectives: quest.objectives.map(objective => {
+                            if (objective.description === "Meet the village elder") {
+                              return { ...objective, completed: true };
+                            }
+                            return objective;
+                          })
+                        };
+                      }
+                      return quest;
+                    });
+                    
+                    // Check if The First Harvest quest already exists
+                    const hasFirstHarvestQuest = updatedQuests.some(quest => quest.title === "The First Harvest");
+                    
+                    if (!hasFirstHarvestQuest) {
+                      // Add The First Harvest quest if it doesn't exist
+                      return [
+                        ...updatedQuests,
+                        {
+                          title: "The First Harvest",
+                          description: "Start your new life by planting and harvesting your first crop.",
+                          objectives: [
+                            {
+                              description: "Buy seeds from the shop",
+                              completed: false
+                            },
+                            {
+                              description: "Plant seeds in your field",
+                              completed: false
+                            },                          {
+                              description: "Water your planted crops for 2 day (0/2)",
+                              completed: false
+                            },                          {
+                              description: "Harvest your first crop",
+                              completed: false
+                            },
+                            {
+                              description: "Sell the potato at the shop",
+                              completed: false
+                            }
+                          ]
+                        }
+                      ];
+                    } else {
+                      // If quest already exists, just return updated quests (Welcome Home)
+
+                      return updatedQuests;
                     }
-                    return quest;
                   });
                   
-                  // Check if The First Harvest quest already exists
-                  const hasFirstHarvestQuest = updatedQuests.some(quest => quest.title === "The First Harvest");
+                  // Show new quest popup
+                  setNewQuestTitle("The First Harvest");
+                  setShowNewQuestPopup(true);                }
+              });
+            }
+            return;
+          }
+
+          if (nearBlacksmith) {
+            // Check if player has the special ore in inventory
+            const hasSpecialOre = inventory.some(item => item.id === 9);
+            
+            if (hasSpecialOre) {              // Player has the special ore - show the completion dialog
+              startDialog({
+                characterName: "Village Blacksmith",
+                expression: "neutral",
+                dialogue: [
+                  { speaker: "Village Blacksmith", text: "You've brought me the ore—excellent work. That will see my projects through." },
+                  { speaker: character?.name || 'Character', text: "I'm glad it helped. Anything else you need?" },
+                  { speaker: "Village Blacksmith", text: "Actually, yes. The village elder has been feeling under the weather. A warm, hearty stew made from your first harvest would lift his spirits." },
+                  { speaker: character?.name || 'Character', text: "A stew—what do I need to prepare it?" },
+                  { speaker: "Village Blacksmith", text: "You've already harvested potatoes. Now head to the merchant's stall in the square—he stocks both meat and mushrooms. Buy what you need, cook the stew at your home, then deliver it to the elder's cottage." },
+                  { speaker: character?.name || 'Character', text: "Consider it done. I'll return with a meal worthy of his kindness." }
+                ],
+                onComplete: () => {
+                  // Remove special ore from inventory
+                  setInventory(prevInventory => 
+                    prevInventory.filter(item => item.id !== 9)
+                  );
                   
-                  if (!hasFirstHarvestQuest) {
-                    // Add The First Harvest quest if it doesn't exist
-                    return [
-                      ...updatedQuests,
+                  // Complete the blacksmith quest
+                  setQuests(prevQuests => {
+                    return prevQuests.map(quest => {
+                      if (quest.title === "The Blacksmith's Request") {
+                        return {
+                          ...quest,
+                          objectives: quest.objectives.map(objective => {
+                            if (objective.description === "Return the rare ore to the blacksmith") {
+                              return { ...objective, completed: true };
+                            }
+                            return objective;
+                          })
+                        };
+                      }
+                      return quest;
+                    });
+                  });
+                  
+                  // Show completion message
+                  showObjective("Quest completed: The Blacksmith's Request!");
+                  
+                  // Check if the new quest already exists
+                  const stewQuestExists = quests.some(quest => quest.title === "Stew for the Elder");
+                  
+                  if (!stewQuestExists) {
+                    // Check if player already has potato in inventory
+                    const hasPotato = inventory.some(item => item.id === 2); // Potato has ID 2
+                    
+                    // Add the new quest
+                    setQuests(prevQuests => [
+                      ...prevQuests,
                       {
-                        title: "The First Harvest",
-                        description: "Start your new life by planting and harvesting your first crop.",
+                        title: "Stew for the Elder",
+                        description: "Prepare a hearty stew to help the village elder feel better.",
                         objectives: [
                           {
-                            description: "Buy seeds from the shop",
+                            description: "Harvest 1 Potato",
+                            completed: hasPotato
+                          },
+                          {
+                            description: "Buy 1 Meat from the Merchant's Stall",
                             completed: false
                           },
                           {
-                            description: "Plant seeds in your field",
+                            description: "Buy 2 Mushrooms from the Merchant's Stall",
                             completed: false
                           },                          {
-                            description: "Water your planted crops for 2 day (0/2)",
-                            completed: false
-                          },                          {
-                            description: "Harvest your first crop",
+                            description: "Cook a Hearty Stew at your home",
                             completed: false
                           },
                           {
-                            description: "Sell the potato at the shop",
+                            description: "Deliver the Stew to the Elder",
                             completed: false
                           }
                         ]
                       }
-                    ];
-                  } else {
-                    // If quest already exists, just return updated quests (Welcome Home)
-
-                    return updatedQuests;
+                    ]);
+                    
+                    // Show new quest popup
+                    setNewQuestTitle("Stew for the Elder");
+                    setShowNewQuestPopup(true);
+                    
+                    // If player already has potato, show objective completion
+                    if (hasPotato) {
+                      setTimeout(() => {
+                        showObjective("Harvest 1 Potato - Already completed!");
+                      }, 1000);
+                    }
                   }
-                });
-                
-                // Show new quest popup
-                setNewQuestTitle("The First Harvest");
-                setShowNewQuestPopup(true);
-              }
-            });
+                }
+              });
+            } else {              // Player doesn't have the special ore - show the initial quest dialog
+              startDialog({
+                characterName: "Village Blacksmith",
+                expression: "neutral",
+                dialogue: [
+                  { speaker: "Village Blacksmith", text: "Good of you to stop by. I've run into a snag—my best steel still needs that one ingredient to truly hold its edge." },
+                  { speaker: character?.name || 'Character', text: "An ingredient?" },
+                  { speaker: "Village Blacksmith", text: "A rare ore, stronger than any local metal. Trouble is, it isn't mined in these parts—or sold by any wagon that rolls through. Folks only whisper they've glimpsed its silver-blue gleam out in the wild." },
+                  { speaker: character?.name || 'Character', text: "So no one knows exactly where to find it?" },
+                  { speaker: "Village Blacksmith", text: "That's the rub. You'll have to rely on your own eyes and instincts—scour riverbeds, cliff faces, glades, even ruined walls. When you spot a stone that shimmers oddly in daylight, that's your prize." },
+                  { speaker: character?.name || 'Character', text: "I understand. I'll search every likely spot." },
+                  { speaker: "Village Blacksmith", text: "Do that, and bring me a hefty chunk. Once I have it, my forge will sing—and you'll have done the village a great service." }
+                ],
+                onComplete: () => {
+                  // Check if the blacksmith quest already exists
+                  const blacksmithQuestExists = quests.some(quest => quest.title === "The Blacksmith's Request");
+                  
+                  if (blacksmithQuestExists) {
+                    // Quest exists, check if it only has the "talk to blacksmith" objective
+                    const blacksmithQuest = quests.find(quest => quest.title === "The Blacksmith's Request");
+                    const hasOnlyTalkObjective = blacksmithQuest.objectives.length === 1 && 
+                      blacksmithQuest.objectives[0].description === "Talk to the village blacksmith";
+                    
+                    if (hasOnlyTalkObjective) {                      // Update the existing quest to add the ore finding objectives
+                      setQuests(prevQuests => {
+                        return prevQuests.map(quest => {
+                          if (quest.title === "The Blacksmith's Request") {
+                            return {
+                              ...quest,
+                              description: "Help the village blacksmith by finding the rare ore somewhere in the wild.",
+                              objectives: [
+                                {
+                                  description: "Talk to the village blacksmith",
+                                  completed: true
+                                },
+                                {
+                                  description: "Find the rare ore somewhere",
+                                  completed: false
+                                },
+                                {
+                                  description: "Return the rare ore to the blacksmith",
+                                  completed: false
+                                }
+                              ]
+                            };
+                          }
+                          return quest;
+                        });
+                      });
+                      
+                      // Show objective completion for talking to blacksmith
+                      showChainedObjective("Talk to the village blacksmith", "Find the rare ore somewhere");
+                    }
+                  } else {                    // Add new blacksmith quest (fallback if quest doesn't exist yet)
+                    setQuests(prevQuests => [
+                      ...prevQuests,
+                      {
+                        title: "The Blacksmith's Request",
+                        description: "Help the village blacksmith by finding rare ore somewhere in the wild.",
+                        objectives: [
+                          {
+                            description: "Find the rare ore somewhere",
+                            completed: false
+                          },
+                          {
+                            description: "Return the rare ore to the blacksmith",
+                            completed: false
+                          }
+                        ]
+                      }
+                    ]);
+                    
+                    // Show new quest popup
+                    setNewQuestTitle("The Blacksmith's Request");
+                    setShowNewQuestPopup(true);
+                  }
+                }
+              });
+            }
+            return;
+          }          // Always check if player is at shop and trigger interaction
+          if (nearShop) {
+            setShowShopConfirm(true);
             return;
           }
           
-          if (nearBlacksmith) {
-            startDialog({
-              characterName: "Village Blacksmith",
-              expression: "neutral",
-              dialogue: [
-                "Ah, a new face! Or perhaps... an old one returned?",
-                "I am the village blacksmith. These hands have forged tools for generations of farmers and workers.",
-                "But times have been hard. My supplies are running low, and I need help gathering materials.",
-                "If you could bring me some metal ore from the old mines, I could craft better tools for the village.",
-                "What say you? Will you help an old smith restore his craft?"
-              ],
-              onComplete: () => {
-                // Check if the blacksmith quest already exists
-                const blacksmithQuestExists = quests.some(quest => quest.title === "The Blacksmith's Request");
-                
-                if (blacksmithQuestExists) {
-                  // Quest exists, check if it only has the "talk to blacksmith" objective
-                  const blacksmithQuest = quests.find(quest => quest.title === "The Blacksmith's Request");
-                  const hasOnlyTalkObjective = blacksmithQuest.objectives.length === 1 && 
-                    blacksmithQuest.objectives[0].description === "Talk to the village blacksmith";
-                  
-                  if (hasOnlyTalkObjective) {
-                    // Update the existing quest to add the mining objectives
-                    setQuests(prevQuests => {
-                      return prevQuests.map(quest => {
-                        if (quest.title === "The Blacksmith's Request") {
-                          return {
-                            ...quest,
-                            description: "Help the village blacksmith by gathering metal ore from the old mines.",
-                            objectives: [
-                              {
-                                description: "Talk to the village blacksmith",
-                                completed: true
-                              },
-                              {
-                                description: "Find the old mines",
-                                completed: false
-                              },
-                              {
-                                description: "Collect metal ore (0/3)",
-                                completed: false
-                              },
-                              {
-                                description: "Return to the blacksmith",
-                                completed: false
-                              }
-                            ]
-                          };
-                        }
-                        return quest;
-                      });
+          // Check for special ore interaction
+          if (nearSpecialOre && !specialOreCollected) {
+            // Collect the special ore
+            setSpecialOreCollected(true);
+              // Add special ore to inventory
+            addItemToInventory(9); // Special ore has ID 9
+            
+            // Play collection sound
+            playCash(); // You can change this to a different sound if needed
+            
+            // Show collection message
+            showObjective("Rare ore collected! Take it to the blacksmith.");
+              // Update blacksmith quest if it exists
+            setQuests(prevQuests => {
+              return prevQuests.map(quest => {
+                if (quest.title === "The Blacksmith's Request") {
+                  return {
+                    ...quest,
+                    objectives: quest.objectives.map(objective => {
+                      if (objective.description === "Find the rare ore somewhere") {
+                        return { ...objective, completed: true };
+                      }
+                      return objective;
+                    })
+                  };
+                }
+                return quest;
+              });
+            });
+              return;
+          }
+          
+          // Check for mysterious ledger interaction
+          if (nearMysteriousLedger && !mysteriousLedgerCollected) {
+            // Collect the mysterious ledger
+            setMysteriousLedgerCollected(true);
+              // Add mysterious ledger to inventory (using the ledger icon from the imports)
+            addItemToInventory(5); // Ledger item ID
+            
+            // Play collection sound
+            playCash();
+            
+            // Start dialog sequence
+            setTimeout(() => {
+              startDialog({
+                characterName: character?.name || 'Character',
+                expression: 'surprised',
+                dialogue: ["What is this thing?"]
+              });
+            }, 500);
+            
+            // Show ledger content after initial dialog
+            setTimeout(() => {
+              startDialog({
+                characterName: "Mysterious Ledger",
+                expression: 'neutral',
+                dialogue: [
+                  "Within the forgotten halls where stone whispers to time, a resting place conceals more than mere bones.",
+                  "The ancients sealed away a document—a truth buried within the tomb at the heart of the old castle.",
+                  "Seek not as a raider, but as a seeker, for what lies within is meant for the one who understands its weight.",
+                  "To reclaim it is to unlock a piece of our lost past. Let the journey begin."
+                ]
+              });
+            }, 3000);
+            
+            // Add follow-up player reactions
+            setTimeout(() => {
+              startDialog({
+                characterName: character?.name || 'Character',
+                expression: 'thoughtful',
+                dialogue: [
+                  "Why was this kept secret? And why does it feel like it's calling to me?",
+                  "I need to find that tomb."
+                ]
+              });
+            }, 8000);
+            
+            // Update quest objective
+            setTimeout(() => {
+              setQuests(prevQuests => {
+                return prevQuests.map(quest => {
+                  if (quest.title === "The Lost Ledger") {
+                    const updatedObjectives = quest.objectives.map(objective => {
+                      if (objective.description === "Check the mysterious ledger" && !objective.completed) {
+                        return { ...objective, completed: true };
+                      }
+                      return objective;
                     });
                     
-                    // Show objective completion for talking to blacksmith
-                    showChainedObjective("Talk to the village blacksmith", "Find the old mines");
-                  }
-                } else {
-                  // Add new blacksmith quest (fallback if quest doesn't exist yet)
-                  setQuests(prevQuests => [
-                    ...prevQuests,
-                    {
-                      title: "The Blacksmith's Request",
-                      description: "Help the village blacksmith by gathering metal ore from the old mines.",
-                      objectives: [
-                        {
-                          description: "Find the old mines",
-                          completed: false
-                        },
-                        {
-                          description: "Collect metal ore (0/3)",
-                          completed: false
-                        },
-                        {
-                          description: "Return to the blacksmith",
-                          completed: false
-                        }
-                      ]
+                    // Add new objective to find the tomb
+                    const hasTombObjective = quest.objectives.some(obj => obj.description === "Find the tomb in the old castle");
+                    if (!hasTombObjective) {
+                      updatedObjectives.push({
+                        description: "Find the tomb in the old castle",
+                        completed: false
+                      });
                     }
-                  ]);
-                  
-                  // Show new quest popup
-                  setNewQuestTitle("The Blacksmith's Request");
-                  setShowNewQuestPopup(true);
-                }
-              }
-            });
-            return;
-          }
-            // Always check if player is at shop and trigger interaction
-          if (nearShop) {
-            setShowShopConfirm(true);
+                    
+                    return { ...quest, objectives: updatedObjectives };
+                  }
+                  return quest;
+                });
+              });
+              
+              showChainedObjective("Mysterious ledger obtained!", "New objective: Find the tomb in the old castle");
+            }, 10000);
+            
             return;
           }
           
@@ -1667,16 +2099,17 @@ const Game = () => {
               y: Math.max(0, newY),
             }));
             setEnergy((prev) => Math.max(0, prev - energyCost));
-            setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));
-              const isAtSavePoint = checkSavePoint(newX, newY);
+            setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));              const isAtSavePoint = checkSavePoint(newX, newY);
             setCanSave(isAtSavePoint);
             setShowSavePrompt(isAtSavePoint);            checkTeleport(newX, newY);
             
             checkElderProximity(newX, newY);
             checkBlacksmithProximity(newX, newY);
             checkShopProximity(newX, newY);
+            checkSpecialOreProximity(newX, newY);
+            checkMysteriousLedgerProximity(newX, newY);
           }
-          break;        case 's':
+          break;case 's':
         case 'arrowdown':
           newY += MOVEMENT_SPEED;
           if (!hasCollision(newX, newY)) {
@@ -1684,11 +2117,12 @@ const Game = () => {
             setPosition((prev) => ({
               ...prev,
               y: Math.min(MAP_HEIGHT - PLAYER_SIZE, newY),
-            }));            setEnergy((prev) => Math.max(0, prev - energyCost));
-            setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));            checkTeleport(newX, newY);
+            }));            setEnergy((prev) => Math.max(0, prev - energyCost));            setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));            checkTeleport(newX, newY);
             checkElderProximity(newX, newY);
             checkBlacksmithProximity(newX, newY);
             checkShopProximity(newX, newY);
+            checkSpecialOreProximity(newX, newY);
+            checkMysteriousLedgerProximity(newX, newY);
           }
           break;        case 'a':
         case 'arrowleft':
@@ -1698,11 +2132,12 @@ const Game = () => {
             setPosition((prev) => ({
               ...prev,
               x: Math.max(0, newX),
-            }));            setEnergy((prev) => Math.max(0, prev - energyCost));
-            setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));            checkTeleport(newX, newY);
+            }));            setEnergy((prev) => Math.max(0, prev - energyCost));            setCleanliness((prev) => Math.max(0, prev - cleanlinessCost));            checkTeleport(newX, newY);
             checkElderProximity(newX, newY);
             checkBlacksmithProximity(newX, newY);
             checkShopProximity(newX, newY);
+            checkSpecialOreProximity(newX, newY);
+            checkMysteriousLedgerProximity(newX, newY);
           }
           break;        case 'd':
         case 'arrowright':
@@ -1717,6 +2152,8 @@ const Game = () => {
             checkElderProximity(newX, newY);
             checkBlacksmithProximity(newX, newY);
             checkShopProximity(newX, newY);
+            checkSpecialOreProximity(newX, newY);
+            checkMysteriousLedgerProximity(newX, newY);
           }
           break;
         case 'p': // Handle planting
@@ -1882,12 +2319,13 @@ const Game = () => {
           // Check various interactions
         const isAtSavePoint = checkSavePoint(newX, newY);
         setCanSave(isAtSavePoint);
-        setShowSavePrompt(isAtSavePoint);
-          checkTeleport(newX, newY);
+        setShowSavePrompt(isAtSavePoint);        checkTeleport(newX, newY);
         
         checkElderProximity(newX, newY);
         checkBlacksmithProximity(newX, newY);
         checkShopProximity(newX, newY);
+        checkSpecialOreProximity(newX, newY);
+        checkMysteriousLedgerProximity(newX, newY);
       } else if (!hasMoved) {
         setIsMoving(false);
       }
@@ -1910,11 +2348,11 @@ const Game = () => {
     showSabung,
     showChess,
     showMinigameSelection,
-    isInInterior,
-    checkSavePoint,
-    checkTeleport,
+    isInInterior,    checkSavePoint,    checkTeleport,
     checkShopTrigger,
     checkElderProximity,
+    checkSpecialOreProximity,
+    checkMysteriousLedgerProximity,
     MAP_WIDTH,
     MAP_HEIGHT,
     PLAYER_SIZE
@@ -2198,53 +2636,6 @@ useEffect(() => {
   return () => clearInterval(interval);
 }, [isSleeping, isPaused, isInInterior, isDialogActive, showShop]);
 
-  if (isInInterior) {
-    return (
-      <DialogProvider>
-        <HouseInterior 
-          position={position} 
-          setPosition={setPosition} 
-          onExit={handleExitInterior} 
-          character={character}
-          health={health}
-          setHealth={setHealth}
-          energy={energy}
-          setEnergy={setEnergy}
-          hunger={hunger}
-          setHunger={setHunger}
-          happiness={happiness}
-          setHappiness={setHappiness}
-          money={money}
-          setMoney={setMoney}
-          isSleeping={isSleeping}
-          setIsSleeping={setIsSleeping}
-          cleanliness={cleanliness}
-          setCleanliness={setCleanliness}
-          inventory={inventory}
-          quests={quests}
-          setQuests={setQuests}
-          onUseItem={handleUseItem}
-          isPaused={isPaused}
-          handlePause={handlePause}
-          handleResume={handleResume}
-          handleSettings={handleSettings}
-          handleCloseSettings={handleCloseSettings}
-          handleExit={handleExit}
-          showSettings={showSettings}
-          gameTime={gameTime}
-          onTimeUpdate={onTimeUpdate}
-          hasSeenHouseDialog={hasSeenHouseDialog}
-          setHasSeenHouseDialog={setHasSeenHouseDialog}
-          saveGame={saveGame}
-          showEatAnimation={showEatAnimation}
-          setShowEatAnimation={setShowEatAnimation}
-          currentDay={currentDay}
-          setCurrentDay={setCurrentDay}
-        />
-    </DialogProvider>
-    );
-  }
-
   // If mobile user, show mobile screen instead of the game
   if (isMobile) {
     return <MobileScreen />;
@@ -2336,11 +2727,8 @@ useEffect(() => {
             </div>
           </div>          {/* Wrap ActiveQuestFolderUI for positioning */}          <div className="fixed right-8 top-[25%] transform -translate-y-1/2 z-[90] scale-125">
             {!isDialogActive && !isLoading && !showCutscene && !showShop && !showBlackjack && !showSabung && !showChess && !showMinigameSelection && !isSleeping && <ActiveQuestFolderUI quests={quests} />}
-          </div>
-          {!isDialogActive && !isLoading && !showCutscene && !showShop && !showBlackjack && !showSabung && !showChess && !showMinigameSelection && !isSleeping && <QuestFolder quests={quests} />}
-
-          {/* Minimap */}
-          {!isLoading && !showCutscene && !showShop && !showBlackjack && !showSabung && !showChess && !showMinigameSelection && !isSleeping && (
+          </div>          {!isDialogActive && !isLoading && !showCutscene && !showShop && !showBlackjack && !showSabung && !showChess && !showMinigameSelection && !isSleeping && <QuestFolder quests={quests} />}          {/* Minimap */}
+          {!isDialogActive && !isLoading && !showCutscene && !showShop && !showBlackjack && !showSabung && !showChess && !showMinigameSelection && !isSleeping && (
             <div className="z-[50]"> {/* Added wrapper with higher z-index */}
               <Minimap position={position} shopPoints={shopPoints} />
             </div>
@@ -2681,11 +3069,9 @@ useEffect(() => {
           musicVolume={musicVolume}
           setMusicVolume={setMusicVolume}
         />
-      )}
-
-      {/* Shop Popup */}
+      )}      {/* Shop Popup */}
       {showShop && !isInInterior && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-60 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
           <div className="bg-[#8B4513] p-3 rounded-lg text-white border-3 border-[#D2B48C] shadow-lg w-[280px] h-fit">
             <div className="flex justify-between items-center mb-1">
               <h2 className="text-base font-bold text-[#F5DEB3]">Shop ({shopMode === 'buy' ? 'Buying' : 'Selling'})</h2>              <button
@@ -2748,10 +3134,16 @@ useEffect(() => {
                           return updatedQuests;
                         });                      } else if (seedItem) {
                         // Not enough money
-                        showObjective("Not enough money! Seeds cost " + seedItem.price + " coins.");
+                        startDialog({
+                          speaker: "Merchant",
+                          dialogue: [`You need ${seedItem.price} coins for seeds, but you only have ${money}.`]
+                        });
                       } else {
                         // Item not found
-                        showObjective("Seeds are currently unavailable.");
+                        startDialog({
+                          speaker: "Merchant", 
+                          dialogue: ["Seeds are currently unavailable."]
+                        });
                       }
                     }}
                   >                    <img src={seedsIcon} alt="Seeds" className="w-8 h-8 object-contain" />
@@ -2769,25 +3161,140 @@ useEffect(() => {
                       if (breadItem && money >= breadItem.price) {                        playCash();
                         setMoney(prevMoney => prevMoney - breadItem.price);
                         addItemToInventory(breadItem.id, 1);
-                        
-                        // Show objective popup
-                        showObjective("Bread purchased! Food will restore your energy.");                      } else if (breadItem) {
+                          // Show brief purchase confirmation as dialog instead of objective
+                        startDialog({
+                          speaker: "Merchant",
+                          dialogue: ["Bread purchased! This will restore your energy when eaten."]
+                        });} else if (breadItem) {
                         // Not enough money
-                        showObjective("Not enough money! Bread costs " + breadItem.price + " coins.");
+                        startDialog({
+                          speaker: "Merchant",
+                          dialogue: [`You need ${breadItem.price} coins for bread, but you only have ${money}.`]
+                        });
                       } else {
                         // Item not found
-                        showObjective("Bread is currently unavailable.");
+                        startDialog({
+                          speaker: "Merchant", 
+                          dialogue: ["Bread is currently unavailable."]
+                        });
                       }
                     }}
                   >                    <img src={breadIcon} alt="Bread" className="w-8 h-8 object-contain" />
                     <div className="flex-grow">
                       <p className="text-sm font-bold text-[#F5DEB3]">Bread</p>
                       <p className="text-xs">Price: {getItemById(3)?.price || 15}</p>
+                    </div>                  </div>
+
+                  {/* Meat */}
+                  <div 
+                    className="bg-[#A0522D] p-2 rounded border border-[#D2B48C] hover:border-[#F5DEB3] transition-colors cursor-pointer flex items-center gap-2"
+                    onClick={() => {
+                      const meatItem = getItemById(7); // Use getItemById with ID 7 for Meat
+                      if (meatItem && money >= meatItem.price) {
+                        playCash();
+                        setMoney(prevMoney => prevMoney - meatItem.price);                        addItemToInventory(meatItem.id, 1);
+                        
+                        // Update quest objective: Buy 1 Meat from the Merchant's Stall
+                        setQuests(prevQuests => {
+                          return prevQuests.map(quest => {
+                            if (quest.title === "Stew for the Elder") {
+                              return {
+                                ...quest,
+                                objectives: quest.objectives.map(objective => {
+                                  if (objective.description === "Buy 1 Meat from the Merchant's Stall") {
+                                    return { ...objective, completed: true };
+                                  }
+                                  return objective;
+                                })
+                              };
+                            }
+                            return quest;
+                          });
+                        });
+                        
+                        // Show completion message
+                        showCompletedObjective("Buy 1 Meat from the Merchant's Stall");                      } else if (meatItem) {
+                        // Not enough money
+                        startDialog({
+                          speaker: "Merchant",
+                          dialogue: [`You need ${meatItem.price} coins for meat, but you only have ${money}.`]
+                        });
+                      } else {
+                        // Item not found
+                        startDialog({
+                          speaker: "Merchant", 
+                          dialogue: ["Meat is currently unavailable."]
+                        });
+                      }
+                    }}
+                  >
+                    <img src={meatIcon} alt="Meat" className="w-8 h-8 object-contain" />
+                    <div className="flex-grow">
+                      <p className="text-sm font-bold text-[#F5DEB3]">Meat</p>
+                      <p className="text-xs">Price: {getItemById(7)?.price || 20}</p>
+                    </div>
+                  </div>
+
+                  {/* Mushroom */}
+                  <div 
+                    className="bg-[#A0522D] p-2 rounded border border-[#D2B48C] hover:border-[#F5DEB3] transition-colors cursor-pointer flex items-center gap-2"
+                    onClick={() => {
+                      const mushroomItem = getItemById(8); // Use getItemById with ID 8 for Mushroom
+                      if (mushroomItem && money >= mushroomItem.price) {
+                        playCash();
+                        setMoney(prevMoney => prevMoney - mushroomItem.price);
+                        addItemToInventory(mushroomItem.id, 1);
+                        
+                        // Check how many mushrooms player now has
+                        const currentMushrooms = inventory.filter(item => item.id === 8).reduce((total, item) => total + item.quantity, 0) + 1; // +1 for the one just bought
+                        
+                        if (currentMushrooms >= 2) {
+                          // Complete quest objective
+                          setQuests(prevQuests => {
+                            return prevQuests.map(quest => {
+                              if (quest.title === "Stew for the Elder") {
+                                return {
+                                  ...quest,
+                                  objectives: quest.objectives.map(objective => {
+                                    if (objective.description === "Buy 2 Mushrooms from the Merchant's Stall") {
+                                      return { ...objective, completed: true };
+                                    }
+                                    return objective;
+                                  })
+                                };
+                              }
+                              return quest;
+                            });
+                          });
+                          
+                          // Show completion message
+                          showCompletedObjective("Buy 2 Mushrooms from the Merchant's Stall");
+                        } else {
+                          // Show progress
+                          showObjective(`Buy 2 Mushrooms from the Merchant's Stall (${currentMushrooms}/2)`);
+                        }                      } else if (mushroomItem) {
+                        // Not enough money
+                        startDialog({
+                          speaker: "Merchant",
+                          dialogue: [`You need ${mushroomItem.price} coins for mushrooms, but you only have ${money}.`]
+                        });
+                      } else {
+                        startDialog({
+                          speaker: "Merchant", 
+                          dialogue: ["Mushrooms are currently unavailable."]
+                        });
+                      }
+                    }}
+                  >
+                    <img src={mushroomIcon} alt="Mushroom" className="w-8 h-8 object-contain" />
+                    <div className="flex-grow">
+                      <p className="text-sm font-bold text-[#F5DEB3]">Mushroom</p>
+                      <p className="text-xs">Price: {getItemById(8)?.price || 12}</p>
                     </div>
                   </div>
 
                   {/* Empty slots for aesthetic */}
-                  {[...Array(4)].map((_, i) => (
+                  {[...Array(2)].map((_, i) => (
                     <div key={`empty-${i}`} className="bg-[#A0522D] p-2 rounded border border-[#D2B48C] opacity-50" style={{ height: '64px' }}>{/* Added height for consistency */}</div>
                   ))}
                 </div>
@@ -2853,35 +3360,83 @@ useEffect(() => {
                               
                               // Check if blacksmith quest already exists
                               const blacksmithQuestExists = updatedQuests.some(quest => quest.title === "The Blacksmith's Request");
-                              
-                              // If "The First Harvest" is completed and blacksmith quest doesn't exist, add it
+                                // If "The First Harvest" is completed and blacksmith quest doesn't exist, add it
                               if (isFirstHarvestCompleted && !blacksmithQuestExists) {
                                 console.log("Adding blacksmith quest!");
-                                // Show a chained objective indicating quest completion and new quest
-                                setTimeout(() => {
-                                  showChainedObjective("Quest completed: The First Harvest", "New quest available: Visit the blacksmith");
-                                  
-                                  // Add the blacksmith quest after a short delay
-                                  setTimeout(() => {
-                                    setQuests(prevQuests => [
-                                      ...prevQuests,
-                                      {
-                                        title: "The Blacksmith's Request",
-                                        description: "The village blacksmith needs help gathering materials. Visit him to learn more.",
-                                        objectives: [
-                                          {
-                                            description: "Talk to the village blacksmith",
-                                            completed: false
-                                          }
-                                        ]
+                                
+                                // Close the shop first
+                                setShowShop(false);
+                                
+                                // Trigger merchant post-harvest dialog if not seen before
+                                if (!hasSeenPostHarvestDialog) {
+                                  setTimeout(() => {                                    startDialog({
+                                      characterName: 'merchant',
+                                      expression: 'neutral',
+                                      dialogue: [
+                                        { speaker: "Merchant", text: "Not bad at all—you've turned fresh soil into fresh coin. Your first harvest's a success!" },
+                                        { speaker: character?.name || 'Character', text: "It's a start. Every coin feels like a seed for the future." },
+                                        { speaker: "Merchant", text: "Speaking of seeds… I've caught wind of something stirring beyond the fields. The blacksmith's been grumbling all morning about a certain rare ore he desperately needs." },
+                                        { speaker: "Merchant", text: "Apparently, a trader once carried a piece through here, but it was lost near the old wagons by the forest's edge." },
+                                        { speaker: character?.name || 'Character', text: "Rare ore, you say? I always thought such treasures were the miners' business." },
+                                        { speaker: "Merchant", text: "That's the usual tale, true enough. But in these parts, fate favors the resourceful. It isn't about breaking into deep mines this time—it's about keeping a keen eye for what others might overlook." },
+                                        { speaker: "Merchant", text: "If you find that ore, the blacksmith's grateful, and you might just forge a reputation beyond the fields." },
+                                        { speaker: character?.name || 'Character', text: "I see… The blacksmith's needs might be my next challenge. I'll have a look around for that lost piece." },
+                                        { speaker: "Merchant", text: "Good to hear. Head over to the edge of the forest and check the abandoned wagons, or ask around if you catch whispers of any recent sightings. Once you've found it, take it to the forge. That's where your next chapter begins." }
+                                      ],
+                                      onComplete: () => {
+                                        setHasSeenPostHarvestDialog(true);
+                                        
+                                        // Show a chained objective indicating quest completion and new quest
+                                        setTimeout(() => {
+                                          showChainedObjective("Quest completed: The First Harvest", "New quest available: Visit the blacksmith");
+                                            // Add the blacksmith quest after a short delay
+                                          setTimeout(() => {
+                                            setQuests(prevQuests => [
+                                              ...prevQuests,
+                                              {
+                                                title: "The Blacksmith's Request",
+                                                description: "The village blacksmith needs help finding rare ore. Visit him to learn more.",
+                                                objectives: [
+                                                  {
+                                                    description: "Talk to the village blacksmith",
+                                                    completed: false
+                                                  }
+                                                ]
+                                              }
+                                            ]);
+                                            
+                                            // Show new quest popup
+                                            setNewQuestTitle("The Blacksmith's Request");
+                                            setShowNewQuestPopup(true);
+                                          }, 2000);
+                                        }, 500);
                                       }
-                                    ]);
-                                    
-                                    // Show new quest popup
-                                    setNewQuestTitle("The Blacksmith's Request");
-                                    setShowNewQuestPopup(true);
-                                  }, 2000);
-                                }, 500);
+                                    });
+                                  }, 500);
+                                } else {
+                                  // If dialog already seen, just add the quest normally
+                                  setTimeout(() => {
+                                    showChainedObjective("Quest completed: The First Harvest", "New quest available: Visit the blacksmith");
+                                      setTimeout(() => {
+                                      setQuests(prevQuests => [
+                                        ...prevQuests,
+                                        {
+                                          title: "The Blacksmith's Request",
+                                          description: "The village blacksmith needs help finding rare ore. Visit him to learn more.",
+                                          objectives: [
+                                            {
+                                              description: "Talk to the village blacksmith",
+                                              completed: false
+                                            }
+                                          ]
+                                        }
+                                      ]);
+                                      
+                                      setNewQuestTitle("The Blacksmith's Request");
+                                      setShowNewQuestPopup(true);
+                                    }, 2000);
+                                  }, 500);
+                                }
                                 
                                 return updatedQuests;
                               }
@@ -3046,54 +3601,93 @@ useEffect(() => {
             }`}
           />
         );
-      })()}
-
-      {/* Render HouseInterior or Main Game */}
+      })()}      {/* Render HouseInterior or CastleTomb based on interior type */}
       {isInInterior ? (
         <DialogProvider>
-          <HouseInterior 
-            position={position} 
-            setPosition={setPosition} 
-            onExit={handleExitInterior} 
-            character={character}
-            health={health}
-            setHealth={setHealth}
-            energy={energy}
-            setEnergy={setEnergy}
-            hunger={hunger}
-            setHunger={setHunger}
-            happiness={happiness}
-            setHappiness={setHappiness}
-            money={money}
-            setMoney={setMoney}
-            isSleeping={isSleeping}
-            setIsSleeping={setIsSleeping}
-            cleanliness={cleanliness}
-            setCleanliness={setCleanliness}
-            inventory={inventory}
-            quests={quests}
-            setQuests={setQuests}
-            onUseItem={handleUseItem}
-            isPaused={isPaused}
-            handlePause={handlePause}
-            handleResume={handleResume}
-            handleSettings={handleSettings}
-            handleCloseSettings={handleCloseSettings}
-            handleExit={handleExit}
-            showSettings={showSettings}
-            gameTime={gameTime}
-            onTimeUpdate={onTimeUpdate}
-            hasSeenHouseDialog={hasSeenHouseDialog}
-            setHasSeenHouseDialog={setHasSeenHouseDialog}
-            saveGame={saveGame}
-            showEatAnimation={showEatAnimation}
-            setShowEatAnimation={setShowEatAnimation}            currentDay={currentDay}
-            setCurrentDay={setCurrentDay}
-            plantedCrops={plantedCrops}
-            setPlantedCrops={setPlantedCrops}
-          />
+          {interiorType === 'house' ? (
+            <HouseInterior 
+              position={position} 
+              setPosition={setPosition} 
+              onExit={handleExitInterior} 
+              character={character}
+              health={health}
+              setHealth={setHealth}
+              energy={energy}
+              setEnergy={setEnergy}
+              hunger={hunger}
+              setHunger={setHunger}
+              happiness={happiness}
+              setHappiness={setHappiness}
+              money={money}
+              setMoney={setMoney}
+              isSleeping={isSleeping}
+              setIsSleeping={setIsSleeping}
+              cleanliness={cleanliness}
+              setCleanliness={setCleanliness}
+              inventory={inventory}
+              quests={quests}
+              setQuests={setQuests}
+              onUseItem={handleUseItem}
+              isPaused={isPaused}
+              handlePause={handlePause}
+              handleResume={handleResume}
+              handleSettings={handleSettings}
+              handleCloseSettings={handleCloseSettings}
+              handleExit={handleExit}
+              showSettings={showSettings}
+              gameTime={gameTime}
+              onTimeUpdate={onTimeUpdate}
+              hasSeenHouseDialog={hasSeenHouseDialog}
+              setHasSeenHouseDialog={setHasSeenHouseDialog}
+              saveGame={saveGame}
+              showEatAnimation={showEatAnimation}
+              setShowEatAnimation={setShowEatAnimation}
+              currentDay={currentDay}
+              setCurrentDay={setCurrentDay}
+              plantedCrops={plantedCrops}
+              setPlantedCrops={setPlantedCrops}
+            />
+          ) : (
+            <CastleTomb 
+              position={position} 
+              setPosition={setPosition} 
+              onExit={handleExitInterior} 
+              character={character}
+              health={health}
+              setHealth={setHealth}
+              energy={energy}
+              setEnergy={setEnergy}
+              hunger={hunger}
+              setHunger={setHunger}
+              happiness={happiness}
+              setHappiness={setHappiness}
+              money={money}
+              setMoney={setMoney}
+              cleanliness={cleanliness}
+              setCleanliness={setCleanliness}
+              inventory={inventory}
+              quests={quests}
+              setQuests={setQuests}
+              onUseItem={handleUseItem}
+              isPaused={isPaused}
+              handlePause={handlePause}
+              handleResume={handleResume}
+              handleSettings={handleSettings}
+              handleCloseSettings={handleCloseSettings}
+              handleExit={handleExit}
+              showSettings={showSettings}
+              gameTime={gameTime}
+              onTimeUpdate={onTimeUpdate}
+              saveGame={saveGame}
+              showEatAnimation={showEatAnimation}
+              setShowEatAnimation={setShowEatAnimation}              currentDay={currentDay}
+              setCurrentDay={setCurrentDay}
+              plantedCrops={plantedCrops}
+              setPlantedCrops={setPlantedCrops}
+            />
+          )}
         </DialogProvider>
-      ) : (        <>
+      ) : (<>
           {/* Rest of your game content (excluding UI moved to HouseInterior) */}
           {!isLoading && !showCutscene && (
             <div className="game-container">
@@ -3172,9 +3766,29 @@ useEffect(() => {
                                   const plantSeedObjective = currentQuest?.objectives.find(obj => obj.description === "Plant seeds in your field");
                                   const isObjectiveAlreadyCompleted = plantSeedObjective?.completed;
 
-                                  playCash();
-                                  setMoney(prevMoney => prevMoney - seedItem.price);
-                                  addItemToInventory(seedItem.id, 1);                        // Only show objective popup if this is the first time completing the objective
+                                  // Consume one seed from inventory
+                                  setInventory(prev => prev.map(item => 
+                                    item.name === 'Seeds' ? { ...item, quantity: item.quantity - 1 } : item
+                                  ).filter(item => item.quantity > 0));
+
+                                  // Play planting sound
+                                  playPlant();
+                                  
+                                  // Add new planted crop (start at stage 1)
+                                  setPlantedCrops(prev => [...prev, {
+                                    x: spot.x,
+                                    y: spot.y,
+                                    type: 'potato',
+                                    stage: 1,
+                                    plantTime: Date.now(),
+                                    plantDay: currentDay,
+                                    needsWatering: true,
+                                  }]);
+
+                                  // Show objective popup
+                                  showObjective("Seed planted! Water it to help it grow.");
+
+                                  // Only show objective popup if this is the first time completing the objective
                                   if (!isObjectiveAlreadyCompleted) {
                                     showChainedObjective("Plant seeds in your field", "Water your planted crops for 2 day (0/2)");
                                   }
@@ -3197,9 +3811,7 @@ useEffect(() => {
                                     });
                                   });
                                 }
-                              } else {
-
-                              }                            } else if (iconType === 'wateringCan' && isCurrentlyPlanted && isCurrentlyPlanted.needsWatering) {
+                              }} else if (iconType === 'wateringCan' && isCurrentlyPlanted && isCurrentlyPlanted.needsWatering) {
                               // Watering logic
                               // Play watering sound
                               playWatering();
@@ -3424,7 +4036,38 @@ useEffect(() => {
                         zIndex: 2, // Ensure blacksmith is above background
                       }}
                     />
-                  )}                  {/* Elder Interaction Prompt */}                  {nearElder && !isDialogActive && !showCutscene && !showShop && !isSleeping && !isPaused && (
+                  )}
+
+                  {/* Special Ore Sprite */}
+                  {!isLoading && !showCutscene && !specialOreCollected && (
+                    <img
+                      src={specialOreIcon}
+                      alt="Special Ore"
+                      className="absolute pixelated"
+                      style={{
+                        left: `${SPECIAL_ORE_POSITION_PIXEL.x}px`,
+                        top: `${SPECIAL_ORE_POSITION_PIXEL.y}px`,
+                        width: `${SPECIAL_ORE_SIZE}px`,
+                        height: `${SPECIAL_ORE_SIZE}px`,                        zIndex: 2, // Ensure ore is above background
+                      }}
+                    />
+                  )}                  {/* Mysterious Ledger Sprite */}
+                  {!isLoading && !showCutscene && !mysteriousLedgerCollected && (
+                    <img
+                      src={ledgerIcon}
+                      alt="Mysterious Ledger"
+                      className="absolute pixelated"
+                      style={{
+                        left: `${MYSTERIOUS_LEDGER_POSITION_PIXEL.x}px`,
+                        top: `${MYSTERIOUS_LEDGER_POSITION_PIXEL.y}px`,
+                        width: `${MYSTERIOUS_LEDGER_SIZE}px`,
+                        height: `${MYSTERIOUS_LEDGER_SIZE}px`,
+                        zIndex: 2, // Ensure ledger is above background
+                      }}
+                    />
+                  )}
+
+{/* Elder Interaction Prompt */}{nearElder && !isDialogActive && !showCutscene && !showShop && !isSleeping && !isPaused && (
                     <div 
                       className="absolute z-10 pointer-events-none"
                       style={{
@@ -3475,6 +4118,42 @@ useEffect(() => {
                         className="text-white px-1 py-0.5 rounded text-center"
                         style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
                       >
+                        <p className="text-xs">Press E</p>                      </div>
+                    </div>
+                  )}
+
+                  {/* Special Ore Interaction Prompt */}
+                  {nearSpecialOre && !specialOreCollected && !isDialogActive && !showCutscene && !showShop && !isSleeping && !isPaused && (
+                    <div 
+                      className="absolute z-10 pointer-events-none"
+                      style={{
+                        left: `${SPECIAL_ORE_POSITION_PIXEL.x + (SPECIAL_ORE_SIZE / 2)}px`,
+                        top: `${SPECIAL_ORE_POSITION_PIXEL.y - 20}px`,
+                        transform: 'translateX(-50%)'
+                      }}
+                    >
+                      <div 
+                        className="text-white px-1 py-0.5 rounded text-center"
+                        style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
+                      >
+                        <p className="text-xs">Press E</p>
+                      </div>
+                    </div>                  )}
+
+                  {/* Mysterious Ledger Interaction Prompt */}
+                  {nearMysteriousLedger && !mysteriousLedgerCollected && !isDialogActive && !showCutscene && !showShop && !isSleeping && !isPaused && (
+                    <div 
+                      className="absolute z-10 pointer-events-none"
+                      style={{
+                        left: `${MYSTERIOUS_LEDGER_POSITION_PIXEL.x + (MYSTERIOUS_LEDGER_SIZE / 2)}px`,
+                        top: `${MYSTERIOUS_LEDGER_POSITION_PIXEL.y - 20}px`,
+                        transform: 'translateX(-50%)'
+                      }}
+                    >
+                      <div 
+                        className="text-white px-1 py-0.5 rounded text-center"
+                        style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
+                      >
                         <p className="text-xs">Press E</p>
                       </div>
                     </div>
@@ -3510,13 +4189,16 @@ useEffect(() => {
         const shouldShowMerchantDialogue = hasFirstHarvestQuest && hasBuySeedsObjective && !hasSeenFirstShopDialogue;        if (shouldShowMerchantDialogue) {
           // Trigger merchant dialogue
           setTimeout(() => {
-            setShowShopConfirm(false);
-            startDialog({
+            setShowShopConfirm(false);            startDialog({
               characterName: 'merchant',
               expression: 'neutral',
-              dialogue: ["Ah… a new face, or rather, an old one returned. Haven't seen anyone from that cottage in years.",
-                "So, what's it going to be? Looking for tools? A bite to eat? No, wait—must be seeds. Can't live off an empty field, eh?",
-                "Wheat for steady trade, turnips for a quick harvest… or maybe something more refined? What'll it be?"],
+              dialogue: [
+                { speaker: "Merchant", text: "Ah… a new face, or rather, an old one returned. Haven't seen anyone from that cottage in years." },
+                { speaker: character?.name || 'Character', text: "I've come back to start fresh. The land needs tending." },
+                { speaker: "Merchant", text: "So, what's it going to be? Looking for tools? A bite to eat? No, wait—must be seeds. Can't live off an empty field, eh?" },
+                { speaker: character?.name || 'Character', text: "Seeds would be a good start. What do you have available?" },
+                { speaker: "Merchant", text: "Wheat for steady trade, turnips for a quick harvest… or maybe something more refined? What'll it be?" }
+              ],
               onComplete: () => {
                 // Mark that the first shop dialogue has been seen
                 setHasSeenFirstShopDialogue(true);
@@ -3660,9 +4342,13 @@ useEffect(() => {
               <div className="bg-black bg-opacity-75 text-white px-4 py-2 rounded-lg shadow-lg text-center">
                 <p className="text-lg">Press E to play Games</p>
               </div>
-            </div>
-          )}
+            </div>          )}
         </>
+      )}
+
+      {/* Credit Scene */}
+      {showCredits && (
+        <CreditScene onComplete={() => setShowCredits(false)} />
       )}
     </div>
   );

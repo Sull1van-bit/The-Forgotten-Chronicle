@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import houseInside from '../../assets/Interior/house-inside.png';
 import { useAuth } from '../../context/AuthContext';
+import { useGame } from '../../context/GameContext';
 import { saveFileService } from '../../services/saveFileService';
 import { useSound } from '../../context/SoundContext';
 import { useMusic } from '../../context/MusicContext';
@@ -13,6 +14,7 @@ import QuestFolder from '../../components/QuestFolder';
 import ActiveQuestFolderUI from '../../components/ActiveQuestFolderUI';
 import Settings from '../../components/Settings';
 import DialogBox from '../../components/DialogBox';
+import CookingGame from '../../components/CookingGame';
 
 // Import UI icons
 import heartIcon from '../../assets/statbar/heart.png';
@@ -105,14 +107,19 @@ const HouseInterior = ({
   setPlantedCrops
 }) => {
   const { user } = useAuth();
-  const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume, playClick, playHover } = useSound();
+  const { removeItemFromInventory, addItemToInventory } = useGame();
+  const { soundEnabled, setSoundEnabled, sfxVolume, setSfxVolume, playClick, playHover, playThunder } = useSound();
   const { musicEnabled, setMusicEnabled, musicVolume, setMusicVolume } = useMusic();
-  const { isDialogActive, currentDialog, dialogIndex, startDialog, advanceDialog, endDialog } = useDialog();
-  const [facing, setFacing] = useState('stand');  const [showSleepButton, setShowSleepButton] = useState(false);
+  const { isDialogActive, currentDialog, dialogIndex, startDialog, advanceDialog, endDialog } = useDialog();const [facing, setFacing] = useState('stand');  const [showSleepButton, setShowSleepButton] = useState(false);
   const [showSleepConfirmPopup, setShowSleepConfirmPopup] = useState(false);
   const [isNearSleepArea, setIsNearSleepArea] = useState(false);
   const prevIsNearSleepArea = useRef(false);
   const hasShownSleepPopup = useRef(false);
+  
+  // Cooking area states
+  const [showCookingGame, setShowCookingGame] = useState(false);
+  const [isNearCookingArea, setIsNearCookingArea] = useState(false);
+  const [showCookingPrompt, setShowCookingPrompt] = useState(false);
     // Objective popup state
   const [completedObjectives, setCompletedObjectives] = useState([]);
   const [newObjectives, setNewObjectives] = useState([]);
@@ -130,10 +137,13 @@ const HouseInterior = ({
   const [isMoving, setIsMoving] = useState(false);
   const moveSpeed = 2; // Movement speed for smooth diagonal movement
   const moveTimeoutRef = useRef(null);
-
   // Define the sleep area
   const SLEEP_AREA = { x: 2, y: 2 };
   const SLEEP_AREA_PIXEL = { x: SLEEP_AREA.x * GRID_SIZE, y: SLEEP_AREA.y * GRID_SIZE };
+
+  // Define the cooking area
+  const COOKING_AREA = { x: 6, y: 2 };
+  const COOKING_AREA_PIXEL = { x: COOKING_AREA.x * GRID_SIZE, y: COOKING_AREA.y * GRID_SIZE };
 
   // Check if it's sleep time (9 PM to 6 AM) - Moved up
   const isSleepTime = () => {
@@ -212,6 +222,23 @@ const HouseInterior = ({
 
   }, [isNearSleepArea, isSleeping, showSleepConfirmPopup]); // Dependencies - Removed gameTime and isSleepTime
 
+  // Effect to trigger cooking prompt when entering cooking area
+  useEffect(() => {
+    if (isNearCookingArea && !showCookingGame) {      // Check if player has required ingredients for Hearty Stew
+      const hasIngredients = inventory.some(item => item.id === 2) && // Potato
+                           inventory.some(item => item.id === 7) && // Meat
+                           inventory.filter(item => item.id === 8).length >= 2; // Mushrooms (at least 2)
+        // Check if cooking quest is active
+      const stewQuest = quests.find(quest => quest.title === "Stew for the Elder");
+      const cookingObjective = stewQuest?.objectives.find(obj => obj.description === "Cook a Hearty Stew at your home");
+      const shouldShowPrompt = stewQuest && !cookingObjective?.completed;
+      
+      setShowCookingPrompt(shouldShowPrompt);
+    } else {
+      setShowCookingPrompt(false);
+    }
+  }, [isNearCookingArea, showCookingGame, inventory, quests]);
+
   // The checkSleepProximity function should only set isNearSleepArea
   // The effect above will handle setting showSleepConfirmPopup
   const checkSleepProximity = (x, y) => {
@@ -226,11 +253,24 @@ const HouseInterior = ({
     );
     // Update proximity state - Increased threshold
     const proximityThreshold = 50; // Increased from 30
-    const isNear = distance < proximityThreshold;
-    console.log('Check Sleep Proximity:', { playerX: x, playerY: y, playerCenterX, playerCenterY, sleepCenterX, sleepCenterY, distance, isNear, proximityThreshold }); // Debug log
+    const isNear = distance < proximityThreshold;    console.log('Check Sleep Proximity:', { playerX: x, playerY: y, playerCenterX, playerCenterY, sleepCenterX, sleepCenterY, distance, isNear, proximityThreshold }); // Debug log
     setIsNearSleepArea(isNear);
     // Removed setShowSleepButton(isNear);
-  };  // Add effect to check quest progress when entering house
+  };
+
+  // Check cooking area proximity
+  const checkCookingProximity = (x, y) => {
+    const playerCenterX = x + (PLAYER_SCALED_SIZE / 2);
+    const playerCenterY = y + (PLAYER_SCALED_SIZE / 2);
+    const cookingCenterX = COOKING_AREA_PIXEL.x + (GRID_SIZE / 2);
+    const cookingCenterY = COOKING_AREA_PIXEL.y + (GRID_SIZE / 2);
+    const distance = Math.sqrt(
+      Math.pow(playerCenterX - cookingCenterX, 2) + Math.pow(playerCenterY - cookingCenterY, 2)
+    );
+    const proximityThreshold = 50;
+    const isNear = distance < proximityThreshold;
+    setIsNearCookingArea(isNear);
+  };// Add effect to check quest progress when entering house
   const hasShownHouseObjective = useRef(false);
   
   useEffect(() => {
@@ -381,10 +421,13 @@ const HouseInterior = ({
           
           return newDay;
         });
-      }
-
-      // Update quest progress after sleeping
+      }      // Update quest progress after sleeping
       if (quests && quests.length > 0) {
+        // Check if we need to trigger the thunder sequence BEFORE updating quests
+        const stewQuest = quests.find(quest => quest.title === "Stew for the Elder");
+        const sleepObjective = stewQuest?.objectives.find(obj => obj.description === "Go home and sleep");
+        const shouldTriggerThunder = stewQuest && sleepObjective && !sleepObjective.completed;
+        
         const updatedQuests = quests.map(quest => {
           if (quest.title === "Welcome Home") {
             const updatedObjectives = quest.objectives.map(objective => {
@@ -395,11 +438,90 @@ const HouseInterior = ({
             });
             return { ...quest, objectives: updatedObjectives };
           }
+          
+          // Complete "Go home and sleep" objective in the "Stew for the Elder" quest
+          if (quest.title === "Stew for the Elder") {
+            const updatedObjectives = quest.objectives.map(objective => {
+              if (objective.description === "Go home and sleep" && !objective.completed) {
+                return { ...objective, completed: true };
+              }
+              return objective;
+            });
+            return { ...quest, objectives: updatedObjectives };
+          }
+          
           return quest;
         });
         setQuests(updatedQuests);
-      }    }, sleepDuration);
-  };  // Helper functions for objective popups
+        
+        // Show quest completion message and trigger thunder sequence if needed
+        if (shouldTriggerThunder) {
+          setTimeout(() => {
+            showObjective("Quest completed: Stew for the Elder! You've rested after a meaningful day.");
+          }, 2000); // Show after wake up message
+          
+          // Thunder sound effect and dialog after completing the stew quest
+          setTimeout(() => {
+            playThunder();
+            setTimeout(() => {
+              startDialog({
+                characterName: character?.name || 'Character',
+                expression: 'surprised',
+                dialogue: ["What's that?"]
+              });
+            }, 1000); // Small delay after thunder sound
+            
+            // Add new quest: The Lost Ledger
+            setTimeout(() => {
+              setQuests(prevQuests => [
+                ...prevQuests,
+                {
+                  title: "The Lost Ledger",
+                  description: "A mysterious event happened during the night. Investigate outside.",
+                  objectives: [
+                    {
+                      description: "Check outside",
+                      completed: false
+                    }
+                  ]
+                }
+              ]);
+              showObjective("New quest: The Lost Ledger - Check outside");
+            }, 3000); // After dialog
+          }, 3000); // After quest completion message
+        }
+      }
+    }, sleepDuration);
+  };
+
+  // Cooking game functions
+  const startCookingGame = () => {
+    setShowCookingGame(true);
+    setShowCookingPrompt(false);
+  };  const handleCookingSuccess = () => {
+    // Add Hearty Stew to inventory (item ID 4 - based on GameContext ITEMS.stew)
+    addItemToInventory(4, 1);
+    console.log('Adding Hearty Stew to inventory');
+    
+    // Show success message
+    showObjective("Successfully cooked a Hearty Stew! Take it to the elder.");
+    
+    setShowCookingGame(false);
+  };
+
+  const handleCookingFail = () => {
+    showObjective("Cooking failed! Try again when you have all the ingredients.");
+    setShowCookingGame(false);
+  };
+
+  const closeCookingGame = () => {
+    setShowCookingGame(false);
+  };
+  // Function to remove items from inventory (used by cooking game)
+  const removeItemFromInventoryLocal = (itemId, quantity = 1) => {
+    console.log(`Removing ${quantity} of item ${itemId} from inventory`);
+    removeItemFromInventory(itemId, quantity);
+  };// Helper functions for objective popups
   const showCompletedObjective = (text) => {
     setCompletedObjectives(prev => [...prev, { text, id: Date.now() }]);
   };
@@ -572,17 +694,17 @@ const HouseInterior = ({
 
   const renderGrid = () => {
     const cells = [];
-    for (let row = 0; row < GRID_ROWS; row++) {
-      for (let col = 0; col < GRID_COLS; col++) {
+    for (let row = 0; row < GRID_ROWS; row++) {      for (let col = 0; col < GRID_COLS; col++) {
         const isExitPoint = col === 5 && row === 5;
         const isSleepArea = col === SLEEP_AREA.x && row === SLEEP_AREA.y;
+        const isCookingArea = col === COOKING_AREA.x && row === COOKING_AREA.y;
         const collisionPoint = INTERIOR_COLLISION_MAP.find(point => point.x === col && point.y === row);
         const collisionClass = collisionPoint ? `collision ${collisionPoint.type}` : '';
         
         cells.push(
           <div
             key={`${row}-${col}`}
-            className={`grid-cell ${collisionClass} ${isExitPoint ? 'teleport' : ''} ${isSleepArea ? 'sleep-area' : ''}`}
+            className={`grid-cell ${collisionClass} ${isExitPoint ? 'teleport' : ''} ${isSleepArea ? 'sleep-area' : ''} ${isCookingArea ? 'cooking-area' : ''}`}
             style={{
               left: col * GRID_SIZE,
               top: row * GRID_SIZE,
@@ -595,10 +717,10 @@ const HouseInterior = ({
               fontWeight: 'bold', // Added bold for better readability
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: isExitPoint ? 'rgba(0, 255, 0, 0.3)' : 
+              justifyContent: 'center',              backgroundColor: isExitPoint ? 'rgba(0, 255, 0, 0.3)' : 
                                isSleepArea ? 'rgba(0, 0, 255, 0.3)' : 
-                               collisionPoint ? 'rgba(255, 0, 0, 0.3)' : 
+                               isCookingArea ? 'rgba(255, 165, 0, 0.3)' : 
+                               collisionPoint ? 'rgba(255, 0, 0, 0.3)' :
                                'rgba(0, 0, 0, 0.1)', // Added background colors for different areas
               textShadow: '1px 1px 2px rgba(0, 0, 0, 0.8)', // Added text shadow for better readability
             }}
@@ -614,9 +736,7 @@ const HouseInterior = ({
   // Add effect to track pressed keys for diagonal movement
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (isSleeping || isPaused || isDialogActive) return;
-
-      // Handle number keys for item slots (1-9)
+      if (isSleeping || isPaused || isDialogActive) return;      // Handle number keys for item slots (1-9)
       if (e.key >= '1' && e.key <= '9') {
         const slotIndex = parseInt(e.key) - 1;
         const item = inventory[slotIndex];
@@ -627,6 +747,15 @@ const HouseInterior = ({
           e.preventDefault();
         }
         return; // Stop processing other keys if a number key was pressed
+      }
+
+      // Handle E key for interactions
+      if (e.key.toLowerCase() === 'e') {
+        // Check cooking interaction
+        if (isNearCookingArea && showCookingPrompt) {
+          startCookingGame();
+          return;
+        }
       }
 
       const movementKeys = ['w', 's', 'a', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
@@ -663,7 +792,7 @@ const HouseInterior = ({
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [isSleeping, isPaused, isDialogActive]);
+  }, [isSleeping, isPaused, isDialogActive, isNearCookingArea, showCookingPrompt]);
 
   // Handle continuous movement
   useEffect(() => {
@@ -728,10 +857,10 @@ const HouseInterior = ({
         // Apply costs only when actually moving
         setEnergy(prev => Math.max(0, prev - energyCost));
         setCleanliness(prev => Math.max(0, prev - cleanlinessCost));
-        
-        // Check interactions
+          // Check interactions
         checkExitPoint(newX, newY);
         checkSleepProximity(newX, newY);
+        checkCookingProximity(newX, newY);
       } else if (!hasMoved) {
         setIsMoving(false);
       }
@@ -755,6 +884,7 @@ const HouseInterior = ({
     hasCollision,
     checkExitPoint,
     checkSleepProximity,
+    checkCookingProximity,
     INTERIOR_WIDTH,
     INTERIOR_HEIGHT,
     PLAYER_SIZE  ]);
@@ -985,8 +1115,27 @@ const HouseInterior = ({
                 Cancel
               </button>
             </div>
-          </div>
+          </div>        </div>
+      )}
+
+      {/* Cooking Prompt */}
+      {showCookingPrompt && isNearCookingArea && (
+        <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 bg-[#8B4513] border-4 border-[#D2B48C] rounded-lg p-4 text-white text-center">
+          <p className="mb-2 text-[#F5DEB3]">🍲 Cooking Station</p>
+          <p className="text-sm mb-3">Press <span className="font-bold text-yellow-400">E</span> to cook Hearty Stew</p>
+          <p className="text-xs text-gray-300">Required: 1 Potato, 1 Meat, 2 Mushrooms</p>
         </div>
+      )}
+
+      {/* Cooking Game */}
+      {showCookingGame && (
+        <CookingGame
+          onClose={closeCookingGame}
+          onSuccess={handleCookingSuccess}
+                    onFail={handleCookingFail}
+          inventory={inventory}
+          removeItemFromInventory={removeItemFromInventoryLocal}
+        />
       )}
 
       {/* Sleep Overlay */}
