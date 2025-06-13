@@ -15,6 +15,7 @@ import QuestFolder from '../../components/QuestFolder';
 import ActiveQuestFolderUI from '../../components/ActiveQuestFolderUI';
 import Settings from '../../components/Settings';
 import DialogBox from '../../components/DialogBox';
+import CreditScene from '../../components/CreditScene';
 
 // Import UI icons
 import heartIcon from '../../assets/statbar/heart.png';
@@ -131,7 +132,12 @@ const CastleTomb = ({
   
   // Objective popup state
   const [completedObjectives, setCompletedObjectives] = useState([]);
-  const [newObjectives, setNewObjectives] = useState([]);  const INTERIOR_WIDTH = 1200;   // Increased width for better visibility
+  const [newObjectives, setNewObjectives] = useState([]);
+  
+  // Credits state
+  const [showCredits, setShowCredits] = useState(false);
+
+  const INTERIOR_WIDTH = 1200;   // Increased width for better visibility
   const INTERIOR_HEIGHT = 800;   // Increased height for better visibility
   const GRID_SIZE = 100;          // Standard grid size matching main game
   const PLAYER_SIZE = 26;
@@ -683,7 +689,7 @@ const CastleTomb = ({
       </div>
 
       {/* UI Elements */}
-      {!isDialogActive && (
+      {!isDialogActive && !showCredits && (
         <div className="ui-container" style={{
           position: 'fixed',
           top: 0,
@@ -692,7 +698,8 @@ const CastleTomb = ({
           bottom: 0,
           pointerEvents: 'none',
           zIndex: 100
-        }}>          {/* Stats Bar */}
+        }}>
+          {/* Stats Bar */}
           {!isDialogActive && (
             <div className="stats-bar" style={{
               position: 'absolute',
@@ -737,9 +744,12 @@ const CastleTomb = ({
               <img src={moneyIcon} alt="Money" style={{ width: '20px', height: '20px' }} />
               <span style={{ color: 'white', fontSize: '14px', textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
                 ${money}
-              </span>            </div>
+              </span>
+            </div>
           </div>
-          )}          {/* Pause Button */}
+          )}
+
+          {/* Pause Button */}
           {!isDialogActive && (
             <button
               onClick={handlePause}
@@ -764,8 +774,47 @@ const CastleTomb = ({
               /> 
             </button>
           )}
+
+          {/* Credit Button */}
+          {!isDialogActive && (
+            <button
+              onClick={() => {
+                playClick();
+                setShowCredits(true);
+              }}
+              onMouseEnter={playHover}
+              style={{
+                position: 'absolute',
+                top: '20px',
+                right: '80px',
+                background: 'rgba(0, 0, 0, 0.7)',
+                border: '2px solid #F5DEB3',
+                borderRadius: '8px',
+                color: '#F5DEB3',
+                padding: '8px 16px',
+                cursor: 'pointer',
+                pointerEvents: 'auto',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseOver={(e) => {
+                e.target.style.background = 'rgba(245, 222, 179, 0.2)';
+                e.target.style.transform = 'scale(1.05)';
+              }}
+              onMouseOut={(e) => {
+                e.target.style.background = 'rgba(0, 0, 0, 0.7)';
+                e.target.style.transform = 'scale(1)';
+              }}
+            >
+              Credits
+            </button>
+          )}
         </div>
-      )}      {/* Dialog Box */}
+      )}
+
+      {/* Dialog Box */}
       {isDialogActive && (
         <DialogBox
           character={characterName}
@@ -796,8 +845,10 @@ const CastleTomb = ({
           musicVolume={musicVolume}
           setMusicVolume={setMusicVolume}
         />
-      )}      {/* Objective Popups */}
-      {!isDialogActive && (
+      )}
+
+      {/* Objective Popups */}
+      {!isDialogActive && !showCredits && (
         <AnimatePresence>
           {newObjectives.map((objective, index) => (
             <motion.div
@@ -821,7 +872,8 @@ const CastleTomb = ({
               }}
             >
               {objective}
-            </motion.div>        ))}
+            </motion.div>
+          ))}
         </AnimatePresence>
       )}
 
@@ -838,6 +890,11 @@ const CastleTomb = ({
             Press E to examine
           </div>
         </div>
+      )}
+
+      {/* Credits Modal */}
+      {showCredits && (
+        <CreditScene onComplete={() => setShowCredits(false)} />
       )}
     </div>
   );
