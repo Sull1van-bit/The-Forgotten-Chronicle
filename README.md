@@ -1,6 +1,6 @@
 # The Forgotten Chronicle
 
-Game petualangan RPG 2D yang dibangun dengan React dan Vite, menampilkan sistem pertanian, mini-games, dan gameplay yang digerakkan oleh cerita.
+Game petualangan RPG 2D yang dibangun dengan React dan Tailwind, menampilkan sistem pertanian, mini-games, dan gameplay yang menarik.
 
 ## 🎮 Dibuat Oleh P.U.N.K
 
