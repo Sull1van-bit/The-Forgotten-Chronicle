@@ -1413,7 +1413,7 @@ const Game = () => {
   // Add state for movement
   const [isMoving, setIsMoving] = useState(false);
   const [lastDirection, setLastDirection] = useState('down');
-  const moveSpeed = 10; // Reduced speed for smoother movement
+  const moveSpeed = 7; // Reduced speed for smoother movement
   const moveTimeoutRef = useRef(null);
 
   // Movement constants
