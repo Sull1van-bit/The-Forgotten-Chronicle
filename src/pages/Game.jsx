@@ -552,12 +552,10 @@ const Game = () => {
   const [specialOreCollected, setSpecialOreCollected] = useState(false);
     // State for credit scene
   const [showCredits, setShowCredits] = useState(false);
-  const [nearSpecialOre, setNearSpecialOre] = useState(false);
-  // Death and stat management states
+  const [nearSpecialOre, setNearSpecialOre] = useState(false);  // Death and stat management states
   const [isDead, setIsDead] = useState(false);
   const [showDeathScreen, setShowDeathScreen] = useState(false);
   const [deathCause, setDeathCause] = useState('');
-  const [criticalWarnings, setCriticalWarnings] = useState(new Set());
 
   // Add state for mysterious ledger
   const [mysteriousLedgerCollected, setMysteriousLedgerCollected] = useState(false);
@@ -2686,54 +2684,6 @@ useEffect(() => {
   }
 }, [health, hunger, energy, cleanliness, happiness, isDead]);
 
-// Critical stat warning system
-useEffect(() => {
-  if (isDead) return; // Don't show warnings if already dead
-
-  const newWarnings = new Set();
-  
-  // Check for critical stats and show warnings
-  if (hunger <= 0 && !criticalWarnings.has('hunger-critical')) {
-    newWarnings.add('hunger-critical');
-  }
-  if (energy <= 0 && !criticalWarnings.has('energy-critical')) {
-    newWarnings.add('energy-critical');
-  }
-  if (cleanliness <= 0 && !criticalWarnings.has('cleanliness-critical')) {
-    newWarnings.add('cleanliness-critical');
-  }
-  if (happiness <= 0 && !criticalWarnings.has('happiness-critical')) {
-    newWarnings.add('happiness-critical');
-  }
-  
-  // Check for low stats (warning level)
-  if (hunger <= 20 && hunger > 0 && !criticalWarnings.has('hunger-low')) {
-    newWarnings.add('hunger-low');
-  }
-  if (energy <= 20 && energy > 0 && !criticalWarnings.has('energy-low')) {
-    newWarnings.add('energy-low');
-  }
-  if (cleanliness <= 20 && cleanliness > 0 && !criticalWarnings.has('cleanliness-low')) {
-    newWarnings.add('cleanliness-low');
-  }
-  if (happiness <= 20 && happiness > 0 && !criticalWarnings.has('happiness-low')) {
-    newWarnings.add('happiness-low');
-  }
-  
-  if (newWarnings.size > 0) {
-    setCriticalWarnings(prev => new Set([...prev, ...newWarnings]));
-    
-    // Clear warnings after some time
-    setTimeout(() => {
-      setCriticalWarnings(prev => {
-        const updated = new Set(prev);
-        newWarnings.forEach(warning => updated.delete(warning));
-        return updated;
-      });
-    }, 5000);
-  }
-}, [hunger, energy, cleanliness, happiness, isDead, criticalWarnings]);
-
   // If mobile user, show mobile screen instead of the game
   if (isMobile) {
     return <MobileScreen />;
@@ -2876,55 +2826,8 @@ useEffect(() => {
                       style={{ width: `${energy}%` }}
                     ></div>
                   </div>                </div>
-              </div>
-            </div>
+              </div>            </div>
           </div>
-          
-          {/* Critical Stat Warnings */}
-          {criticalWarnings.size > 0 && (
-            <div className="absolute top-4 right-4 z-50 space-y-2">
-              {criticalWarnings.has('hunger-critical') && (
-                <div className="bg-red-600 text-white px-4 py-2 rounded-lg border-2 border-red-400 animate-pulse">
-                  ⚠️ CRITICAL: You're starving! Eat something now!
-                </div>
-              )}
-              {criticalWarnings.has('energy-critical') && (
-                <div className="bg-red-600 text-white px-4 py-2 rounded-lg border-2 border-red-400 animate-pulse">
-                  ⚠️ CRITICAL: You're exhausted! Rest immediately!
-                </div>
-              )}
-              {criticalWarnings.has('cleanliness-critical') && (
-                <div className="bg-red-600 text-white px-4 py-2 rounded-lg border-2 border-red-400 animate-pulse">
-                  ⚠️ CRITICAL: You're filthy! Clean yourself now!
-                </div>
-              )}
-              {criticalWarnings.has('happiness-critical') && (
-                <div className="bg-red-600 text-white px-4 py-2 rounded-lg border-2 border-red-400 animate-pulse">
-                  ⚠️ CRITICAL: You're in despair! Find happiness!
-                </div>
-              )}
-              {criticalWarnings.has('hunger-low') && (
-                <div className="bg-orange-500 text-white px-4 py-2 rounded-lg border-2 border-orange-300">
-                  ⚠️ Warning: You're getting hungry
-                </div>
-              )}
-              {criticalWarnings.has('energy-low') && (
-                <div className="bg-orange-500 text-white px-4 py-2 rounded-lg border-2 border-orange-300">
-                  ⚠️ Warning: You're getting tired
-                </div>
-              )}
-              {criticalWarnings.has('cleanliness-low') && (
-                <div className="bg-orange-500 text-white px-4 py-2 rounded-lg border-2 border-orange-300">
-                  ⚠️ Warning: You're getting dirty
-                </div>
-              )}
-              {criticalWarnings.has('happiness-low') && (
-                <div className="bg-orange-500 text-white px-4 py-2 rounded-lg border-2 border-orange-300">
-                  ⚠️ Warning: You're feeling down
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Time and Money Display - Side by side under stat bar */}
           <div className="absolute top-[211px] left-4 z-50 text-white text-sm">
@@ -4543,11 +4446,54 @@ useEffect(() => {
               </div>
             </div>          )}
         </>
-      )}
-
-      {/* Credit Scene */}
+      )}      {/* Credit Scene */}
       {showCredits && (
         <CreditScene onComplete={() => setShowCredits(false)} />
+      )}
+
+      {/* Death Screen */}
+      {showDeathScreen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-90">
+          <div className="text-center text-white space-y-6">
+            <div className="text-6xl font-bold text-red-500 mb-4 animate-pulse">
+              💀 GAME OVER 💀
+            </div>
+            <div className="text-2xl mb-4">
+              You have died from {deathCause}
+            </div>
+            <div className="text-lg text-gray-300 mb-8">
+              Your journey has come to an end...
+            </div>
+            <div className="space-x-4">
+              <button
+                className="px-8 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg border-2 border-red-400 hover:border-red-300 transition-all duration-200"
+                onClick={() => {
+                  // Reset game state
+                  setHealth(100);
+                  setEnergy(100);
+                  setHunger(100);
+                  setHappiness(100);
+                  setCleanliness(100);
+                  setIsDead(false);
+                  setShowDeathScreen(false);
+                  setDeathCause('');
+                  // Reset position to spawn
+                  setPosition({ x: 350, y: 150 });
+                }}
+              >
+                Respawn
+              </button>
+              <button
+                className="px-8 py-4 bg-gray-600 hover:bg-gray-700 text-white font-bold rounded-lg border-2 border-gray-400 hover:border-gray-300 transition-all duration-200"
+                onClick={() => {
+                  navigate('/', { replace: true });
+                }}
+              >
+                Main Menu
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
