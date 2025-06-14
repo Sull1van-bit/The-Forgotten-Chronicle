@@ -25,6 +25,7 @@ import louiseWalkDown from '../assets/characters/louise/walk-down.gif';
 import louiseWalkLeft from '../assets/characters/louise/walk-left.gif';
 import louiseWalkRight from '../assets/characters/louise/walk-right.gif';
 import louiseEat from '../assets/characters/louise/eat.gif';
+import louiseDeath from '../assets/characters/louise/death.gif';
 
 import eugeneStand from '../assets/characters/eugene/stand.gif';
 import eugeneWalkUp from '../assets/characters/eugene/walk-up.gif';
@@ -32,6 +33,7 @@ import eugeneWalkDown from '../assets/characters/eugene/walk-down.gif';
 import eugeneWalkLeft from '../assets/characters/eugene/walk-left.gif';
 import eugeneWalkRight from '../assets/characters/eugene/walk-right.gif';
 import eugeneEat from '../assets/characters/eugene/eat.gif';
+import eugeneDeath from '../assets/characters/eugene/death.gif';
 
 import alexStand from '../assets/characters/alex/stand.gif';
 import alexWalkUp from '../assets/characters/alex/walk-up.gif';
@@ -39,6 +41,7 @@ import alexWalkDown from '../assets/characters/alex/walk-down.gif';
 import alexWalkLeft from '../assets/characters/alex/walk-left.gif';
 import alexWalkRight from '../assets/characters/alex/walk-right.gif';
 import alexEat from '../assets/characters/alex/eat.gif';
+import alexDeath from '../assets/characters/alex/death.gif';
 
 // Import elder assets
 import elderStand from '../assets/npc/elder/stand.gif';
@@ -547,10 +550,14 @@ const Game = () => {
   const [nearBlacksmith, setNearBlacksmith] = useState(false);
   const [nearShop, setNearShop] = useState(false);  // Add state for special ore
   const [specialOreCollected, setSpecialOreCollected] = useState(false);
-  
-  // State for credit scene
+    // State for credit scene
   const [showCredits, setShowCredits] = useState(false);
   const [nearSpecialOre, setNearSpecialOre] = useState(false);
+  // Death and stat management states
+  const [isDead, setIsDead] = useState(false);
+  const [showDeathScreen, setShowDeathScreen] = useState(false);
+  const [deathCause, setDeathCause] = useState('');
+  const [criticalWarnings, setCriticalWarnings] = useState(new Set());
 
   // Add state for mysterious ledger
   const [mysteriousLedgerCollected, setMysteriousLedgerCollected] = useState(false);
@@ -1178,8 +1185,7 @@ const Game = () => {
         setMysteriousLedgerCollected(gameState.mysteriousLedgerCollected ?? false);}
     } catch (error) {
     }
-  };
-  // Get character-specific sprites
+  };  // Get character-specific sprites
   const getCharacterSprites = () => {
     
     // Handle case where character might be an object with a name property
@@ -1191,7 +1197,8 @@ const Game = () => {
           walkDown: eugeneWalkDown,
           walkLeft: eugeneWalkLeft,
           walkRight: eugeneWalkRight,
-          eat: eugeneEat
+          eat: eugeneEat,
+          death: eugeneDeath
         };
       case 'alex':
         return {
@@ -1200,7 +1207,8 @@ const Game = () => {
           walkDown: alexWalkDown,
           walkLeft: alexWalkLeft,
           walkRight: alexWalkRight,
-          eat: alexEat
+          eat: alexEat,
+          death: alexDeath
         };
       case 'louise':
         return {
@@ -1209,7 +1217,8 @@ const Game = () => {
           walkDown: louiseWalkDown,
           walkLeft: louiseWalkLeft,
           walkRight: louiseWalkRight,
-          eat: louiseEat        };
+          eat: louiseEat,
+          death: louiseDeath        };
       default:
         return {
           stand: louiseStand,
@@ -1217,7 +1226,8 @@ const Game = () => {
           walkDown: louiseWalkDown,
           walkLeft: louiseWalkLeft,
           walkRight: louiseWalkRight,
-          eat: louiseEat
+          eat: louiseEat,
+          death: louiseDeath
         };
     }
   };
@@ -1235,8 +1245,13 @@ const Game = () => {
       default:
         return louisePortrait; // Default to louise
     }
-  };
-  const getSprite = () => {
+  };  const getSprite = () => {
+    if (isDead) {
+      return characterSprites.death;
+    }
+    if (showEatAnimation) {
+      return characterSprites.eat;
+    }
     const sprite = characterSprites[facing === 'stand' ? 'stand' : `walk${facing.charAt(0).toUpperCase() + facing.slice(1)}`];
     return sprite;
   };
@@ -2043,7 +2058,6 @@ const Game = () => {
       window.removeEventListener('keyup', handleKeyUp);
     };
   }, [isSleeping, isPaused, isDialogActive, showShop, showSabung, showChess, showMinigameSelection, isInInterior]);
-
   // Movement handler
   useEffect(() => {
     const handleKeyPress = (e) => {
@@ -2060,6 +2074,9 @@ const Game = () => {
         }
         return;
       }
+      
+      // Prevent all movement and actions if dead
+      if (isDead) return;
       
       if (isSleeping || isPaused || isDialogActive || showShop || showSabung || showChess) return;
       if (isInInterior) return;
@@ -2587,7 +2604,7 @@ useEffect(() => {  if (!isPaused && !isDialogActive && !showShop && !showSabung 
   } else {
     setShowBathPopup(false);
   }
-}, [position, isPaused, isDialogActive, showShop, showSabung, showChess, showBlackjack, showMinigameSelection, isSleeping]);
+}, [position, isPaused, isDialogActive, showShop, showSabung, showChess, showBlackjack, showMinigameSelection, isSleeping, isDead]);
 
 // Bath action handler
 const handleBath = () => {
@@ -2595,55 +2612,191 @@ const handleBath = () => {
   setCleanliness(prev => Math.min(100, prev + 40)); // Increase cleanliness
   setShowBathPopup(false);
 };
-
-  // Health drain effect if energy or cleanliness is 0
+  // Comprehensive stat draining system
 useEffect(() => {
   const interval = setInterval(() => {
-    // Only drain health if not sleeping, not paused, not in interior, not in dialog, not in shop
+    // Only drain stats if not sleeping, not paused, not in interior, not in dialog, not in shop, and not dead
     if (
       !isSleeping &&
       !isPaused &&
       !isInInterior &&
       !isDialogActive &&
-      !showShop
+      !showShop &&
+      !isDead
     ) {
-      if (energy === 0 && cleanliness === 0) {
-        setHealth(prev => Math.max(0, prev - 0.25)); // Both 0: drain faster
-      } else if (energy === 0 || cleanliness === 0) {
-        setHealth(prev => Math.max(0, prev - 0.12)); // One 0: drain slower
-      }
+      // Hunger drains constantly (fastest)
+      setHunger(prev => Math.max(0, prev - 0.3));
+
+      // Energy drains over time (medium speed)
+      setEnergy(prev => Math.max(0, prev - 0.15));
+
+      // Cleanliness drains slowly over time
+      setCleanliness(prev => Math.max(0, prev - 0.08));
+
+      // Happiness drains slowly when other stats are low
+      setHappiness(prev => {
+        let drainAmount = 0.05; // Base drain
+        if (hunger < 20) drainAmount += 0.1; // Extra drain when hungry
+        if (energy < 20) drainAmount += 0.08; // Extra drain when tired
+        if (cleanliness < 20) drainAmount += 0.06; // Extra drain when dirty
+        return Math.max(0, prev - drainAmount);
+      });
+
+      // Health drains when critical stats are low
+      setHealth(prev => {
+        let drainAmount = 0;
+        
+        // Critical health drain conditions
+        if (hunger <= 0) drainAmount += 0.4; // Starvation
+        if (energy <= 0) drainAmount += 0.25; // Exhaustion
+        if (cleanliness <= 0) drainAmount += 0.15; // Disease/infection
+        if (happiness <= 0) drainAmount += 0.1; // Depression/despair
+        
+        // Additional drain if multiple stats are critically low (but not zero)
+        const criticalStats = [hunger, energy, cleanliness, happiness].filter(stat => stat > 0 && stat <= 10);
+        if (criticalStats.length >= 2) drainAmount += 0.12;
+        
+        return Math.max(0, prev - drainAmount);
+      });
     }
   }, 1000); // Check every second
 
   return () => clearInterval(interval);
-}, [energy, cleanliness, isSleeping, isPaused, isInInterior, isDialogActive, showShop]);
-
-  // Hunger drain effect (Tarkov-like, drains a bit faster)
+}, [hunger, energy, cleanliness, happiness, isSleeping, isPaused, isInInterior, isDialogActive, showShop, isDead]);
+  // Death detection system
 useEffect(() => {
-  const interval = setInterval(() => {
-    // Only drain hunger if not sleeping, not paused, not in interior, not in dialog, not in shop
-    if (
-      !isSleeping &&
-      !isPaused &&
-      !isInInterior &&
-      !isDialogActive &&
-      !showShop
-    ) {
-      setHunger(prev => Math.max(0, prev - 0.25)); // Adjust value for desired speed
-    }
-  }, 1000); // Every second
+  if (health <= 0 && !isDead) {
+    setIsDead(true);
+    setFacing('stand'); // Stop movement
+    
+    // Determine death cause
+    let cause = '';
+    if (hunger <= 0) cause = 'starvation';
+    else if (energy <= 0) cause = 'exhaustion';
+    else if (cleanliness <= 0) cause = 'disease';
+    else if (happiness <= 0) cause = 'despair';
+    else cause = 'multiple factors';
+    
+    setDeathCause(cause);
+    
+    // Show death screen after a short delay to let death animation play
+    setTimeout(() => {
+      setShowDeathScreen(true);
+    }, 2000);
+  }
+}, [health, hunger, energy, cleanliness, happiness, isDead]);
 
-  return () => clearInterval(interval);
-}, [isSleeping, isPaused, isInInterior, isDialogActive, showShop]);
+// Critical stat warning system
+useEffect(() => {
+  if (isDead) return; // Don't show warnings if already dead
+
+  const newWarnings = new Set();
+  
+  // Check for critical stats and show warnings
+  if (hunger <= 0 && !criticalWarnings.has('hunger-critical')) {
+    newWarnings.add('hunger-critical');
+  }
+  if (energy <= 0 && !criticalWarnings.has('energy-critical')) {
+    newWarnings.add('energy-critical');
+  }
+  if (cleanliness <= 0 && !criticalWarnings.has('cleanliness-critical')) {
+    newWarnings.add('cleanliness-critical');
+  }
+  if (happiness <= 0 && !criticalWarnings.has('happiness-critical')) {
+    newWarnings.add('happiness-critical');
+  }
+  
+  // Check for low stats (warning level)
+  if (hunger <= 20 && hunger > 0 && !criticalWarnings.has('hunger-low')) {
+    newWarnings.add('hunger-low');
+  }
+  if (energy <= 20 && energy > 0 && !criticalWarnings.has('energy-low')) {
+    newWarnings.add('energy-low');
+  }
+  if (cleanliness <= 20 && cleanliness > 0 && !criticalWarnings.has('cleanliness-low')) {
+    newWarnings.add('cleanliness-low');
+  }
+  if (happiness <= 20 && happiness > 0 && !criticalWarnings.has('happiness-low')) {
+    newWarnings.add('happiness-low');
+  }
+  
+  if (newWarnings.size > 0) {
+    setCriticalWarnings(prev => new Set([...prev, ...newWarnings]));
+    
+    // Clear warnings after some time
+    setTimeout(() => {
+      setCriticalWarnings(prev => {
+        const updated = new Set(prev);
+        newWarnings.forEach(warning => updated.delete(warning));
+        return updated;
+      });
+    }, 5000);
+  }
+}, [hunger, energy, cleanliness, happiness, isDead, criticalWarnings]);
 
   // If mobile user, show mobile screen instead of the game
   if (isMobile) {
     return <MobileScreen />;
   }
-
   return (
-    <div className="relative w-full h-screen bg-black overflow-hidden">      {/* Styled Status Bar (HP, Hunger, Hygiene, Happiness) */}
-      {!isDialogActive && !isLoading && !showCutscene && !showShop && !showBlackjack && !showSabung && !showChess && !showMinigameSelection && !isSleeping && (
+    <div className="relative w-full h-screen bg-black overflow-hidden">
+      {/* Death Screen Overlay */}
+      {showDeathScreen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-95">
+          <div className="text-center text-white max-w-md mx-auto p-8">
+            <div className="mb-8">
+              <h1 className="text-6xl font-bold text-red-500 mb-4 animate-pulse">
+                YOU DIED
+              </h1>
+              <div className="w-40 h-40 mx-auto mb-6 rounded-lg border-4 border-red-500 overflow-hidden bg-gray-800">
+                <img
+                  src={getSprite()}
+                  alt="Death"
+                  className="w-full h-full object-cover pixelated"
+                />
+              </div>
+              <p className="text-xl mb-2">
+                Cause of Death: <span className="text-red-400 capitalize">{deathCause}</span>
+              </p>
+              <p className="text-gray-300 mb-6">
+                {deathCause === 'starvation' && "You starved to death. Remember to eat regularly!"}
+                {deathCause === 'exhaustion' && "You died from exhaustion. Get enough rest!"}
+                {deathCause === 'disease' && "Poor hygiene led to your demise. Stay clean!"}
+                {deathCause === 'despair' && "Depression overwhelmed you. Take care of your happiness!"}
+                {deathCause === 'multiple factors' && "Multiple factors contributed to your death. Manage all your stats!"}
+              </p>
+            </div>
+            <div className="space-y-4">
+              <button
+                className="w-full px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-bold text-lg border-2 border-red-400"
+                onClick={() => {
+                  // Reset game state
+                  setHealth(100);
+                  setEnergy(100);
+                  setHunger(100);
+                  setHappiness(100);
+                  setCleanliness(100);
+                  setIsDead(false);
+                  setShowDeathScreen(false);
+                  setDeathCause('');
+                  setPosition({ x: 350, y: 150 }); // Reset to spawn position
+                }}
+              >
+                Respawn
+              </button>
+              <button
+                className="w-full px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-bold text-lg border-2 border-gray-400"
+                onClick={() => {
+                  navigate('/', { replace: true });
+                }}
+              >
+                Return to Menu
+              </button>
+            </div>
+          </div>
+        </div>
+      )}{/* Styled Status Bar (HP, Hunger, Hygiene, Happiness) */}
+      {!isDialogActive && !isLoading && !showCutscene && !showShop && !showBlackjack && !showSabung && !showChess && !showMinigameSelection && !isSleeping && !isInInterior && (
         <>          {/* Single Statbar Container with Fixed Layout like HouseInterior */}
           <div className="absolute top-4 left-4 z-50 text-white flex items-center border-8 border-[#D2B48C]" style={{ backgroundColor: '#8B4513', padding: '10px', borderRadius: '10px' }}>
             {/* Character Portrait */}
@@ -2662,56 +2815,118 @@ useEffect(() => {
               <div className="flex flex-col gap-1">
                 {/* Health */}
                 <div className="flex items-center gap-1">
-                  <span className="text-sm flex items-center w-24">
+                  <span className={`text-sm flex items-center w-24 ${health <= 10 ? 'text-red-400 animate-pulse' : ''}`}>
                     <img src={heartIcon} alt="HP" className="w-6 h-6 mr-1" /> {Math.round(health)}/100
                   </span>
                   <div className="w-32 h-4 bg-gray-700 rounded overflow-hidden">
-                    <div className="h-full bg-red-500" style={{ width: `${health}%` }}></div>
+                    <div 
+                      className={`h-full ${health <= 10 ? 'bg-red-700 animate-pulse' : health <= 25 ? 'bg-red-400' : 'bg-red-500'}`} 
+                      style={{ width: `${health}%` }}
+                    ></div>
                   </div>
                 </div>
 
                 {/* Hunger */}
                 <div className="flex items-center gap-1">
-                  <span className="text-sm flex items-center w-24">
+                  <span className={`text-sm flex items-center w-24 ${hunger <= 10 ? 'text-yellow-400 animate-pulse' : ''}`}>
                     <img src={hungerIcon} alt="Hunger" className="w-6 h-6 mr-1" /> {Math.round(hunger)}/100
                   </span>
                   <div className="w-32 h-4 bg-gray-700 rounded overflow-hidden">
-                    <div className="h-full bg-yellow-500" style={{ width: `${hunger}%` }}></div>
+                    <div 
+                      className={`h-full ${hunger <= 10 ? 'bg-red-600 animate-pulse' : hunger <= 25 ? 'bg-orange-500' : 'bg-yellow-500'}`} 
+                      style={{ width: `${hunger}%` }}
+                    ></div>
                   </div>
                 </div>
 
                 {/* Cleanliness */}
                 <div className="flex items-center gap-1">
-                  <span className="text-sm flex items-center w-24">
+                  <span className={`text-sm flex items-center w-24 ${cleanliness <= 10 ? 'text-cyan-400 animate-pulse' : ''}`}>
                     <img src={hygieneIcon} alt="Cleanliness" className="w-6 h-6 mr-1" /> {Math.round(cleanliness)}/100
                   </span>
                   <div className="w-32 h-4 bg-gray-700 rounded overflow-hidden">
-                    <div className="h-full bg-cyan-500" style={{ width: `${cleanliness}%` }}></div>
+                    <div 
+                      className={`h-full ${cleanliness <= 10 ? 'bg-red-600 animate-pulse' : cleanliness <= 25 ? 'bg-orange-400' : 'bg-cyan-500'}`} 
+                      style={{ width: `${cleanliness}%` }}
+                    ></div>
                   </div>
                 </div>
 
                 {/* Happiness */}
                 <div className="flex items-center gap-1">
-                  <span className="text-sm flex items-center w-24">
+                  <span className={`text-sm flex items-center w-24 ${happiness <= 10 ? 'text-green-400 animate-pulse' : ''}`}>
                     <img src={happinessIcon} alt="Happiness" className="w-6 h-6 mr-1" /> {Math.round(happiness)}/100
                   </span>
                   <div className="w-32 h-4 bg-gray-700 rounded overflow-hidden">
-                    <div className="h-full bg-green-500" style={{ width: `${happiness}%` }}></div>
+                    <div 
+                      className={`h-full ${happiness <= 10 ? 'bg-red-600 animate-pulse' : happiness <= 25 ? 'bg-orange-400' : 'bg-green-500'}`} 
+                      style={{ width: `${happiness}%` }}
+                    ></div>
                   </div>
                 </div>
 
                 {/* Energy */}
                 <div className="flex items-center gap-1">
-                  <span className="text-sm flex items-center w-24">
+                  <span className={`text-sm flex items-center w-24 ${energy <= 10 ? 'text-blue-400 animate-pulse' : ''}`}>
                     <img src={energyIcon} alt="Energy" className="w-6 h-6 mr-1" /> {Math.round(energy)}/100
                   </span>
                   <div className="w-32 h-4 bg-gray-700 rounded overflow-hidden">
-                    <div className="h-full bg-blue-500" style={{ width: `${energy}%` }}></div>
-                  </div>
-                </div>
+                    <div 
+                      className={`h-full ${energy <= 10 ? 'bg-red-600 animate-pulse' : energy <= 25 ? 'bg-orange-400' : 'bg-blue-500'}`} 
+                      style={{ width: `${energy}%` }}
+                    ></div>
+                  </div>                </div>
               </div>
             </div>
-          </div>          {/* Time and Money Display - Side by side under stat bar */}
+          </div>
+          
+          {/* Critical Stat Warnings */}
+          {criticalWarnings.size > 0 && (
+            <div className="absolute top-4 right-4 z-50 space-y-2">
+              {criticalWarnings.has('hunger-critical') && (
+                <div className="bg-red-600 text-white px-4 py-2 rounded-lg border-2 border-red-400 animate-pulse">
+                  ⚠️ CRITICAL: You're starving! Eat something now!
+                </div>
+              )}
+              {criticalWarnings.has('energy-critical') && (
+                <div className="bg-red-600 text-white px-4 py-2 rounded-lg border-2 border-red-400 animate-pulse">
+                  ⚠️ CRITICAL: You're exhausted! Rest immediately!
+                </div>
+              )}
+              {criticalWarnings.has('cleanliness-critical') && (
+                <div className="bg-red-600 text-white px-4 py-2 rounded-lg border-2 border-red-400 animate-pulse">
+                  ⚠️ CRITICAL: You're filthy! Clean yourself now!
+                </div>
+              )}
+              {criticalWarnings.has('happiness-critical') && (
+                <div className="bg-red-600 text-white px-4 py-2 rounded-lg border-2 border-red-400 animate-pulse">
+                  ⚠️ CRITICAL: You're in despair! Find happiness!
+                </div>
+              )}
+              {criticalWarnings.has('hunger-low') && (
+                <div className="bg-orange-500 text-white px-4 py-2 rounded-lg border-2 border-orange-300">
+                  ⚠️ Warning: You're getting hungry
+                </div>
+              )}
+              {criticalWarnings.has('energy-low') && (
+                <div className="bg-orange-500 text-white px-4 py-2 rounded-lg border-2 border-orange-300">
+                  ⚠️ Warning: You're getting tired
+                </div>
+              )}
+              {criticalWarnings.has('cleanliness-low') && (
+                <div className="bg-orange-500 text-white px-4 py-2 rounded-lg border-2 border-orange-300">
+                  ⚠️ Warning: You're getting dirty
+                </div>
+              )}
+              {criticalWarnings.has('happiness-low') && (
+                <div className="bg-orange-500 text-white px-4 py-2 rounded-lg border-2 border-orange-300">
+                  ⚠️ Warning: You're feeling down
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Time and Money Display - Side by side under stat bar */}
           <div className="absolute top-[211px] left-4 z-50 text-white text-sm">
             <div className="flex items-center gap-49">
               {/* Time */}
@@ -2726,9 +2941,9 @@ useEffect(() => {
               </div>
             </div>
           </div>          {/* Wrap ActiveQuestFolderUI for positioning */}          <div className="fixed right-8 top-[25%] transform -translate-y-1/2 z-[90] scale-125">
-            {!isDialogActive && !isLoading && !showCutscene && !showShop && !showBlackjack && !showSabung && !showChess && !showMinigameSelection && !isSleeping && <ActiveQuestFolderUI quests={quests} />}
-          </div>          {!isDialogActive && !isLoading && !showCutscene && !showShop && !showBlackjack && !showSabung && !showChess && !showMinigameSelection && !isSleeping && <QuestFolder quests={quests} />}          {/* Minimap */}
-          {!isDialogActive && !isLoading && !showCutscene && !showShop && !showBlackjack && !showSabung && !showChess && !showMinigameSelection && !isSleeping && (
+            {!isDialogActive && !isLoading && !showCutscene && !showShop && !showBlackjack && !showSabung && !showChess && !showMinigameSelection && !isSleeping && !isInInterior && <ActiveQuestFolderUI quests={quests} />}
+          </div>          {!isDialogActive && !isLoading && !showCutscene && !showShop && !showBlackjack && !showSabung && !showChess && !showMinigameSelection && !isSleeping && !isInInterior && <QuestFolder quests={quests} />}          {/* Minimap */}
+          {!isDialogActive && !isLoading && !showCutscene && !showShop && !showBlackjack && !showSabung && !showChess && !showMinigameSelection && !isSleeping && !isInInterior && (
             <div className="z-[50]"> {/* Added wrapper with higher z-index */}
               <Minimap position={position} shopPoints={shopPoints} />
             </div>
@@ -2755,23 +2970,7 @@ useEffect(() => {
       {user && !isLoading && !showCutscene && !isPaused && !isDialogActive && renderSavePrompt()}
 
       {/* Dialog Box */}
-      {isDialogActive && currentDialog && (
-        <>
-          <div
-            className="fixed top-8 right-8 z-[100] pointer-events-auto"
-          >
-            <button
-              onClick={() => {
-                playClick();
-                handleSkipMonologue();
-              }}
-              onMouseEnter={playHover}
-              style={{ backgroundColor: 'rgba(55, 65, 81, 0.85)' }}
-              className="px-4 py-2 text-white rounded-lg hover:bg-gray-600 transition-colors shadow-lg"
-            >
-              Skip
-            </button>
-          </div>
+      {isDialogActive && currentDialog && (        <>
           <div
             className="fixed inset-0 z-50 flex items-end justify-center p-4 pointer-events-auto"
             onClick={() => {
@@ -3471,7 +3670,7 @@ useEffect(() => {
           </div>
         </div>
       )}      {/* Add Inventory */}
-      {!isDialogActive && !isPaused && !isLoading && !showCutscene && !showShop && !showBlackjack && !showSabung && !showChess && !showMinigameSelection && !isSleeping && (
+      {!isDialogActive && !isPaused && !isLoading && !showCutscene && !showShop && !showBlackjack && !showSabung && !showChess && !showMinigameSelection && !isSleeping && !isInInterior && (
         <Inventory 
           items={inventory} 
           onUseItem={handleUseItem}

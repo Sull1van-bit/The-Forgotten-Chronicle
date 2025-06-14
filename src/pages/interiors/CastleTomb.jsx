@@ -268,10 +268,9 @@ const CastleTomb = ({
             currentDialogIndex++;
             if (currentDialogIndex < royalDocumentDialogs.length) {
               // Continue to next dialog after a brief pause
-              setTimeout(startNextDialog, 500);
-            } else {
-              // All dialogs complete - trigger new quest
-              handleNewQuestUnlock();
+              setTimeout(startNextDialog, 500);            } else {
+              // All dialogs complete - trigger ending
+              handleGameEnding();
             }
           }
         });
@@ -279,11 +278,12 @@ const CastleTomb = ({
     };
     
     startNextDialog();
-  };
-
-  // Handle unlocking the new quest after king's dialog
-  const handleNewQuestUnlock = () => {
-    // Find and complete "The Lost Ledger" quest
+  };  // Handle game ending after king's dialog
+  const handleGameEnding = () => {
+    // Stop the music when dialog ends
+    setMusicEnabled(false);
+    
+    // Complete "The Lost Ledger" quest
     setQuests(prevQuests => {
       const updatedQuests = prevQuests.map(quest => {
         if (quest.title === "The Lost Ledger") {
@@ -292,56 +292,18 @@ const CastleTomb = ({
         }
         return quest;
       });
-
-      // Add the new quest "The Heir's Trial"
-      const newQuest = {
-        id: `quest-${Date.now()}`,
-        title: "The Heir's Trial",
-        description: "The ancient king has revealed your destiny as the prophesied heir. Seek the three legendary artifacts to prove your worth and claim the throne.",
-        objectives: [
-          { 
-            id: 1, 
-            description: "Find the Crown of Wisdom", 
-            completed: false,
-            clue: "Seek knowledge where scholars once gathered"
-          },
-          { 
-            id: 2, 
-            description: "Find the Blade of Courage", 
-            completed: false,
-            clue: "Where warriors proved their mettle in combat"
-          },
-          { 
-            id: 3, 
-            description: "Find the Heart of Compassion", 
-            completed: false,
-            clue: "Where the suffering found solace and healing"
-          },
-          { 
-            id: 4, 
-            description: "Unite the three artifacts at the ancient altar", 
-            completed: false,
-            clue: "Return to where the prophecy was first spoken"
-          }
-        ],
-        completed: false,
-        reward: {
-          experience: 1000,
-          gold: 500,
-          items: ["Royal Crown", "Kingdom Seal"]
-        }
-      };
-
-      return [...updatedQuests, newQuest];
+      return updatedQuests;
     });
 
-    // Show objective popup for the new quest
-    setNewObjectives(prev => [...prev, "New Quest: The Heir's Trial"]);
+    // Show completion message with proper objective popup format
+    setCompletedObjectives(prev => [...prev, { text: "Quest Complete: The Lost Ledger", id: Date.now() }]);
     
-    // Remove popup after delay
+    // Remove popup and trigger ending after delay
     setTimeout(() => {
-      setNewObjectives(prev => prev.filter(obj => obj !== "New Quest: The Heir's Trial"));
-    }, 4000);
+      setCompletedObjectives([]);
+      // Trigger the credits/ending scene
+      setShowCredits(true);
+    }, 4000); // Match the standard 4 second duration for completed objectives
   };
 
   // Movement handling
@@ -675,9 +637,7 @@ const CastleTomb = ({
             </div>
           )}
         </div>
-      </div>
-
-      {/* UI Elements */}
+      </div>      {/* UI Elements */}
       {!isDialogActive && !showCredits && (
         <div className="ui-container" style={{
           position: 'fixed',
@@ -689,16 +649,15 @@ const CastleTomb = ({
           zIndex: 100
         }}>
           {/* Stats Bar */}
-          {!isDialogActive && (
-            <div className="stats-bar" style={{
-              position: 'absolute',
-              top: '20px',
-              left: '20px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '10px',
-              pointerEvents: 'auto'
-            }}>
+          <div className="stats-bar" style={{
+            position: 'absolute',
+            top: '20px',
+            left: '20px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+            pointerEvents: 'auto'
+          }}>
             <div className="stat-item" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
               <img src={heartIcon} alt="Health" style={{ width: '20px', height: '20px' }} />
               <span style={{ color: 'white', fontSize: '14px', textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
@@ -728,17 +687,13 @@ const CastleTomb = ({
               <span style={{ color: 'white', fontSize: '14px', textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
                 {cleanliness}/100
               </span>
-            </div>
-            <div className="stat-item" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+            </div>            <div className="stat-item" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
               <img src={moneyIcon} alt="Money" style={{ width: '20px', height: '20px' }} />
               <span style={{ color: 'white', fontSize: '14px', textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
                 ${money}
               </span>
             </div>
-          </div>
-          )}
-
-          {/* Pause Button */}
+          </div>          {/* Pause Button */}
           {!isDialogActive && (
             <button
               onClick={handlePause}
@@ -763,61 +718,12 @@ const CastleTomb = ({
               /> 
             </button>
           )}
-
-          {/* Credit Button */}
-          {!isDialogActive && (
-            <button
-              onClick={() => {
-                playClick();
-                setShowCredits(true);
-              }}
-              onMouseEnter={playHover}
-              style={{
-                position: 'absolute',
-                top: '20px',
-                right: '80px',
-                background: 'rgba(0, 0, 0, 0.7)',
-                border: '2px solid #F5DEB3',
-                borderRadius: '8px',
-                color: '#F5DEB3',
-                padding: '8px 16px',
-                cursor: 'pointer',
-                pointerEvents: 'auto',
-                fontSize: '14px',
-                fontWeight: 'bold',
-                textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseOver={(e) => {
-                e.target.style.background = 'rgba(245, 222, 179, 0.2)';
-                e.target.style.transform = 'scale(1.05)';
-              }}
-              onMouseOut={(e) => {
-                e.target.style.background = 'rgba(0, 0, 0, 0.7)';
-                e.target.style.transform = 'scale(1)';
-              }}
-            >
-              Credits
-            </button>
-          )}
         </div>
-      )}
-
-      {/* Dialog Box */}
+      )}{/* Dialog Box */}
       {isDialogActive && (
-        <DialogBox
-          character={characterName}
-          dialogue={currentDialog?.dialogue || []}
-          currentIndex={dialogIndex}
-          onNext={advanceDialog}
-          onSkip={endDialog}
-          characterPortrait={
-            characterName === 'Eugene' ? eugenePortrait :
-            characterName === 'Louise' ? louisePortrait :
-            characterName === 'Alex' ? alexPortrait :
-            eugenePortrait
-          }
-        />
+        <div style={{ zIndex: 9999, position: 'fixed', inset: 0 }}>
+          <DialogBox />
+        </div>
       )}
 
       {/* Settings Menu */}
@@ -834,36 +740,43 @@ const CastleTomb = ({
           musicVolume={musicVolume}
           setMusicVolume={setMusicVolume}
         />
-      )}
-
-      {/* Objective Popups */}
+      )}      {/* Objective Popups */}
       {!isDialogActive && !showCredits && (
-        <AnimatePresence>
-          {newObjectives.map((objective, index) => (
-            <motion.div
-              key={`${objective}-${index}`}
-              initial={{ opacity: 0, y: -50 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -50 }}
-              style={{
-                position: 'fixed',
-                top: `${120 + index * 60}px`,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                background: 'rgba(0, 0, 0, 0.8)',
-                color: 'white',
-                padding: '10px 20px',
-                borderRadius: '5px',
-                fontSize: '16px',
-                fontWeight: 'bold',
-                zIndex: 1000,
-                pointerEvents: 'none',
-              }}
-            >
-              {objective}
-            </motion.div>
-          ))}
-        </AnimatePresence>
+        <div className="fixed top-28 left-1/2 transform -translate-x-1/2 z-[109] pointer-events-none text-center">
+          <AnimatePresence>
+            {/* Completed objectives */}
+            {completedObjectives.map((completedObj) => (
+              <motion.div
+                key={`completed-${completedObj.id}`}
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.5 }}
+                className="mb-3"
+              >
+                <p className="text-yellow-400 text-xl font-medium drop-shadow-lg tracking-wide">
+                  <span className="line-through">✓ {completedObj.text}</span>
+                </p>
+              </motion.div>
+            ))}
+            
+            {/* New objectives */}
+            {newObjectives.map((objective, index) => (
+              <motion.div
+                key={`new-${objective.id || index}`}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                transition={{ duration: 0.5 }}
+                className="mb-3"
+              >
+                <p className="text-white text-xl font-medium drop-shadow-lg tracking-wide">
+                  ▶ {typeof objective === 'string' ? objective : objective.text}
+                </p>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
       )}
 
       {/* Royal Document Interaction Prompt */}
@@ -879,11 +792,16 @@ const CastleTomb = ({
             Press E to examine
           </div>
         </div>
-      )}
-
-      {/* Credits Modal */}
+      )}      {/* Credits Modal */}
       {showCredits && (
-        <CreditScene onComplete={() => setShowCredits(false)} />
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 2, ease: "easeInOut" }}
+          className="fixed inset-0 z-[200]"
+        >
+          <CreditScene onComplete={handleExit} />
+        </motion.div>
       )}
     </div>
   );

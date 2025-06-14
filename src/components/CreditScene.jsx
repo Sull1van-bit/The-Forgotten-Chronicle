@@ -72,11 +72,9 @@ const CreditScene = ({ onComplete }) => {
     const timer2 = setTimeout(() => setCurrentPhase('studio'), 6000); // Extended time for smoother transition
     const timer3 = setTimeout(() => {
       setCurrentPhase('credits');
-    }, 10000); // Extended total time
-
-    // Backup timer to redirect to main menu after music duration (3:09 = 189 seconds)
+    }, 10000); // Extended total time    // Backup timer to complete credits after music duration (3:09 = 189 seconds)
     const redirectTimer = setTimeout(() => {
-      navigate('/');
+      onComplete();
     }, 189000); // 189 seconds = 3 minutes 9 seconds
 
     return () => {
@@ -116,11 +114,10 @@ const CreditScene = ({ onComplete }) => {
 
       return () => clearInterval(mediaTimer);
     }
-  }, [currentPhase, mediaAssets.length]);
-  // Handle audio end - redirect to main menu
+  }, [currentPhase, mediaAssets.length]);  // Handle audio end - complete credits
   const handleAudioEnd = () => {
-    // Navigate back to main menu when music ends
-    navigate('/');
+    // Call onComplete when music ends
+    onComplete();
   };
 
   const renderMedia = () => {

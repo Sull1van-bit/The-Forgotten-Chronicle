@@ -187,7 +187,7 @@ const DialogBox = ({ onAdvance }) => {
     } else {
       // If not typing, advance the dialog.
       console.log('Clicking while not typing, attempting to advance.'); // Debug log
-      onAdvance();
+      advanceDialog();
     }
   };
 
@@ -233,9 +233,30 @@ const DialogBox = ({ onAdvance }) => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-50 flex items-end justify-center p-4 pointer-events-auto"
+          onClick={handleClick}
           // Remove background overlay from DialogBox component, it will be handled by the parent
           // style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)' }}
         >
+          {/* Skip Button - Top Right of Screen */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent triggering dialog advance
+              playExit();
+              endDialog();
+            }}
+            className="absolute top-4 right-4 text-[#F5DEB3] hover:text-white transition-colors z-10"
+            style={{
+              background: 'rgba(0, 0, 0, 0.7)',
+              border: '2px solid #D2B48C',
+              borderRadius: '8px',
+              padding: '8px 16px',
+              fontSize: '14px',
+              fontWeight: 'bold'
+            }}
+          >
+            Skip
+          </button>
+
           <motion.div
             initial={{ y: 200, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -249,7 +270,7 @@ const DialogBox = ({ onAdvance }) => {
               justifyContent: 'flex-end', // Align content to the end (right)
               padding: '10px 20px', // Adjust padding to fit the new layout
             }}
-            onClick={handleClick}
+            onClick={(e) => e.stopPropagation()} // Prevent dialog box clicks from bubbling up
           >
             {/* Text Area */}
             <div className="flex-grow flex flex-col justify-center ml-4">
