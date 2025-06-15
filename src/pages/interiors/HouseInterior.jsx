@@ -802,8 +802,6 @@ const HouseInterior = ({
       let newX = position.x;
       let newY = position.y;
       let hasMoved = false;
-      const energyCost = 0.1;
-      const cleanlinessCost = 0.1;
 
       // Handle diagonal movement with normalized speed
       const moveDiagonal = pressedKeys.size > 1;
@@ -854,10 +852,7 @@ const HouseInterior = ({
         setPosition({ x: newX, y: newY });
         setIsMoving(true);
         
-        // Apply costs only when actually moving
-        setEnergy(prev => Math.max(0, prev - energyCost));
-        setCleanliness(prev => Math.max(0, prev - cleanlinessCost));
-          // Check interactions
+        // Check interactions
         checkExitPoint(newX, newY);
         checkSleepProximity(newX, newY);
         checkCookingProximity(newX, newY);

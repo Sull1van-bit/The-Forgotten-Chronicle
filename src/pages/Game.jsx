@@ -2328,10 +2328,11 @@ const Game = () => {
         setPosition({ x: newX, y: newY });
         setIsMoving(true);
         
-        // Apply costs only when actually moving
-        setEnergy(prev => Math.max(0, prev - energyCost));
-        setCleanliness(prev => Math.max(0, prev - cleanlinessCost));
-          // Check various interactions
+        // Remove movement costs
+        // setEnergy(prev => Math.max(0, prev - energyCost));
+        // setCleanliness(prev => Math.max(0, prev - cleanlinessCost));
+        
+        // Check various interactions
         const isAtSavePoint = checkSavePoint(newX, newY);
         setCanSave(isAtSavePoint);
         setShowSavePrompt(isAtSavePoint);        checkTeleport(newX, newY);
