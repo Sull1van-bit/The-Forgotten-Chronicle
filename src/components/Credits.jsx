@@ -62,7 +62,7 @@ export default function Credits({ onClose }) {
           <div className="text-center">
             <h3 className="text-xl font-semibold mb-2 text-[#F5DEB3]">Special Thanks To: </h3>
             <p>Allah SWT & Jesus Christ</p>
-            <p>Pak Wawo</p>
+            <p>Pak Wawsasasasaassaasassaasasasao</p>
             <p>Dian Fajrina Rahmatunisa(choji)</p>
             <p>Nadine Putri </p>
             <p>Melisa Chiufin</p>
