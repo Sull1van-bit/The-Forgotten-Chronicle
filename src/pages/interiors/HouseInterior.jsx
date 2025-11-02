@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import houseInside from '../../assets/Interior/house-inside.png';
 import { useAuth } from '../../context/AuthContext';
 import { useGame } from '../../context/GameContext';
@@ -135,8 +135,9 @@ const HouseInterior = ({
   // Add state to track pressed keys for diagonal movement
   const [pressedKeys, setPressedKeys] = useState(new Set());
   const [isMoving, setIsMoving] = useState(false);
-  const moveSpeed = 5; // Movement speed for smooth diagonal movement
+  const moveSpeed = 2; // Balanced movement speed for small interior
   const moveTimeoutRef = useRef(null);
+  const lastFrameTimeRef = useRef(Date.now());
   // Define the sleep area
   const SLEEP_AREA = { x: 2, y: 2 };
   const SLEEP_AREA_PIXEL = { x: SLEEP_AREA.x * GRID_SIZE, y: SLEEP_AREA.y * GRID_SIZE };
@@ -241,7 +242,7 @@ const HouseInterior = ({
 
   // The checkSleepProximity function should only set isNearSleepArea
   // The effect above will handle setting showSleepConfirmPopup
-  const checkSleepProximity = (x, y) => {
+  const checkSleepProximity = useCallback((x, y) => {
     // Use scaled player size for center calculation
     const playerCenterX = x + (PLAYER_SCALED_SIZE / 2);
     const playerCenterY = y + (PLAYER_SCALED_SIZE / 2);
@@ -256,10 +257,10 @@ const HouseInterior = ({
     const isNear = distance < proximityThreshold;    console.log('Check Sleep Proximity:', { playerX: x, playerY: y, playerCenterX, playerCenterY, sleepCenterX, sleepCenterY, distance, isNear, proximityThreshold }); // Debug log
     setIsNearSleepArea(isNear);
     // Removed setShowSleepButton(isNear);
-  };
+  }, [SLEEP_AREA_PIXEL.x, SLEEP_AREA_PIXEL.y]);
 
   // Check cooking area proximity
-  const checkCookingProximity = (x, y) => {
+  const checkCookingProximity = useCallback((x, y) => {
     const playerCenterX = x + (PLAYER_SCALED_SIZE / 2);
     const playerCenterY = y + (PLAYER_SCALED_SIZE / 2);
     const cookingCenterX = COOKING_AREA_PIXEL.x + (GRID_SIZE / 2);
@@ -270,7 +271,7 @@ const HouseInterior = ({
     const proximityThreshold = 50;
     const isNear = distance < proximityThreshold;
     setIsNearCookingArea(isNear);
-  };// Add effect to check quest progress when entering house
+  }, [COOKING_AREA_PIXEL.x, COOKING_AREA_PIXEL.y]);// Add effect to check quest progress when entering house
   const hasShownHouseObjective = useRef(false);
   
   useEffect(() => {
@@ -673,12 +674,12 @@ const HouseInterior = ({
   };
 
   // Check if any collision occurs
-  const hasCollision = (x, y) => {
+  const hasCollision = useCallback((x, y) => {
     return INTERIOR_COLLISION_MAP.some(point => checkCollision(x, y, point));
-  };
+  }, []);
 
   // Handle exit point (door) collision
-  const checkExitPoint = (x, y) => {
+  const checkExitPoint = useCallback((x, y) => {
     const exitPoint = { x: 5, y: 5 };
     const playerGridPos = {
       x: Math.floor(x / GRID_SIZE),
@@ -690,7 +691,7 @@ const HouseInterior = ({
       const adjustedY = Math.round((2 * gameGridSize) / GRID_SIZE * GRID_SIZE / gameGridSize);
       onExit({ x: adjustedX, y: adjustedY });
     }
-  };
+  }, [onExit]);
 
   const renderGrid = () => {
     const cells = [];
@@ -705,29 +706,11 @@ const HouseInterior = ({
           <div
             key={`${row}-${col}`}
             className={`grid-cell ${collisionClass} ${isExitPoint ? 'teleport' : ''} ${isSleepArea ? 'sleep-area' : ''} ${isCookingArea ? 'cooking-area' : ''}`}
-            // style={{
-            //   left: col * GRID_SIZE,
-            //   top: row * GRID_SIZE,
-            //   width: GRID_SIZE,
-            //   height: GRID_SIZE,
-            //   position: 'absolute',
-            //   border: '1px solid rgba(255, 255, 255, 0.5)', // Increased opacity for better visibility
-            //   color: 'rgba(255, 255, 255, 0.8)', // Increased opacity for better visibility
-            //   fontSize: '12px', // Increased font size
-            //   fontWeight: 'bold', // Added bold for better readability
-            //   display: 'flex',
-            //   alignItems: 'center',
-            //   justifyContent: 'center',              backgroundColor: isExitPoint ? 'rgba(0, 255, 0, 0.3)' : 
-            //                    isSleepArea ? 'rgba(0, 0, 255, 0.3)' : 
-            //                    isCookingArea ? 'rgba(255, 165, 0, 0.3)' : 
-            //                    collisionPoint ? 'rgba(255, 0, 0, 0.3)' :
-            //                    'rgba(0, 0, 0, 0.1)', // Added background colors for different areas
-            //   textShadow: '1px 1px 2px rgba(0, 0, 0, 0.8)', // Added text shadow for better readability
-            // }}
+            style={{
+              display: 'none' // Hide grid cells - they're just for debugging
+            }}
             title={`${col},${row}`}
-          >
-            {`${col},${row}`}
-          </div>
+          />
         );
       }
     }    return cells;
@@ -870,19 +853,7 @@ const HouseInterior = ({
         cancelAnimationFrame(moveTimeoutRef.current);
       }
     };
-  }, [
-    position,
-    pressedKeys,
-    isSleeping,
-    isPaused,
-    isDialogActive,
-    hasCollision,
-    checkExitPoint,
-    checkSleepProximity,
-    checkCookingProximity,
-    INTERIOR_WIDTH,
-    INTERIOR_HEIGHT,
-    PLAYER_SIZE  ]);
+  }, [pressedKeys, isSleeping, isPaused, isDialogActive]);
 
   // Add getCharacterPortrait function
   const getCharacterPortrait = () => {

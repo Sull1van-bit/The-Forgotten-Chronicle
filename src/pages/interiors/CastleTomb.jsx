@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import castleTombInside from '../../assets/Interior/castle-tomb.png';
 import royalDocumentIcon from '../../assets/items/royal-document.png';
 import { useAuth } from '../../context/AuthContext';
@@ -149,8 +149,10 @@ const CastleTomb = ({
   // Add state to track pressed keys for diagonal movement
   const [pressedKeys, setPressedKeys] = useState(new Set());
   const [isMoving, setIsMoving] = useState(false);
-  const moveSpeed = 10;
+  const moveSpeed = 3; // Adjusted for better control (was 10, too fast)
   const moveTimeoutRef = useRef(null);
+  // eslint-disable-next-line no-unused-vars
+  const lastFrameTimeRef = useRef(Date.now());
 
   // Add state for royal document
   const [royalDocumentCollected, setRoyalDocumentCollected] = useState(false);
@@ -170,15 +172,16 @@ const CastleTomb = ({
   ];
 
   // Check if player is near any exit
-  const isNearExit = (playerX, playerY) => {
+  const isNearExit = useCallback((playerX, playerY) => {
     const playerGridX = Math.floor(playerX / GRID_SIZE);
     const playerGridY = Math.floor(playerY / GRID_SIZE);
     return EXIT_AREAS.some(exitArea => 
       playerGridX === exitArea.x && playerGridY === exitArea.y
-    );  };
+    );
+  }, []);
 
   // Collision detection for tomb
-  const hasCollision = (x, y) => {
+  const hasCollision = useCallback((x, y) => {
     const gridX = Math.floor(x / GRID_SIZE);
     const gridY = Math.floor(y / GRID_SIZE);
 
@@ -191,14 +194,14 @@ const CastleTomb = ({
     return TOMB_COLLISION_MAP.some(collision => 
       collision.x === gridX && collision.y === gridY
     );
-  };
+  }, []);
 
   // Handle exit
-  const handleExitTomb = () => {
+  const handleExitTomb = useCallback(() => {
     onExit({ x: 57, y: 10 }); // Spawn point outside the tomb
-  };
+  }, [onExit]);
   // Check proximity to Royal Document
-  const checkRoyalDocumentProximity = (playerX, playerY) => {
+  const checkRoyalDocumentProximity = useCallback((playerX, playerY) => {
     if (royalDocumentCollected) {
       setNearRoyalDocument(false);
       return false;
@@ -215,7 +218,7 @@ const CastleTomb = ({
     const proximityThreshold = GRID_SIZE * 1.5;    const isNear = distance < proximityThreshold;
     setNearRoyalDocument(isNear);
     return isNear;
-  };
+  }, [royalDocumentCollected, ROYAL_DOCUMENT_POSITION_PIXEL.x, ROYAL_DOCUMENT_POSITION_PIXEL.y]);
 
   // Handle Royal Document Collection with Dialog Sequences
   const handleRoyalDocumentCollection = () => {
@@ -306,32 +309,41 @@ const CastleTomb = ({
     }, 4000); // Match the standard 4 second duration for completed objectives
   };
 
-  // Movement handling
-  const handleMovement = (direction) => {
+  // Movement handling with delta time for smooth movement
+  const handleMovement = useCallback((direction) => {
     if (isDialogActive || isPaused) return;
+
+    // Calculate delta time for frame-independent movement
+    const currentTime = Date.now();
+    const deltaTime = (currentTime - lastFrameTimeRef.current) / 16.67; // Normalize to 60fps
+    lastFrameTimeRef.current = currentTime;
 
     const currentX = position.x || 0;
     const currentY = position.y || 0;
     let newX = currentX;
     let newY = currentY;
 
+    const adjustedSpeed = moveSpeed * Math.min(deltaTime, 2); // Cap delta to prevent huge jumps
+
     switch (direction) {
       case 'up':
-        newY = Math.max(0, currentY - moveSpeed);
+        newY = Math.max(0, currentY - adjustedSpeed);
         setFacing('up');
         break;
       case 'down':
-        newY = Math.min(INTERIOR_HEIGHT - PLAYER_SCALED_SIZE, currentY + moveSpeed);
+        newY = Math.min(INTERIOR_HEIGHT - PLAYER_SCALED_SIZE, currentY + adjustedSpeed);
         setFacing('down');
         break;
       case 'left':
-        newX = Math.max(0, currentX - moveSpeed);
+        newX = Math.max(0, currentX - adjustedSpeed);
         setFacing('left');
         break;
       case 'right':
-        newX = Math.min(INTERIOR_WIDTH - PLAYER_SCALED_SIZE, currentX + moveSpeed);
+        newX = Math.min(INTERIOR_WIDTH - PLAYER_SCALED_SIZE, currentX + adjustedSpeed);
         setFacing('right');
         break;
+      default:
+        return;
     }
 
     if (!hasCollision(newX, newY)) {
@@ -354,7 +366,7 @@ const CastleTomb = ({
         setFacing('stand');
       }, 200);
     }
-  };
+  }, [isDialogActive, isPaused, position, hasCollision, isNearExit, handleExitTomb, checkRoyalDocumentProximity]);
 
   // Keyboard controls
   useEffect(() => {
