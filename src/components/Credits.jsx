@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useSound } from '../context/SoundContext';
+import logoUMN from '../assets/sponsor/logoUMN.png';
 
 export default function Credits({ onClose }) {
   const { playExit } = useSound();
@@ -25,6 +26,12 @@ export default function Credits({ onClose }) {
         transition={{ type: "spring", bounce: 0.3 }}
         className="bg-[#8B4513] p-8 rounded-lg max-w-2xl w-full mx-4 relative border-8 border-[#D2B48C] shadow-lg"
       >
+        <img 
+          src={logoUMN} 
+          alt="UMN Logo" 
+          className="absolute top-4 left-4 w-25 h-25 object-contain"
+        />
+        
         <button
           onClick={handleClose}
           className="absolute top-4 right-4 text-[#F5DEB3] text-2xl focus:outline-none hover:text-white transition-colors"
@@ -42,14 +49,14 @@ export default function Credits({ onClose }) {
           
           <div className="text-center">
             <h3 className="text-xl font-semibold mb-2 text-[#F5DEB3]">Art & Design</h3>
-            <p>Gading Kelana Putra</p>
+            <p>Gading Kelana Putra - 00000111323</p>
           </div>
           
           <div className="text-center">
             <h3 className="text-xl font-semibold mb-2 text-[#F5DEB3]">Programming</h3>
-            <p>Naufal Rabbani</p>
-            <p>Abid Irsyad Dinejad</p>
-            <p>Rafael Romelo Gibran</p>
+            <p>Naufal Rabbani - 00000108931</p>
+            <p>Abid Irsyad Dinejad - 00000111284</p>
+            <p>Rafael Romelo Gibran - 00000111248</p>
           </div>
           
           <div className="text-center">

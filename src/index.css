@@ -1,3 +1,6 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -55,8 +58,6 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
-@import "tailwindcss";
-
 /* Ensure pixel art stays crisp */
 .pixel-art {
   image-rendering: pixelated;
@@ -75,6 +76,3 @@ button:focus-visible {
 .pixel-button:active {
   transform: translateY(2px);
 }
-
-/* Import pixel font */
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');

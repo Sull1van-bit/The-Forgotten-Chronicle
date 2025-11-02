@@ -1,0 +1,152 @@
+/* Blackjack Game Styles */
+.blackjack-overlay {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.blackjack-table {
+  background: linear-gradient(to bottom, rgba(26, 71, 42, 0.95), rgba(45, 90, 63, 0.95));
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  animation: slideIn 0.3s ease-out;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.card {
+  transition: all 0.3s ease;
+  transform-style: preserve-3d;
+  perspective: 1000px;
+}
+
+.card:hover {
+  transform: translateY(-5px) rotateY(10deg);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.card.red {
+  color: #dc2626;
+}
+
+.card.black {
+  color: #1f2937;
+}
+
+.bet-input {
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+  color: #fde047;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.bet-input:focus {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  outline: none;
+  box-shadow: 0 0 10px rgba(253, 224, 71, 0.3);
+}
+
+.bet-input::placeholder {
+  color: rgba(253, 224, 71, 0.5);
+}
+
+.game-button {
+  transition: all 0.2s ease;
+  transform: translateY(0);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.game-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
+  text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.game-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.message {
+  animation: messageSlide 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes messageSlide {
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Card dealing animation */
+.dealing {
+  animation: dealCard 0.5s ease-out;
+}
+
+@keyframes dealCard {
+  from {
+    transform: translateY(-100px) rotate(-10deg);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) rotate(0);
+    opacity: 1;
+  }
+}
+
+/* Win/Lose effects */
+.win-effect {
+  animation: winGlow 1s ease-in-out;
+}
+
+.lose-effect {
+  animation: loseShake 0.5s ease-in-out;
+}
+
+@keyframes winGlow {
+  0% {
+    box-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+  }
+}
+
+@keyframes loseShake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
+} 

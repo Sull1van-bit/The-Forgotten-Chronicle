@@ -20,7 +20,7 @@
   width: 100%;
   height: 100%;
   will-change: transform;
-  transition: transform 0.1s ease-out;
+  transition: transform 0.05s ease-out;
 }
 
 .map-background {
@@ -35,7 +35,7 @@
   pointer-events: none;
 }
 
-.grid {
+/* .grid {
   position: relative;
   width: 2400px;
   height: 1800px;
@@ -46,59 +46,72 @@
   position: absolute;
   width: 40px;
   height: 40px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.3);
-  font-size: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 10px;
+  font-weight: bold;
   display: flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  background-color: rgba(0, 0, 0, 0.1);
 }
 
 .grid-cell.collision.full {
-  background-color: rgba(255, 0, 0, 0.2);
-  border: 1px solid rgba(255, 0, 0, 0.5);
+  background-color: rgba(255, 0, 0, 0.3);
+  border: 1px solid rgba(255, 0, 0, 0.7);
 }
 
 .grid-cell.collision.half-top {
   background: linear-gradient(to bottom, 
-    rgba(255, 0, 0, 0.2) 50%, 
-    transparent 50%
+    rgba(255, 0, 0, 0.3) 50%, 
+    rgba(0, 0, 0, 0.1) 50%
   );
-  border-top: 1px solid rgba(255, 0, 0, 0.5);
-  border-left: 1px solid rgba(255, 0, 0, 0.5);
-  border-right: 1px solid rgba(255, 0, 0, 0.5);
+  border-top: 1px solid rgba(255, 0, 0, 0.7);
+  border-left: 1px solid rgba(255, 0, 0, 0.7);
+  border-right: 1px solid rgba(255, 0, 0, 0.7);
 }
 
 .grid-cell.collision.half-bottom {
   background: linear-gradient(to top, 
-    rgba(255, 0, 0, 0.2) 50%, 
-    transparent 50%
+    rgba(255, 0, 0, 0.3) 50%, 
+    rgba(0, 0, 0, 0.1) 50%
   );
-  border-bottom: 1px solid rgba(255, 0, 0, 0.5);
-  border-left: 1px solid rgba(255, 0, 0, 0.5);
-  border-right: 1px solid rgba(255, 0, 0, 0.5);
+  border-bottom: 1px solid rgba(255, 0, 0, 0.7);
+  border-left: 1px solid rgba(255, 0, 0, 0.7);
+  border-right: 1px solid rgba(255, 0, 0, 0.7);
 }
 
 .grid-cell.collision.half-left {
   background: linear-gradient(to right, 
-    rgba(255, 0, 0, 0.2) 50%, 
-    transparent 50%
+    rgba(255, 0, 0, 0.3) 50%, 
+    rgba(0, 0, 0, 0.1) 50%
   );
-  border-top: 1px solid rgba(255, 0, 0, 0.5);
-  border-left: 1px solid rgba(255, 0, 0, 0.5);
-  border-bottom: 1px solid rgba(255, 0, 0, 0.5);
+  border-top: 1px solid rgba(255, 0, 0, 0.7);
+  border-left: 1px solid rgba(255, 0, 0, 0.7);
+  border-bottom: 1px solid rgba(255, 0, 0, 0.7);
 }
 
 .grid-cell.collision.half-right {
   background: linear-gradient(to left, 
-    rgba(255, 0, 0, 0.2) 50%, 
-    transparent 50%
+    rgba(255, 0, 0, 0.3) 50%, 
+    rgba(0, 0, 0, 0.1) 50%
   );
-  border-top: 1px solid rgba(255, 0, 0, 0.5);
-  border-right: 1px solid rgba(255, 0, 0, 0.5);
-  border-bottom: 1px solid rgba(255, 0, 0, 0.5);
+  border-top: 1px solid rgba(255, 0, 0, 0.7);
+  border-right: 1px solid rgba(255, 0, 0, 0.7);
+  border-bottom: 1px solid rgba(255, 0, 0, 0.7);
 }
+
+.grid-cell.teleport {
+  background-color: rgba(0, 255, 0, 0.3);
+  border: 1px solid rgba(0, 255, 0, 0.7);
+}
+
+.grid-cell.interactive-cell {
+  background-color: rgba(0, 0, 255, 0.3);
+  border: 1px solid rgba(0, 0, 255, 0.7);
+} */
 
 .player {
   position: absolute;
@@ -110,7 +123,58 @@
   background-position: center;
   z-index: 2;
   image-rendering: pixelated;
-  transition: all 0.1s linear;
+  transition: left 0.02s ease-out, top 0.02s ease-out;
   transform-origin: center;
-  will-change: transform, left, top;
+  will-change: left, top;
+}
+.player-interior {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  transform: scale(3.5);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+  z-index: 2;
+  image-rendering: pixelated;
+  transition: left 0.02s ease-out, top 0.02s ease-out;
+  transform-origin: center;
+  will-change: left, top;
+}
+
+.interior-container {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #000;
+}
+
+.interior {
+  position: relative;
+  image-rendering: pixelated;
+}
+
+.pause-menu-btn {
+  background: linear-gradient(180deg, rgba(224,185,125,0.92) 0%, rgba(169,124,80,0.92) 100%);
+  color: #3a220a;
+  font-size: 1.25rem;
+  font-weight: bold;
+  border: 2.5px solid #7c4f21;
+  border-radius: 18px;
+  box-shadow: 0 4px 12px rgba(60, 40, 10, 0.18);
+  padding: 0.75rem 0;
+  margin: 0.5rem 0;
+  transition: background 0.2s, color 0.2s, transform 0.1s;
+  opacity: 0.96;
+  width: 100%;
+  max-width: 260px;
+  letter-spacing: 1px;
+}
+.pause-menu-btn:hover {
+  background: linear-gradient(180deg, rgba(245,215,161,0.98) 0%, rgba(196,154,108,0.98) 100%);
+  color: #a97c50;
+  transform: translateY(-2px) scale(1.04);
+  opacity: 1;
 } 
